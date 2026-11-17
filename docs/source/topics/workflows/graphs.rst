@@ -1,5 +1,3 @@
-.. _topics:workflows:graphs:
-
 Graphs
 ======
 
@@ -30,13 +28,29 @@ For example, to construct our favorite multiply-add workflow:
         product = multiply(x=x, y=y)
         return add(x=product, y=z)
 
+Various other examples live in the :ref:`topics:workflows:graphs:gallery` at the end of this page.
+
+.. _topics:workflows:graphs:contract:
+
+The contract
+------------
+
+A ``@graph`` body is never executed as Python.
+It declares orchestration in a small subset of Python; every name resolves to a task, a graph input, or an inline value, and anything else fails when the graph is validated with ``build()``.
+Tasks are the only place that runs Python, creates data, and records provenance.
+The full rule list lives under :ref:`topics:workflows:graphs:language`.
+
+Each call to a task or graph in a body is a placement.
+Calling the same task twice creates two placements; each runs as its own child process with its own inputs, outputs, and provenance links.
+A named value passed between placements is a wire.
+Nested graphs, branch arms, loop iterations, and map items run as scopes of the same graph process: no intermediate process nodes, with hierarchical call labels preserving the scope identity.
+
 .. _topics:workflows:graphs:recipe:
 
 Authoring recipe
 ----------------
 
-The following workflow moves a value toward a target, stopping when it reaches the target or uses its step budget.
-Copy these definitions into a Python module:
+The following workflow example moves a value toward a target, stopping when it reaches the target or uses its step budget. Later sections refer back to it:
 
 .. code:: python
 
@@ -83,7 +97,7 @@ Validate the graph before launching it:
 
 .. code:: python
 
-    assert converge.build() is None
+    converge.build()  # silent on success; raises GraphLanguageError naming the offending source line on failure
 
 This checks supported syntax, wiring, and static contracts without running tasks.
 It does not execute the task bodies or guarantee that a run will succeed.
@@ -98,89 +112,160 @@ With an AiiDA profile loaded, run a representative case and inspect the result:
     }
     assert root.inputs.initial.value == 0
 
-The stored workflow node keeps the launch inputs directly under ``root.inputs``.
-Its output is the existing report node, not a copy:
+
+.. _topics:workflows:graphs:why:
+
+Why graphs
+----------
+
+A ``WorkChain`` spells orchestration as outline steps with explicit ``submit`` and ``to_context``, keeping resume state in ``self.ctx``.
+The sketch below builds an equivalent workflow to the ``converge`` recipe above, step for step:
 
 .. code:: python
 
-    summary = next(child for child in root.called if child.process_label == 'summarize')
-    assert outputs['result'].uuid == summary.outputs.result.uuid
+    from aiida.engine import WorkChain, while_
+    from aiida.orm import Dict, Int
 
-Also check the stopping conditions: exhausting the budget, starting at the target, and allowing no steps.
-A descending case exercises the other branch of ``step_toward``:
+    class Converge(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('initial', valid_type=Int)
+            spec.input('target', valid_type=Int)
+            spec.input('max_steps', valid_type=Int)
+            spec.output('report', valid_type=Dict)
+            spec.outline(cls.init, while_(cls.has_steps_left)(cls.step, cls.update), cls.report)
+
+        def init(self):
+            self.ctx.value = self.inputs.initial
+            self.ctx.attempts = 0
+
+        def has_steps_left(self):
+            return self.ctx.value.value != self.inputs.target.value and self.ctx.attempts < self.inputs.max_steps.value
+
+        def step(self):
+            self.to_context(stepped=self.submit(StepToward, value=self.ctx.value, target=self.inputs.target))
+
+        def update(self):
+            self.ctx.value = self.ctx.stepped.outputs.result
+            self.ctx.attempts += 1
+
+        def report(self):
+            self.out('report', Dict({'value': self.ctx.value.value, 'attempts': self.ctx.attempts}))
+
+The same workflow as a graph (see :ref:`topics:workflows:graphs:recipe`) reduces the boilerplate.
+
+Each ``WorkChain`` concept has a counterpart in a graph:
+
+* ``spec.input``/``spec.output`` become function parameters and the return annotation: ports are plain annotations, checked at ``build()`` instead of at first launch (see :ref:`topics:workflows:graphs:validation`);
+* ``spec.outline`` steps become straight-line code: ``if_`` becomes ``if``, ``while_`` becomes ``while``, with no step functions to name and order (see :ref:`topics:workflows:graphs:control_flow`);
+* ``self.submit(...)`` plus ``to_context`` becomes a direct call: outputs arrive as named values, so downstream wiring is type-checked instead of looked up in ``self.ctx`` at run time (see :ref:`topics:workflows:graphs:task_kinds`);
+* ``self.ctx`` resume state becomes carried loop state and inline values: counters and flags checkpoint without stored nodes (see :ref:`topics:workflows:graphs:inline`);
+* ``self.out(...)`` becomes ``return``: the graph returns existing nodes instead of attaching outputs by hand (see :ref:`topics:workflows:graphs:outputs`);
+* ``spec.exit_code`` for expected failures becomes ``Result[..., Errors]`` with ``Err`` returns, or ``errors=`` on a task wrapping a process class: declared outcomes branch and retry in the graph instead of needing a restart work chain (see :ref:`topics:workflows:graphs:declared_failures` and :ref:`topics:workflows:graphs:retries`).
+
+As compared to work chains, graphs provide: less code to write, static pre-runtime validation with actionable error messages, and on-the-fly construction without the need for entry point registration. Tasks stay processes with full provenance, executed by daemon workers.
+
+Graphs do not do:
+
+* arbitrary Python (method calls, comprehensions, and imports belong in tasks);
+* dynamic submission (the placements are fixed when the graph is built -- a ``WorkChain`` can instead submit a number of processes computed at run time, or pick the process class from an intermediate result);
+* unstored runs (see :ref:`topics:workflows:graphs:limitations`).
+
+.. _topics:workflows:graphs:validation:
+
+Validation
+----------
+
+Validation happens at three points as a graph moves from template to run: placements and wiring are fully known at ``build()`` time.
+``build()`` checks syntax, wiring, and static contracts without running anything or creating nodes.
+A passing ``build()`` means the graph is well-formed, not that it will succeed.
+Launch fills inputs and defaults, binds ``runtime_config`` per placement, and rejects unknown placements or missing execution inputs.
+Absent graph inputs are reported together at launch, and a task whose wired inputs leave a required port empty never dispatches.
+At runtime the engine re-checks branch condition types, fails tasks with missing outputs, and maps declared failures to error arms; only values, such as how many iterations a loop takes, materialize at run time.
+The checkpoint keeps finished task nodes, scope progress, and inline values, so a restarted graph reuses work instead of resubmitting it.
+
+For example, returning a name bound in only one arm fails at ``build()``, before anything runs:
 
 .. code:: python
 
-    for initial, target, budget, value, attempts, status in [
-        (0, 5, 2, 2, 2, 'exhausted'),
-        (4, 4, 5, 4, 0, 'converged'),
-        (0, 3, 0, 0, 0, 'exhausted'),
-        (2, -1, 10, -1, 3, 'converged'),
-    ]:
-        outputs, root = run_get_node(converge, initial=initial, target=target, max_steps=budget)
-        assert root.is_finished_ok
-        assert outputs['result'].get_dict() == {
-            'value': value, 'target': target, 'attempts': attempts, 'status': status
-        }
+    from aiida.engine import graph, task
 
-Graph language
---------------
+    @task
+    def add(x: int, y: int) -> int:
+        return x + y
 
-AiiDA reads the source of a ``@graph`` function and compiles it for the engine; the compiled representation stays an implementation detail user code never touches.
+    @graph
+    def bad(x: int, flag: bool) -> int:
+        if flag:
+            chosen = add(x=x, y=1)
+        return chosen
 
-.. important::
+Building it reports the exact validation error, with the offending source line and a caret:
 
-   **A graph body is never executed as Python.**
-   It uses a very small subset of Python syntax; arbitrary Python code belongs in a ``@task``.
+.. code:: text
 
-The graph body supports:
+    aiida.common.exceptions.GraphLanguageError: bad:9:5: without an `else`
+    arm the branch keeps the prior binding, so `chosen` must be assigned
+    before the `if`; assign it first or add an `else` arm instead
+        if flag:
+        ^
 
-* ``name = task(...)`` assignments, with keyword or positional arguments; positional arguments follow the declared input order. Calling another graph works the same way.
-* Graph inputs and names bound on an earlier line, such as ``product`` in ``add(x=product, y=z)``, as arguments.
-* Literal numbers, strings, booleans, and ``None`` as arguments, such as ``y=1``.
-* Scalar literals bound to names, such as ``attempts = 0`` or ``mode = 'square'``, see :ref:`topics:workflows:graphs:inline`.
-* ``if``, with or without ``elif`` and ``else``, and ``while``, as well as conditional expressions ``x if condition else y``, see :ref:`topics:workflows:graphs:control_flow`.
-* Inline expressions for orchestration state: numeric arithmetic ``+ - * // %``, comparisons ``< <= > >= == !=``, and unary ``+ - not``, such as ``iterations - 1`` or ``iterations > 0``, see :ref:`topics:workflows:graphs:inline`.
-* One final ``return`` of a name, a field, or a call, or of a ``dict`` of those, possibly nested, with literal string keys; a graph with no outputs ends with an explicit ``return {}``.
-* ``.key`` or ``['key']`` to select an output of a multi-output call or a field of a namespace input; ``.result`` on a single-output call is optional.
-* ``a, b = task(...)`` to bind every output of a multi-output call, in declaration order, outside branches; loop bodies rebind unpacked names the same way.
-* Calls through an imported module, such as ``my_module.add(...)``. Calls resolve to the
-  declared name of an importable task or graph: the plain ``@task``/``@graph`` name, a
-  module-qualified target, or a ``task(CalcJob)``/``task(WorkChain)`` factory variable
-  under its assigned variable name. A module-global rebinding of a handle
-  (``alias = add``), a stored ``alias = decl.alias('name')`` handle, or a renamed import
-  is not a declaration; name the placement inline with ``decl.alias('name')(...)`` instead.
-  Module-global scalars, nodes, and other values are not wires either; pass them as graph
-  inputs.
-* ``dict`` literals with string keys as arguments: for namespace ports, such as ``nodes={'text': text}``, and for ``dict`` ports when every value is a literal.
-* ``**bundle`` to spread a namespace-typed name across the ports of a call, see :ref:`topics:workflows:graphs:spreading`.
-* ``after=first`` or ``after=(first, second)`` to wait for earlier calls without passing their values.
-* A docstring as the first statement.
-
-Every call is assigned to a name, including calls to tasks without outputs; ``return`` and the tests of ``if`` and ``while`` also take inline expressions and calls directly.
-Each name is bound once; only ``if`` arms and ``while`` bodies rebind names bound before them.
-Any other construct raises a ``GraphLanguageError`` naming its source line when the graph is validated with ``build()``.
-For example, an inline comparison in an ``if`` condition just runs:
+Both fixes from the message build.
+Binding the name first keeps the incoming value when the branch is skipped:
 
 .. code:: python
 
     @graph
-    def choose_by_sign(x: int) -> int:
-        if x > 0:
+    def good(x: int, flag: bool) -> int:
+        chosen = x
+        if flag:
+            chosen = add(x=x, y=1)
+        return chosen
+
+Adding an ``else`` arm binds it on that path instead:
+
+.. code:: python
+
+    @graph
+    def good_else(x: int, flag: bool) -> int:
+        if flag:
             chosen = add(x=x, y=1)
         else:
-            chosen = add(x=x, y=2)
+            chosen = x
         return chosen
+
+.. _topics:workflows:graphs:language:
+
+Graph language
+--------------
+
+AiiDA compiles the ``@graph`` source for the engine; the compiled representation stays an implementation detail.
+
+The graph body supports:
+
+* calls, ``name = task(...)`` with keyword or positional arguments; calling another graph works the same way and places it as a subgraph (:ref:`topics:workflows:graphs:control_flow`);
+* graph inputs and earlier-bound names as arguments, plus literals (``1``, ``'done'``, ``True``, ``None``) and scalar bindings (``attempts = 0``);
+* ``if``/``elif``/``else``, ``while``, and ``x if condition else y``, with inline expressions and task calls directly in the tests (:ref:`topics:workflows:graphs:control_flow`);
+* inline arithmetic, comparisons, and unary operators (:ref:`topics:workflows:graphs:inline`);
+* a single final ``return`` of a name, a field, or a call, or of a ``dict`` of those with literal string keys; a graph with no outputs ends with an explicit ``return {}``;
+* field and namespace selection (``.key``, ``['key']``, ``.result``; ``.result`` on a single-output call is optional) and multi-output unpacking (``value, error = step(...)``);
+* module-qualified calls (``my_module.add(...)``) and explicitly aliased placements (``decl.alias('name')(...)``), required whenever one task or graph is placed twice in the same body;
+* namespace ``dict`` literals (``nodes={'text': text}``) and ``**bundle`` spreading (:ref:`topics:workflows:graphs:spreading`);
+* ``after=`` ordering: ``add(x=x, y=1, after=prepared)`` waits for the ``prepared`` placement without using its outputs; ``after=(first, second)`` waits for both; ``after`` is reserved and cannot be a task parameter;
+
+Each call is assigned to a name, including calls to tasks without outputs; ``return`` and the tests of ``if`` and ``while`` also take inline expressions and calls directly.
+Each name is bound once; only ``if`` arms and ``while`` bodies rebind names bound before them.
+Anything else fails when the graph is validated with ``build()``, naming its source line.
 
 .. _topics:workflows:graphs:inline:
 
 Inline operations
 ^^^^^^^^^^^^^^^^^^
 
-Arithmetic, comparisons, and unary operators compute orchestration state inline, without a task:
-``+ - * // %``, ``< <= > >= == !=``, and unary ``+ - not``. Operands are graph inputs, names bound
-on an earlier line, or literals. A ``while`` tests an inline comparison directly and steps its
-counter with inline arithmetic:
+Arithmetic, comparisons, and unary operators compute orchestration state inline, without a task: ``+ - * // %``, ``< <= > >= == !=``, and unary ``+ - not``.
+Operands are graph inputs, names bound on an earlier line, or literals.
+A ``while`` tests an inline comparison directly and steps its counter with inline arithmetic:
 
 .. code:: python
 
@@ -192,32 +277,141 @@ counter with inline arithmetic:
 
 Scalar literals bind the same way, without a task, such as ``attempts = 0``, ``running = False``, or ``mode = 'square'``.
 A bound name wires its value into task arguments, branch arms, and loop state exactly like a computed inline result.
-Only finite numbers, strings, booleans, and ``None`` bind; anything else -- collections, formatting, indexing -- still belongs in a task or a graph input.
+Only finite numbers, strings, booleans, and ``None`` bind; anything else (collections, formatting, indexing) still belongs in a task or a graph input.
 
 Inline results are ephemeral orchestration state, not scientific data:
 
-* **No provenance:** inline values never become data nodes and never carry links. Only task outputs
-  are stored.
-* **Checkpointed, not stored:** the scheduler keeps inline values in its scope state, so restarts
-  resume counters and conditions, but the provenance graph shows only the tasks that ran.
-* **Root graphs never return a newly computed scalar:** returning ``n`` above would publish a value
-  with no creator, breaking the rule that workflows return existing data while only tasks create new
-data. A root graph returns task outputs, graph inputs, or collector-built containers -- or nothing,
-declared explicitly with ``return {}``. Use an explicit task
-for a scientific result computed from inline state.
-Returning a bound literal directly fails when the graph is built, for the same reason.
-* **Nested helpers may return control state:** a subgraph can return an inline value for its caller to
-consume as orchestration state, since the caller scope -- not the provenance -- receives it.
-* **Explicit tasks are never inlined:** a ``@task`` function always runs as its own child process,
-even when its body is a single expression. Inlining never invents a calculation absent from the source.
-* **Cheap by construction:** inline expressions run inside the graph process, so keep them to the
-supported operators. Anything else -- formatting, indexing, comprehensions, nested calls -- belongs
-in a task and still raises ``GraphLanguageError``. Division by zero and non-finite results fail the run.
+* **No provenance:** inline values never become data nodes and never carry links. Only task outputs are stored.
+* **Checkpointed, not stored:** the scheduler keeps inline values in its scope state, so restarts resume counters and conditions, but the provenance graph shows only the tasks that ran.
+* **Root graphs never return a newly computed scalar:** returning ``n`` above would publish a value with no creator, breaking the rule that workflows return existing data while only tasks create new data. A root graph returns task outputs, graph inputs, or collector-built containers, or nothing, declared explicitly with ``return {}``. Use an explicit task for a scientific result computed from inline state. Returning a bound literal directly fails when the graph is built, for the same reason.
+* **Nested helpers may return control state:** a subgraph can return an inline value for its caller to consume as orchestration state, since the caller scope, not the provenance, receives it.
+* **Explicit tasks are never inlined:** a ``@task`` function always runs as its own child process, even when its body is a single expression. Inlining never invents a calculation absent from the source.
+* **Cheap by construction:** inline expressions run inside the graph process, so keep them to the supported operators. Anything else (formatting, indexing, comprehensions, nested calls) belongs in a task and still raises ``GraphLanguageError``. Division by zero and non-finite results fail the run.
 
-Loop iterations run one at a time and each iteration completes its whole scope before the next
-begins, so placements without a data dependency still run sequentially. For example, stepping an
-inline counter after a calculation needs no ``after`` edge: the next iteration starts only after the
-calculation scope completes.
+Loop iterations run one at a time and each iteration completes its whole scope before the next begins, so placements without a data dependency still run sequentially.
+For example, stepping an inline counter after a calculation needs no ``after`` edge: the next iteration starts only after the calculation scope completes.
+
+.. _topics:workflows:graphs:control_flow:
+
+Subgraphs, branches, and loops
+------------------------------
+
+Calling a graph inside another graph places it as a subgraph, which runs as a scope of the same graph process:
+
+.. code:: python
+
+    @graph
+    def outer(x: int, y: int, z: int) -> int:
+        inner = multiply_add(x=x, y=y, z=z)
+        return add(x=inner, y=x)
+
+An ``if`` tests a bound name, a field, an inline expression such as ``x > 0``, a task call, or boolean combinations of those with ``and`` and ``or``, such as ``value != target and attempts < max_steps``.
+Each ``and``/``or`` pair selects one side at runtime with short-circuit semantics: the right side runs only when the left side selects it, so a task call or a guarded operation there never runs when skipped.
+Every operand must read as a boolean; Python operand tricks such as ``1 and 2`` fail when the graph is built.
+Presence and member tests (``is None``, ``is not None``, ``is`` and ``is not`` against a declared error member, optionally under ``not``) lower to ephemeral boolean control values wherever a boolean reads: they work in an ``if`` or ``while`` test, on either side of ``and``/``or``, as named wires such as ``present = value is not None``, and inside selections.
+Only these supported identity forms read as booleans; arbitrary ``x is y`` identities never run and fail when the graph is built.
+Both arms are compiled; at runtime, only the selected arm runs, as a scope of the same graph process.
+With an ``else``, both arms bind the same name to values of the same type:
+
+.. code:: python
+
+    @graph
+    def choose(x: int, flag: bool) -> int:
+        if flag:
+            chosen = add(x=x, y=1)
+        else:
+            chosen = add(x=x, y=2)
+        return chosen
+
+Without an ``else``, the arm rebinds a name bound before the ``if``; when the test fails, the prior value is kept:
+
+.. code:: python
+
+    @graph
+    def maybe_bump(x: int, flag: bool) -> int:
+        total = add(x=x, y=1)
+        if flag:
+            total = add(x=total, y=10)
+        return total
+
+Each arm holds one statement: an assignment of a call, an assignment of a name bound earlier, such as ``chosen = first``, which runs no task, an assignment of one field of those, such as ``chosen = pair.sum``, an assignment of a whole namespace, such as ``chosen = pair``, an assignment of an inline expression, such as ``n = n - 1``, a ``while`` loop that rebinds one name bound before the ``if``, or another ``if``, such as an ``elif``, whose arms follow the same rules.
+Whole-namespace arms on both sides must share the same fields.
+The branch reserves the name ``condition`` for its test, so the arms cannot read a value of that name.
+A conditional expression ``x if condition else y`` selects one value the same way, without running the unselected side:
+
+.. code:: python
+
+    @graph
+    def choose_either(x: int, y: int, flag: bool) -> int:
+        return add(x=x, y=1) if flag else add(x=y, y=2)
+
+The condition follows the same rules as an ``if`` test, and each arm follows the same rules as an ``if`` arm: calls, constants, names, fields, namespaces, and inline expressions.
+Both arms must expose the same wire, and only the taken arm ever runs, as a scope of the same graph process:
+
+.. code:: python
+
+    @graph
+    def choose_scaled(value: int, flag: bool) -> int:
+        chosen = (value + 1) if flag else (value - 1)
+        return add(x=chosen, y=0)
+
+A ``while`` tests a bound name, an inline expression such as ``n > 0``, a task call, or boolean combinations of those with ``and`` and ``or`` before every iteration.
+A joined test re-evaluates from the rebound names each pass, so a bounded loop steps toward its target until it matches or the attempt budget runs out:
+
+.. code:: python
+
+    @graph
+    def bounded_count(value: int, target: int, max_steps: int) -> int:
+        attempts = 0
+        while value != target and attempts < max_steps:
+            value = value - 1
+            attempts = attempts + 1
+return add(x=value, y=attempts) The body rebinds names bound before the loop, with task calls, inline assignments such as ``n = n - 1``, scalar literal bindings such as ``attempts = 0``, ``if`` branches, or nested ``while`` loops.
+A tested name must be rebound in the body; a tested call runs again after every iteration.
+An inline test re-evaluates from the rebound names.
+Names the body assigns without an enclosing binding are iteration-local, such as ``step`` below: declared on their first write, fresh every pass, never carried across iterations or visible after the loop.
+Reading one before its write, assigning it on only one branch path, or reading it after the loop fails when the graph is built:
+
+.. code:: python
+
+    @task
+    def trial(x: int) -> int:
+        return x - 1
+
+    @task
+    def positive(x: int) -> bool:
+        return x > 0
+
+    @graph
+    def stepped(x: int, keep_going: bool) -> int:
+        while keep_going:
+            step = trial(x=x)
+            x = step
+            keep_going = positive(x=x)
+        return x
+
+Counters and conditions stay inline: they need no ``@task``, and each ``@task`` runs as its own child process with its own provenance nodes.
+Keep orchestration inline and scientific work in tasks, so the returned value is still a stored task output:
+
+.. code:: python
+
+    @graph
+    def refine(x: int, rounds: int, attempt: int = 0) -> int:
+        value = add(x=x, y=0)
+        retry = attempt < rounds
+        while retry:
+            value = add(x=value, y=1)
+            attempt = attempt + 1
+            retry = attempt < rounds
+        return value
+
+The counter seeds from its default graph input (``attempt: int = 0``); a bare ``0`` literal leaves no trace.
+Each iteration steps the counter with inline ``+`` and recomputes the ``<`` comparison, while ``add`` remains the only task.
+
+``while`` takes no ``else``.
+Each iteration runs as a numbered scope of the same graph process, with hierarchical call labels such as ``loop_1_iteration_0__add`` that preserve the iteration identity.
+A loop that never runs leaves its names at their values from before the loop, as in Python.
+A loop still running after 1000 iterations fails the graph process.
 
 Launching
 ---------
@@ -235,15 +429,14 @@ Graphs can be launched like any other process, with a loaded AiiDA profile:
     # or
 
     node = submit(multiply_add, x=2, y=3, z=4)
-
-``run_get_node`` blocks until the graph finishes in the current interpreter.
-``submit`` returns the process node immediately and the daemon runs the graph in the background.
-Calling ``multiply_add(x=2, y=3, z=4)`` directly raises a :py:class:`~aiida.common.exceptions.GraphError`, because the graph body is never executed as Python.
-
-Graph inputs are the function parameters; an input omitted at launch takes its literal default.
-Graphs and tasks take no ``*args`` or ``**kwargs``, because every input needs its own declared port.
-Graph outputs can be task outputs or graph inputs; a graph with no outputs ends with an explicit ``return {}``. A root graph never returns a newly computed inline scalar -- use an explicit task for a scientific result -- while a nested graph may return inline control state for its caller; see :ref:`topics:workflows:graphs:inline`.
-A graph is a workflow, so it returns existing data nodes; only tasks create new data (see :ref:`topics:provenance:concepts`).
+* ``run_get_node`` blocks until the graph finishes in the current interpreter.
+* ``submit`` returns the process node immediately and the daemon runs the graph in the background.
+* Calling ``multiply_add(x=2, y=3, z=4)`` directly raises a :py:class:`~aiida.common.exceptions.GraphError`, because the graph body is never executed as Python.
+* Graph inputs are the function parameters; an input omitted at launch takes its literal default.
+* Graphs and tasks take no ``*args`` or ``**kwargs``, because every input needs its own declared port.
+* Graph outputs can be task outputs or graph inputs; a graph with no outputs ends with an explicit ``return {}``.
+  A root graph never returns a newly computed inline scalar (use an explicit task for a scientific result); a nested graph may return inline control state for its caller (see :ref:`topics:workflows:graphs:inline`).
+* A graph is a workflow, so it returns existing data nodes -- the recipe's ``summarize`` report, for example; only tasks create new data (see :ref:`topics:provenance:concepts`).
 
 Tasks can be run independently: ``run_get_node(add, x=1, y=2)`` launches a single task.
 Calling ``add(x=1, y=2)`` directly raises a :py:class:`~aiida.common.exceptions.GraphError`, as for graphs.
@@ -254,9 +447,21 @@ Where to define graphs
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Graphs and tasks can be defined in a module, a script, or a notebook.
+No entry points or plugin packaging are needed: a graph is submitted directly from where it is defined, unlike a process class that must be installed and registered to be launchable by the daemon.
 Each submission carries the graph structure and a pickled copy of every task, so the daemon needs no access to the files that define them.
 These copies include helpers defined in the same file as the task.
 Helpers imported from other files are referenced by name, so the daemon imports them; those files must be installed or on the daemon's ``PYTHONPATH``.
+
+Validating graphs and inspecting runs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Call ``workflow.build()`` while developing a graph, or from a test, to catch unsupported syntax, bad wiring, and static contract mismatches without launching anything.
+It returns ``None``; problems raise, naming the offending source line.
+``build()`` only validates the declaration; the representation it compiles is an implementation detail user code never touches.
+Then run a representative case and check its outputs before trying boundary cases, as shown in :ref:`topics:workflows:graphs:recipe`; runtime failures are not caught by ``build()``.
+Inspect execution results through the launch outputs and the stored graph node: ``outputs['result']`` reads what tasks produced, while ``root.inputs.initial`` reads the flat workflow argument the run was launched with.
+
+.. _topics:workflows:graphs:task_kinds:
 
 Task kinds
 ----------
@@ -272,23 +477,17 @@ At runtime it runs as a child process of the graph.
 A work chain keeps its own outline and child processes, so it appears in the provenance as a workflow nested under the graph.
 Task and graph names become link labels in the provenance graph, so they must consist of alphanumerics and underscores and must not start or end with an underscore.
 
-Calls resolve by declaration name, not by what a module-global variable happens to hold.
-A plain ``add(...)`` resolves because ``add`` is the declared ``@task`` name; a
-``task(ArithmeticAddCalculation)`` factory variable such as ``add_calc`` resolves under its
-assigned variable name. Rebinding either under another module-global name does not declare
-a new task: ``alias = add`` and ``alias = nested_graph`` fail when the graph is built, as
-does a stored ``alias = add.alias('scf')`` handle or a renamed import. Name repeated
-placements inline at the call site with ``add.alias('scf')(...)`` and
-``add.alias('nscf')(...)`` with distinct local names instead. Enum members in member tests, module-qualified targets such as ``tasks.add``, and the callable mapped with
-``par_map`` keep their existing resolution. Calling one task or graph twice in the same graph body no longer
-falls back to an automatic numeric name; each placement needs its own inline ``.alias('name')`` instead, and
-repeated default ``par_map`` placements need ``par_map(task.alias('name'), values)``. Values that are not declarations -- module-global
-numbers, nodes, mappings, or attributes -- are not wires; pass them as graph inputs instead
-of reading a global, which the build reports as a missing graph input rather than a name to
-assign on an earlier line. When the defining source cannot be read (for example a handle
-installed by a test double after import), function and graph names still match on their
-public name, while a source-less factory handle stays permissive: identity alone cannot tell
-a factory alias from its declaration, so no ordering heuristic is attempted.
+Calls resolve by declaration name, not by what a module-global variable happens to hold:
+
+* a plain ``add(...)`` resolves because ``add`` is the declared ``@task`` name;
+* a ``task(ArithmeticAddCalculation)`` factory variable such as ``add_calc`` resolves under its assigned variable name;
+* rebinding either under another module-global name does not declare a new task: ``alias = add`` and ``alias = nested_graph`` fail when the graph is built, as does a stored ``alias = add.alias('scf')`` handle or a renamed import.
+  Name repeated placements inline at the call site with ``add.alias('scf')(...)`` instead;
+* enum members in member tests, module-qualified targets such as ``tasks.add``, and the callable mapped with ``par_map`` keep their existing resolution;
+* values that are not declarations (module-global numbers, nodes, mappings, or attributes) are not wires.
+  Pass them as graph inputs instead of reading a global, which the build reports as a missing graph input rather than a name to assign on an earlier line.
+
+When the defining source cannot be read (for example a handle installed by a test double after import), function and graph names still match on their public name, while a source-less factory handle stays permissive: identity alone cannot tell a factory alias from its declaration, so no ordering heuristic is attempted.
 
 Explicit placement names
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -301,21 +500,22 @@ A task or graph called through ``.alias('scf')`` names its placement explicitly 
     def two_steps(x: int, y: int) -> int:
         first = add.alias('scf')(x=x, y=y)
         return add.alias('nscf')(x=first, y=y)
+* The constructor works for function tasks, ``CalcJob`` and ``WorkChain`` tasks, nested graphs, generic tasks, dotted and module call targets such as ``tasks.add.alias('scf')``, and the callable mapped with ``par_map``.
+* Each placement in one graph body needs its own name: calling one task or graph twice without aliases fails when the graph is built, as does reusing one alias for two placements or mixing a bare call with an alias on the same name.
+* The same rule covers maps: two default ``par_map`` placements over one callable share one map name and fail, so pass the alias on the callable (``par_map(task.alias('name'), values)``), which names the map placement exactly.
+* Names are scoped to their body: branch arms, loop bodies, and nested graphs each keep their own placements, so both arms of an ``if`` or a loop body may reuse an outer alias.
+* Generated branch, loop, and inline-operation names, as well as runtime map items and loop iteration labels, keep their automatic numbering.
+* The alias is local to the call: it never mutates the task handle, so a later plain ``add(...)`` still places under its own name.
+* It accepts only a non-empty string literal following the link-label contract; a variable or an invalid name fails when the graph is built.
+* The compiled template, the provenance call labels, and the ``runtime_config`` entries below all carry the alias.
+* This is unrelated to the module-level ``Forward`` input alias under :ref:`spreading <topics:workflows:graphs:spreading>`, which reuses an input declaration across graphs.
 
-The constructor works for function tasks, ``CalcJob`` and ``WorkChain`` tasks, nested graphs, generic tasks, dotted and module call targets such as ``tasks.add.alias('scf')``, and the callable mapped with ``par_map``.
-Each placement in one graph body needs its own name: calling one task or graph twice without aliases fails when the graph is built, as does reusing one alias for two placements or mixing a bare call with an alias on the same name.
-The same rule covers maps: two default ``par_map`` placements over one callable share one map name and fail, so pass the alias on the callable -- ``par_map(task.alias('name'), values)`` -- which names the map placement exactly.
-Names are scoped to their body: branch arms, loop bodies, and nested graphs each keep their own placements, so both arms of an ``if`` or a loop body may reuse an outer alias.
-Generated branch, loop, and inline-operation names, as well as runtime map items and loop iteration labels, keep their automatic numbering.
-The alias is local to the call: it never mutates the task handle, so a later plain ``add(...)`` still places under its own name.
-It accepts only a non-empty string literal following the link-label contract; a variable or an invalid name fails when the graph is built.
-The compiled template, the provenance call labels, and the ``runtime_config`` entries below all carry the alias.
-This is unrelated to the module-level ``Forward`` input alias under :ref:`spreading <topics:workflows:graphs:spreading>`, which reuses an input declaration across graphs.
+.. _topics:workflows:graphs:runtime_config:
 
 Runtime configuration
 ^^^^^^^^^^^^^^^^^^^^^
 
-Separate scientific wiring from execution inputs with the graph launch option ``runtime_config``.
+Graphs submit like any other process: ``run_get_node(multiply_add_calc, x=2, y=3, z=4)`` takes flat workflow arguments, or the same mapping under ``inputs=``. Execution settings travel separately, under the launch-only ``runtime_config`` channel -- they are not workflow inputs, so they never enter provenance or checkpoints as such.
 Each process placement takes an ordinary process input mapping, including a nested ``metadata`` mapping:
 
 .. code:: python
@@ -351,13 +551,9 @@ Standard root ``metadata`` such as ``label`` applies to the graph process itself
 
 Configuration-capable inputs are inferred from the concrete process specification:
 
-* Inputs declared by the base ``CalcJob`` or ``WorkChain`` class, when still present in the concrete class.
-  Base namespaces include their descendants and plugin extensions.
-  This covers process metadata and, for ``CalcJob``, ``code``, ``monitors`` and ``remote_folder``.
-* Inputs accepting only ``orm.Code`` subclasses, optionally together with ``None``, at any namespace depth.
-  Mixed types such as ``Code | Int`` and opaque ``Dict`` inputs do not qualify.
-* Execution inputs carried through ``spec.expose_inputs(...)``, including nested exposure chains.
-  Scientific siblings in the exposed namespace still need graph wiring.
+* Inputs declared by the base ``CalcJob`` or ``WorkChain`` class, when still present in the concrete class. Base namespaces include their descendants and plugin extensions. This covers process metadata and, for ``CalcJob``, ``code``, ``monitors`` and ``remote_folder``.
+* Inputs accepting only ``orm.Code`` subclasses, optionally together with ``None``, at any namespace depth. Mixed types such as ``Code | Int`` and opaque ``Dict`` inputs do not qualify.
+* Execution inputs carried through ``spec.expose_inputs(...)``, including nested exposure chains. Scientific siblings in the exposed namespace still need graph wiring.
 
 These rules apply to ``task(CalcJobSubclass)`` and ``task(WorkChainSubclass)``, not plain function tasks.
 Explicit graph wiring always owns an input, including an executable or import folder.
@@ -383,7 +579,8 @@ Here ``relax`` names a nested graph placement containing ``add_calc``.
 For a WorkChain task, its exposed namespaces instead belong directly in its process input mapping, for example ``{'relax': {'base': {'pw': {'code': code}}}}``.
 Configuration never reaches through an opaque WorkChain to its unexposed children.
 Branch, loop and mapped-graph bodies introduce no configuration level; iterations and map items reuse the same static bindings.
-Aliases select placement names, not runtime call-link labels.
+Aliases name placements in the template.
+Labels the engine generates at runtime (loop iterations, map items) keep their automatic names.
 
 ``workflow.build()`` needs no runtime configuration.
 Launch validates supplied addresses, ownership and independently complete execution namespaces across all static branches, including bodies that may never execute.
@@ -396,13 +593,9 @@ Configured nodes retain ordinary child provenance input links.
 The root records a configuration snapshot separately from its scientific inputs, preserving entity references through checkpoints and ``get_builder_restart()``.
 Changing caller-owned mappings after launch does not change the snapshot.
 
-``task_metadata`` is no longer supported.
-Move ``task_metadata={'add_calc': {'options': options}}`` to ``runtime_config={'add_calc': {'metadata': {'options': options}}}``.
-Historical ``task_metadata`` checkpoints and restart envelopes are not adapted.
 
-Static optional inputs, such as a restart folder, need no declaration: wire `None`
-and the input stays out of the launch; wire a node and it arrives. Unwired
-optional inputs were already left out; `None` now means the same.
+Static optional inputs, such as a restart folder, need no declaration: wire `None` and the input stays out of the launch; wire a node and it arrives.
+Unwired optional inputs were already left out; `None` now means the same.
 
 .. _topics:workflows:graphs:dynamic_namespaces:
 
@@ -468,6 +661,14 @@ Graphs pass whole namespaces or single fields on to tasks, either by naming the 
 Missing required inputs are reported together in one ``MissingRequiredInputsError``.
 Default factories run once, when the graph is validated, and must return JSON values; each launch receives its own copy.
 
+Pydantic models
+^^^^^^^^^^^^^^^^^
+
+A pydantic ``BaseModel`` declares the same typed port namespaces as a ``PortModel``: nested models, defaults, and ``Field(description=...)`` help text become ports, stored field by field.
+Leaves support ``str``, ``int``, ``float``, ``bool``, and their optional forms.
+Tasks receive attribute-accessible mappings, not model instances, so model methods are unavailable.
+Port-level validation applies: aliases and decorated validators are rejected at declaration; check values inside the ``@task`` body.
+
 .. _topics:workflows:graphs:spreading:
 
 Spreading and forwarding
@@ -512,6 +713,8 @@ An alias reuses one declaration across graphs:
     @graph
     def forwarded_z(bundle: MultiplyAddInputs) -> int:
         return multiply_add(**bundle, z=1)
+
+.. _topics:workflows:graphs:outputs:
 
 Outputs
 -------
@@ -714,127 +917,42 @@ Each iteration rebinds every unpacked name, so an arm the latest attempt left ab
 ``_`` discards an arm without carrying it into the next iteration.
 ``RestartErrors`` names the failures of the restart machinery itself, with the statuses ``BaseRestartWorkChain`` uses (301, 302, 401, 402), so a task that gives up after the last attempt can return ``Err(RestartErrors.UNHANDLED_FAILURE)``.
 
-.. _topics:workflows:graphs:control_flow:
-
-Subgraphs, branches, and loops
-------------------------------
-
-Calling a graph inside another graph places it as a subgraph, which runs as a scope of the same graph process:
+The same loop restarts tasks that run out of walltime: each retry dispatches
+a fresh child process with the same inputs, and the scheduler places it anew.
+Only the error member differs from the budget example above:
 
 .. code:: python
 
-    @graph
-    def outer(x: int, y: int, z: int) -> int:
-        inner = multiply_add(x=x, y=y, z=z)
-        return add(x=inner, y=x)
-
-An ``if`` tests a bound name, a field, an inline expression such as ``x > 0``, a task call, or boolean combinations of those with ``and`` and ``or``, such as ``value != target and attempts < max_steps``.
-Each ``and``/``or`` pair selects one side at runtime with short-circuit semantics: the right side runs only when the left side selects it, so a task call or a guarded operation there never runs when skipped.
-Every operand must read as a boolean; Python operand tricks such as ``1 and 2`` fail when the graph is built.
-Presence and member tests (``is None``, ``is not None``, ``is`` and ``is not`` against a declared error
-member, optionally under ``not``) lower to ephemeral boolean control values wherever a boolean reads:
-they work in an ``if`` or ``while`` test, on either side of ``and``/``or``, as named wires such as
-``present = value is not None``, and inside selections. Only these supported identity forms read as
-booleans; arbitrary ``x is y`` identities never run and fail when the graph is built.
-Both arms are compiled; at runtime, only the selected arm runs, as a scope of the same graph process.
-With an ``else``, both arms bind the same name to values of the same type:
-
-.. code:: python
-
-    @graph
-    def choose(x: int, flag: bool) -> int:
-        if flag:
-            chosen = add(x=x, y=1)
-        else:
-            chosen = add(x=x, y=2)
-        return chosen
-
-Without an ``else``, the arm rebinds a name bound before the ``if``; when the test fails, the prior value is kept:
-
-.. code:: python
-
-    @graph
-    def maybe_bump(x: int, flag: bool) -> int:
-        total = add(x=x, y=1)
-        if flag:
-            total = add(x=total, y=10)
-        return total
-
-Each arm holds one statement: an assignment of a call, an assignment of a name bound earlier, such as ``chosen = first``, which runs no task, an assignment of one field of those, such as ``chosen = pair.sum``, an assignment of a whole namespace, such as ``chosen = pair``, an assignment of an inline expression, such as ``n = n - 1``, a ``while`` loop that rebinds one name bound before the ``if``, or another ``if``, such as an ``elif``, whose arms follow the same rules.
-Whole-namespace arms on both sides must share the same fields.
-The branch reserves the name ``condition`` for its test, so the arms cannot read a value of that name.
-A conditional expression ``x if condition else y`` selects one value the same way, without running the unselected side:
-
-.. code:: python
-
-    @graph
-    def choose_either(x: int, y: int, flag: bool) -> int:
-        return add(x=x, y=1) if flag else add(x=y, y=2)
-
-The condition follows the same rules as an ``if`` test, and each arm follows the same rules as an ``if`` arm: calls, constants, names, fields, namespaces, and inline expressions.
-Both arms must expose the same wire, and only the taken arm ever runs, as a scope of the same graph process:
-
-.. code:: python
-
-    @graph
-    def choose_scaled(value: int, flag: bool) -> int:
-        chosen = (value + 1) if flag else (value - 1)
-        return add(x=chosen, y=0)
-
-A ``while`` tests a bound name, an inline expression such as ``n > 0``, a task call, or boolean combinations of those with ``and`` and ``or`` before every iteration.
-A joined test re-evaluates from the rebound names each pass, so a bounded loop steps toward its target until it matches or the attempt budget runs out:
-
-.. code:: python
-
-    @graph
-    def bounded_count(value: int, target: int, max_steps: int) -> int:
-        attempts = 0
-        while value != target and attempts < max_steps:
-            value = value - 1
-            attempts = attempts + 1
-        return add(x=value, y=attempts)
-The body rebinds names bound before the loop, with task calls, inline assignments such as ``n = n - 1``, scalar literal bindings such as ``attempts = 0``, ``if`` branches, or nested ``while`` loops.
-A tested name must be rebound in the body; a tested call runs again after every iteration. An inline test re-evaluates from the rebound names.
-Names the body assigns without an enclosing binding are iteration-local, such as ``step`` below: declared on their first write, fresh every pass, never carried across iterations or visible after the loop.
-Reading one before its write, assigning it on only one branch path, or reading it after the loop fails when the graph is built:
-
-.. code:: python
+    class StepErrors(ExitCodeEnum):
+        UNSTABLE = ExitCode(409, 'Unstable step.')
+        OUT_OF_WALLTIME = ExitCode(410, 'The step ran out of walltime.')
 
     @task
-    def trial(x: int) -> int:
-        return x - 1
+    def run_scf(structure: StructureData, attempt: int) -> Result[float, StepErrors]:
+        if attempt < 2:
+            return Err(StepErrors.OUT_OF_WALLTIME)
+        return Ok(1.5)
 
     @graph
-    def stepped(x: int, keep_going: bool) -> int:
-        while keep_going:
-            step = trial(x=x)
-            x = step
-            keep_going = positive(x=x)
-        return x
-
-Counters and conditions stay inline: they need no ``@task``, and each ``@task`` runs as its own child process with its own provenance nodes.
-Keep orchestration inline and scientific work in tasks, so the returned value is still a stored task output:
-
-.. code:: python
-
-    @graph
-    def refine(x: int, rounds: int, attempt: int = 0) -> int:
-        value = add(x=x, y=0)
-        retry = attempt < rounds
+    def restart_on_walltime(structure: StructureData, max_attempts: int, attempt: int = 0) -> float:
+        value, error = run_scf(structure=structure, attempt=attempt)
+        retry = error is StepErrors.OUT_OF_WALLTIME and attempt < max_attempts
         while retry:
-            value = add(x=value, y=1)
             attempt = attempt + 1
-            retry = attempt < rounds
+            value, error = run_scf(structure=structure, attempt=attempt)
+            retry = error is StepErrors.OUT_OF_WALLTIME and attempt < max_attempts
+        checked = ensure(value=value)
         return value
 
-The counter seeds from its default graph input (``attempt: int = 0``); a bare ``0`` literal leaves no trace.
-Each iteration steps the counter with inline ``+`` and recomputes the ``<`` comparison, while ``add`` remains the only task.
+Failures and restarts
+^^^^^^^^^^^^^^^^^^^^^
 
-``while`` takes no ``else``.
-Each iteration runs as a numbered scope of the same graph process, with hierarchical call labels such as
-``loop_1_iteration_0__add`` that preserve the iteration identity.
-A loop that never runs leaves its names at their values from before the loop, as in Python.
-A loop still running after 1000 iterations fails the graph process.
+Declared failures keep the graph alive, as above.
+Anything else stops it: tasks that depend on a failed task never start; independent tasks still run, and the graph then exits with ``ERROR_TASK_FAILED``.
+The graph checkpoint records dispatched and finished tasks with their scope hierarchy, so a restarted graph reattaches pending children and reuses finished work instead of resubmitting it.
+Caching applies to tasks as to any other process.
+
+.. _topics:workflows:graphs:ordering:
 
 Explicit ordering
 -----------------
@@ -854,6 +972,8 @@ The reserved ``after`` argument makes a task wait for another task without using
 
 ``after=(first, second)`` waits for both.
 Task functions cannot have a parameter named ``after``.
+
+.. _topics:workflows:graphs:maps:
 
 Parallel maps over containers
 -----------------------------
@@ -914,7 +1034,8 @@ Provenance
 AiiDA records the graph run, the task runs, and their data:
 
 * The graph run is a single process node: nested graphs, loop iterations, branch arms, and map elements never create intermediate process nodes.
-* Each task run is a child process node, with a call link named after its placement in the graph. Tasks inside nested scopes carry hierarchical labels, such as ``multiply_add__multiply`` or ``loop_1_iteration_0__subtract``, that preserve their scope and iteration identity.
+* Each task run is a child process node, with a call link named after its placement in the graph.
+  Tasks inside nested scopes carry hierarchical labels, such as ``multiply_add__multiply`` or ``loop_1_iteration_0__subtract``, that preserve their scope and iteration identity.
 * Each annotated task input and output is a data node linked to the task node.
 
 AiiDA stores plain Python inputs and outputs as nodes automatically; passing an existing node reuses it.
@@ -928,21 +1049,229 @@ Values a task computes but does not return leave no trace in the provenance grap
 
 .. _topics:workflows:graphs:inspecting:
 
-Validating graphs and inspecting runs
---------------------------------------
+.. _topics:workflows:graphs:limitations:
 
-Call ``assert workflow.build() is None`` while developing a graph, or from a test, to catch unsupported syntax, bad wiring, and static contract mismatches without launching anything.
-``build()`` only validates the declaration; the representation it compiles is an implementation detail user code never touches.
-Then run a representative case and check its outputs before trying boundary cases, as shown in :ref:`topics:workflows:graphs:recipe`; runtime failures are not caught by ``build()``.
-Inspect execution results through the launch outputs and the stored graph node: ``outputs['result']`` reads what tasks produced, while ``root.inputs.initial`` reads the flat workflow argument the run was launched with.
+.. _topics:workflows:graphs:gallery:
 
-Failures and restarts
----------------------
+Example gallery
+---------------
 
-Tasks that depend on a failed task never start; independent tasks still run, and the graph then exits with ``ERROR_TASK_FAILED``.
-A declared ``Result`` failure is not a failure in this sense: the child exits with the declared status, the graph branches on it, and the graph itself can exit cleanly; see :ref:`topics:workflows:graphs:declared_failures`.
-The graph checkpoint records dispatched and finished tasks with their scope hierarchy, so a restarted graph reattaches pending children and reuses finished work instead of resubmitting it.
-Caching applies to tasks as to any other process.
+Complete, runnable graphs. Each links to the section that explains it.
+
+Branch on a flag:
+
+.. code:: python
+
+    @graph
+    def choose(x: int, flag: bool) -> int:
+        if flag:
+            chosen = add(x=x, y=1)
+        else:
+            chosen = add(x=x, y=2)
+        return chosen
+
+See :ref:`topics:workflows:graphs:control_flow`.
+
+Retry a declared failure with a budget:
+
+.. code:: python
+
+    @graph
+    def restartable(x: int, max_retries: int, attempt: int = 0) -> int:
+        value, error = run_step(x=x, attempt=attempt)
+        while error is not None and attempt < max_retries:
+            attempt = attempt + 1
+            value, error = run_step(x=x, attempt=attempt)
+        checked = ensure(value=value)
+        return value
+
+See :ref:`topics:workflows:graphs:retries`.
+
+Fan out over a container, then reduce inside one task (``for`` loops live in ``@task`` bodies, never in ``@graph`` bodies):
+
+.. code:: python
+
+    @task
+    def mean_cell_volume(structures: DataList) -> float:
+        if not structures:
+            raise ValueError('empty structure list')
+        total = 0.0
+        for structure in structures:
+            total += structure.get_cell_volume()
+        return total / len(structures)
+
+    @graph
+    def mean_expanded_volume(structures: DataList) -> float:
+        expanded = par_map(expand_cell, structures)
+        return mean_cell_volume(structures=expanded)
+
+See :ref:`topics:workflows:graphs:maps`.
+
+Nest graphs as subgraphs:
+
+.. code:: python
+
+    @graph
+    def outer(x: int, y: int, z: int) -> int:
+        inner = multiply_add(x=x, y=y, z=z)
+        return add(x=inner, y=x)
+
+The nested graph runs as a scope of the same graph process, not as a child workflow. See :ref:`topics:workflows:graphs:control_flow`.
+
+Handle a declared error without retrying:
+
+.. code:: python
+
+    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result
+
+    class DivisionErrors(ExitCodeEnum):
+        ZERO_DENOMINATOR = ExitCode(410, 'The denominator is zero.')
+
+    @task
+    def divide(numerator: float, denominator: float) -> Result[float, DivisionErrors]:
+        if denominator == 0:
+            return Err(DivisionErrors.ZERO_DENOMINATOR)
+        return Ok(numerator / denominator)
+
+    @task
+    def recover_zero(error: DivisionErrors) -> float:
+        return 0.0
+
+    @graph
+    def ratio_or_zero(numerator: float, denominator: float) -> float:
+        value, error = divide(numerator=numerator, denominator=denominator)
+        if error is None:
+            return value
+        return recover_zero(error=error)
+
+See :ref:`topics:workflows:graphs:declared_failures`.
+
+Run a ``CalcJob``; the executable arrives through ``runtime_config``, not the graph inputs:
+
+.. code:: python
+
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+    from aiida.orm import Code
+
+    add_calc = task(ArithmeticAddCalculation)
+
+    @graph
+    def add_single(x: int, y: int) -> int | float:
+        total = add_calc(x=x, y=y)
+        return total.sum
+
+Launch with ``runtime_config={'add_calc': {'code': code, 'metadata': {...}}}``.
+See :ref:`topics:workflows:graphs:runtime_config`.
+
+Run a ``WorkChain`` and combine it with a ``CalcJob`` in one graph:
+
+.. code:: python
+
+    from aiida.engine import WorkChain
+    from aiida.orm import Int
+
+    class AddWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('x', valid_type=Int)
+            spec.input('y', valid_type=Int)
+            spec.output('result', valid_type=Int)
+            spec.outline(cls.add_numbers)
+
+        def add_numbers(self):
+            self.out('result', Int(self.inputs.x.value + self.inputs.y.value))
+
+    add_chain = task(AddWorkChain)
+
+    @graph
+    def mixed(x: int, y: int, z: int) -> int | float:
+        stepped = add_chain(x=x, y=y)
+        total = add_calc(x=stepped.result, y=z)
+        return total.sum
+
+Legacy processes keep their outline and children; the graph only connects them. See :ref:`topics:workflows:graphs:task_kinds`.
+
+Submit a ``WorkChain`` on its own:
+
+.. code:: python
+
+    from aiida.engine import WorkChain
+    from aiida.orm import Int
+
+    class AddWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('x', valid_type=Int)
+            spec.input('y', valid_type=Int)
+            spec.output('result', valid_type=Int)
+            spec.outline(cls.add_numbers)
+
+        def add_numbers(self):
+            self.out('result', Int(self.inputs.x.value + self.inputs.y.value))
+
+    add_chain = task(AddWorkChain)
+
+    @graph
+    def add_twice(x: int, y: int) -> int:
+        first = add_chain(x=x, y=y)
+        return add_chain(x=first.result, y=y)
+
+The work chain keeps its outline and children.
+Each placement runs as a child workflow process under the graph.
+See :ref:`topics:workflows:graphs:control_flow`.
+
+Pick a value with a conditional expression instead of a branch:
+
+.. code:: python
+
+    @graph
+    def choose_scaled(value: int, flag: bool) -> int:
+        chosen = (value + 1) if flag else (value - 1)
+        return add(x=chosen, y=0)
+
+Only the taken side runs. See :ref:`topics:workflows:graphs:control_flow`.
+
+Order placements without passing values:
+
+.. code:: python
+
+    @task
+    def prepare(x: int) -> None:
+        ...
+
+    @graph
+    def ordered(x: int) -> int:
+        prepared = prepare(x=x)
+        return add(x=x, y=1, after=prepared)
+
+``after=(first, second)`` waits for both. See :ref:`topics:workflows:graphs:ordering`.
+
+Pass a structured input bundle instead of flat arguments:
+
+.. code:: python
+
+    from aiida.engine import PortModel
+
+    class Nested(PortModel):
+        count: int = 2
+
+    class Settings(PortModel):
+        nested: Nested
+        label: str = 'test'
+
+    @task
+    def read_count(settings: Settings) -> int:
+        return settings.nested.count
+
+    @graph
+    def total(settings: Settings) -> int:
+        first = read_count(settings=settings)
+        return add(x=first, y=settings.nested.count)
+
+Each field becomes its own stored node. See :ref:`topics:workflows:graphs:structured_inputs`.
+
 
 Known limitations
 -----------------
@@ -958,7 +1287,7 @@ These are gaps in the current implementation, expected to be closed with further
 * **Monitor wiring:** dynamic ``CalcJob`` monitor mappings can be supplied through ``runtime_config``; graph wiring still needs a fixed namespace declaration.
 * **Local function tasks:** a function task runs in the interpreter that runs the graph, on a daemon worker when submitted. Running it on a remote computer is not yet supported.
 * **Serial loops:** a ``while`` runs one iteration at a time. Use ``par_map`` to run independent items of an owned container in parallel.
-* **No per-iteration outputs:** a graph output holds one node, so a loop cannot return one result per iteration, such as the trajectory of each relaxation step. A task can copy the values into one list node, without links to the original nodes. Container data types, in development, will hold the original nodes in one output.
+* **No per-iteration outputs:** a graph output holds one node, so a loop cannot return one result per iteration, such as the trajectory of each relaxation step. A task can copy the values into one list node, without links to the original nodes. Owned ``DataList``/``DataDict`` containers hold the original nodes in one output instead; use ``par_map`` to build one from per-item tasks.
 * **No value validators:** port types are checked, and ``PortModel`` fields reject pydantic validators; check values inside a task.
 * **Source-only authoring:** graphs are written as Python source. A graphical editor is planned.
 
@@ -969,4 +1298,3 @@ These follow from how graphs work and are expected to stay:
 
 * **Static ports:** every task and graph input and output is declared statically; a dynamic namespace is usable only after a task declares its contents, see :ref:`topics:workflows:graphs:dynamic_namespaces`. This static shape is what allows AiiDA to check the whole graph before launch.
 * **Whole-port type variables:** ports hold node types, and a ``List`` or ``Dict`` node records no element types. A ``TypeVar`` therefore annotates a whole port, such as ``a: T``; one inside another annotation, such as ``list[T]``, is rejected.
-* **Untyped adapted spreads:** a pydantic model or named tuple input is converted to a ``PortModel`` at declaration, but type checkers read the original class, so mypy reports ``Argument after ** must be a mapping`` for ``**bundle``. The graph runs regardless; declare a ``PortModel`` for a type-checked spread.

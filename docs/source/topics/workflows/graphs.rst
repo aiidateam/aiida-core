@@ -144,7 +144,14 @@ The graph body supports:
 * One final ``return`` of a name, a field, or a call, or of a ``dict`` of those, possibly nested, with literal string keys; a graph with no outputs ends with an explicit ``return {}``.
 * ``.key`` or ``['key']`` to select an output of a multi-output call or a field of a namespace input; ``.result`` on a single-output call is optional.
 * ``a, b = task(...)`` to bind every output of a multi-output call, in declaration order, outside branches; loop bodies rebind unpacked names the same way.
-* Calls through an imported module, such as ``my_module.add(...)``.
+* Calls through an imported module, such as ``my_module.add(...)``. Calls resolve to the
+  declared name of an importable task or graph: the plain ``@task``/``@graph`` name, a
+  module-qualified target, or a ``task(CalcJob)``/``task(WorkChain)`` factory variable
+  under its assigned variable name. A module-global rebinding of a handle
+  (``alias = add``), a stored ``alias = decl.alias('name')`` handle, or a renamed import
+  is not a declaration; name the placement inline with ``decl.alias('name')(...)`` instead.
+  Module-global scalars, nodes, and other values are not wires either; pass them as graph
+  inputs.
 * ``dict`` literals with string keys as arguments: for namespace ports, such as ``nodes={'text': text}``, and for ``dict`` ports when every value is a literal.
 * ``**bundle`` to spread a namespace-typed name across the ports of a call, see :ref:`topics:workflows:graphs:spreading`.
 * ``after=first`` or ``after=(first, second)`` to wait for earlier calls without passing their values.
@@ -265,6 +272,23 @@ At runtime it runs as a child process of the graph.
 A work chain keeps its own outline and child processes, so it appears in the provenance as a workflow nested under the graph.
 Task and graph names become link labels in the provenance graph, so they must consist of alphanumerics and underscores and must not start or end with an underscore.
 
+Calls resolve by declaration name, not by what a module-global variable happens to hold.
+A plain ``add(...)`` resolves because ``add`` is the declared ``@task`` name; a
+``task(ArithmeticAddCalculation)`` factory variable such as ``add_calc`` resolves under its
+assigned variable name. Rebinding either under another module-global name does not declare
+a new task: ``alias = add`` and ``alias = nested_graph`` fail when the graph is built, as
+does a stored ``alias = add.alias('scf')`` handle or a renamed import. Name repeated
+placements inline at the call site with ``add.alias('scf')(...)`` and
+``add.alias('nscf')(...)`` with distinct local names instead. Enum members used in
+member tests, module-qualified targets such as ``tasks.add``, and the callable mapped with
+``par_map`` keep their existing resolution. Values that are not declarations -- module-global
+numbers, nodes, mappings, or attributes -- are not wires; pass them as graph inputs instead
+of reading a global, which the build reports as a missing graph input rather than a name to
+assign on an earlier line. When the defining source cannot be read (for example a handle
+installed by a test double after import), function and graph names still match on their
+public name, while a source-less factory handle stays permissive: identity alone cannot tell
+a factory alias from its declaration, so no ordering heuristic is attempted.
+
 Explicit placement names
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -279,6 +303,7 @@ A task or graph called through ``.alias('scf')`` names its placement explicitly 
 
 The constructor works for function tasks, ``CalcJob`` and ``WorkChain`` tasks, nested graphs, generic tasks, dotted and module call targets such as ``tasks.add.alias('scf')``, and the callable mapped with ``par_map``.
 The alias is local to the call: it never mutates the task handle, so a later plain ``add(...)`` still places under its own name.
+Construct the alias at the call site: a module-global ``alias = add`` or ``alias = nested_graph`` does not resolve, and neither does a stored ``alias = add.alias('scf')`` handle or a renamed import; each fails when the graph is built with a diagnostic pointing at the plain declared name with an inline ``.alias('name')`` instead.
 It accepts only a non-empty string literal following the link-label contract; a variable or an invalid name fails when the graph is built.
 The compiled template, the provenance call labels, and the ``task_metadata`` entries below all carry the alias.
 This is unrelated to the module-level ``Forward`` input alias under :ref:`spreading <topics:workflows:graphs:spreading>`, which reuses an input declaration across graphs.

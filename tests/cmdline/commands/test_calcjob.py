@@ -299,6 +299,38 @@ class TestVerdiCalculation:
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         assert result.exception is None
 
+    def test_calcjob_cleanworkdir_workchain(self, tmp_path):
+        """Test verdi calcjob cleanworkdir with the --workchains option."""
+        workchain = orm.WorkChainNode().store()
+
+        # A fresh calcjob called by the workchain, owning a cleanable remote folder.
+        dirpath = tmp_path / 'workchain-child'
+        dirpath.mkdir()
+        (dirpath / 'fileA.txt').write_text('test stringA')
+        calc = orm.CalcJobNode(computer=self.computer)
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc.set_option('output_filename', 'fileA.txt')
+        calc.set_remote_workdir(str(dirpath))
+        # Provenance links are frozen on store, so the CALL link is added before storing the calcjob.
+        calc.base.links.add_incoming(workchain, LinkType.CALL_CALC, link_label='child')
+        calc.store()
+        remote = RemoteData(remote_path=str(dirpath))
+        remote.computer = calc.computer
+        remote.base.links.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
+        remote.store()
+
+        result = self.cli_runner.invoke(command.calcjob_cleanworkdir, ['-w', str(workchain.pk), '-f'])
+        assert result.exception is None, result.output
+        assert remote.base.extras.get('cleaned') is True
+        # A sibling calcjob not called by the workchain must be left untouched.
+        assert self.result_job.outputs.remote_folder.base.extras.get('cleaned') is not True
+
+        # A workchain without calcjob descendants must abort rather than match every calcjob.
+        empty_workchain = orm.WorkChainNode().store()
+        result = self.cli_runner.invoke(command.calcjob_cleanworkdir, ['-w', str(empty_workchain.pk), '-f'])
+        assert result.exception is not None
+        assert 'none of the specified workchains have any calcjob descendants' in result.output
+
     def test_calcjob_inoutputcat_old(self, run_cli_command):
         """Test most recent process class / plug-in can be successfully used to find filenames"""
         # Import old archive of ArithmeticAddCalculation through the CLI, which migrates it to head

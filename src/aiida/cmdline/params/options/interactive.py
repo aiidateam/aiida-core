@@ -99,6 +99,19 @@ class InteractiveOption(ConditionalOption):
             echo.echo_report(f'enter {self.CHARACTER_IGNORE_DEFAULT} to ignore the default and set no value.')
             ctx.prompt_loop_info_printed = True  # type: ignore[attr-defined]
 
+        if self.is_bool_flag:
+            # ``click.Option.prompt_for_value`` prompts for boolean flags with ``click.confirm``, which only accepts
+            # yes/no answers and has no ``value_proc`` hook, so the special characters never reach ``process_value``.
+            default = self.get_default(ctx)
+            suffix = ' [Y/n]' if default else ' [y/N]'
+            return click.prompt(
+                f'{self.prompt}{suffix}',
+                default=default,
+                show_default=False,
+                type=click.BOOL,
+                value_proc=lambda x: self.process_value(ctx, x),
+            )
+
         return super().prompt_for_value(ctx)
 
     def process_value(self, ctx: click.Context, value: t.Any) -> t.Any:

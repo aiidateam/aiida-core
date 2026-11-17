@@ -260,6 +260,35 @@ def test_prompt_simple(run_cli_command):
     assert expected_1 in result.output
 
 
+@pytest.mark.parametrize(
+    ('option_kwargs', 'user_input', 'expected_prompt', 'expected'),
+    (
+        ({'is_flag': True}, '?\ny\n', 'Opt [y/N]: ', 'True'),
+        ({'is_flag': True}, '?\nn\n', 'Opt [y/N]: ', 'False'),
+        ({'is_flag': True, 'default': True}, '?\n\n', 'Opt [Y/n]: ', 'True'),
+    ),
+)
+def test_prompt_flag_help(run_cli_command, option_kwargs, user_input, expected_prompt, expected):
+    """Entering ``?`` at the prompt of a boolean flag prints the help message and repeats the prompt.
+
+    Regression test for https://github.com/aiidateam/aiida-core/issues/5443
+    """
+    cmd = create_command(help='help msg', **option_kwargs)
+    result = run_cli_command(cmd, [], user_input=user_input)
+    assert f'{expected_prompt}?\nhelp msg\n{expected_prompt}' in result.output
+    assert 'invalid input' not in result.output
+    assert result.output_lines[-1] == expected
+
+
+def test_prompt_flag_invalid_input(run_cli_command):
+    """An invalid answer at the prompt of a boolean flag prints an error and repeats the prompt."""
+    cmd = create_command(is_flag=True, help='help msg')
+    result = run_cli_command(cmd, [], user_input='maybe\ny\n')
+    assert "Error: 'maybe' is not a valid boolean" in result.output
+    assert 'help msg' not in result.output
+    assert result.output_lines[-1] == 'True'
+
+
 def test_prompt_simple_other_types(run_cli_command):
     """scenario: using InteractiveOption with type of int or float
     behaviour: giving no option prompts, accepts int or float

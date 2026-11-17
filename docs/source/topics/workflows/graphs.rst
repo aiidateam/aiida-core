@@ -673,6 +673,31 @@ Leaves support ``str``, ``int``, ``float``, ``bool``, and their optional forms.
 Tasks receive attribute-accessible mappings, not model instances, so model methods are unavailable.
 Port-level validation applies: aliases and decorated validators are rejected at declaration; check values inside the ``@task`` body.
 
+.. code:: python
+
+    import pydantic
+
+    class FlatSettings(pydantic.BaseModel):
+        count: int = 2
+        label: str = pydantic.Field(default='test', description='A label.')
+
+    @task
+    def read_flat_count(config: FlatSettings) -> int:
+        return config.count + len(config.label)
+
+    @graph
+    def total_flat(config: FlatSettings) -> int:
+        return read_flat_count(config=config)
+
+    run_get_node(total_flat, config={})
+
+.. note::
+
+    Only a subset of pydantic carries over to ports.
+    Leaves must be JSON-native (``str``, ``int``, ``float``, ``bool``, and their optional forms); anything else fails with a ``TypeError`` when the graph is built.
+    Decorated validators (``field_validator``, ``model_validator``), aliases, and frozen or excluded fields are likewise rejected at declaration with a ``TypeError``.
+    Move value checks into the ``@task`` body instead.
+
 .. _topics:workflows:graphs:spreading:
 
 Spreading and forwarding

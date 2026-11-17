@@ -14,6 +14,7 @@ import functools
 import inspect
 import typing as t
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from types import UnionType
 
 from typing_extensions import is_typeddict
@@ -56,6 +57,7 @@ if t.TYPE_CHECKING:
 __all__ = (
     'CalcJobTaskHandle',
     'FunctionTaskHandle',
+    'PlacementHandle',
     'PortDeclaration',
     'TaskProcess',
     'WorkChainTaskHandle',
@@ -65,6 +67,48 @@ __all__ = (
 R = t.TypeVar('R')
 _V = t.TypeVar('_V')
 _E = t.TypeVar('_E')
+
+
+def _validate_alias_name(name: object) -> str:
+    """Return an explicit placement name, checked against the call link-label contract."""
+    if not isinstance(name, str):
+        msg = f'placement alias must be a quoted name, not `{name!r}`; pass one literal string instead.'
+        raise GraphTypeCheckError(msg)
+    try:
+        validate_link_label(name)
+    except ValueError as exception:
+        msg = (
+            f'placement alias `{name}` is invalid as a link label ({exception}); '
+            + 'use alphanumerics and underscores without leading or trailing underscores instead'
+        )
+        raise GraphTypeCheckError(msg) from exception
+    return name
+
+
+@dataclass(frozen=True, slots=True)
+class PlacementHandle(t.Generic[P, R]):
+    """A declaration paired with an explicit, immutable graph placement name."""
+
+    target: Callable[P, R]
+    placement_name: str
+
+    def __post_init__(self) -> None:
+        _validate_alias_name(self.placement_name)
+
+    @t.overload
+    def __call__(
+        self: PlacementHandle[P, Result[_V, _E]], *args: P.args, **kwargs: P.kwargs
+    ) -> tuple[_V, _E | None]: ...
+
+    @t.overload
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
+
+    @t.overload
+    def __call__(self: PlacementHandle[P, R], *args: t.Any, after: t.Any = ..., **kwargs: t.Any) -> R: ...
+
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        """Delegate direct calls without changing the declaration's execution contract."""
+        return self.target(*args, **kwargs)
 
 
 def _typevar_solution(
@@ -435,6 +479,10 @@ class FunctionTaskHandle(t.Generic[P, R]):
         """Rebuild the task from a checkpoint; the persistence layer calls this, not users."""
         return self._function.recreate_from(*args, **kwargs)
 
+    def alias(self, name: str) -> PlacementHandle[P, R]:
+        """Return an immutable handle placing this task under an explicit placement name."""
+        return PlacementHandle(self, name)
+
 
 class CalcJobTaskHandle:
     """A `CalcJob` subclass carrying its graph declaration, launched with per-placement metadata."""
@@ -492,6 +540,10 @@ class CalcJobTaskHandle:
         """Return the process spec of the task process class."""
         return self._process_class.spec()
 
+    def alias(self, name: str) -> PlacementHandle[t.Any, t.Any]:
+        """Return an immutable handle placing this task under an explicit placement name."""
+        return PlacementHandle(self, name)
+
 
 class WorkChainTaskHandle:
     """A `WorkChain` subclass carrying its graph declaration, wired on graph inputs only."""
@@ -548,6 +600,10 @@ class WorkChainTaskHandle:
     def spec(self) -> ProcessSpec:
         """Return the process spec of the task process class."""
         return self._process_class.spec()
+
+    def alias(self, name: str) -> PlacementHandle[t.Any, t.Any]:
+        """Return an immutable handle placing this task under an explicit placement name."""
+        return PlacementHandle(self, name)
 
 
 def _needs_metadata(task: t.Any) -> t.TypeGuard[ProcessTask]:

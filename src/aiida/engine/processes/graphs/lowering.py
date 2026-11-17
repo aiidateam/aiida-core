@@ -71,6 +71,7 @@ from aiida.engine.processes.graphs.shapes import (
 from aiida.engine.processes.graphs.tasks import (
     CalcJobTaskHandle,
     FunctionTaskHandle,
+    PlacementHandle,
     PortDeclaration,
     WorkChainTaskHandle,
     _build_task,
@@ -159,6 +160,10 @@ class GraphHandle(t.Generic[P, R]):
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         msg = f'`{self.identifier}` declares a graph; launch it with `run` or `submit`.'
         raise GraphError(msg)
+
+    def alias(self, name: str) -> PlacementHandle[P, R]:
+        """Return an immutable handle placing this graph under an explicit placement name."""
+        return PlacementHandle(self, name)
 
     @property
     def identifier(self) -> str:
@@ -1595,6 +1600,17 @@ def _callee_ids(state: _LoweringState, statements: list[ast.stmt], enclosing: Ma
         if not isinstance(node, ast.Call):
             continue
         callees.add(id(node.func))
+        if isinstance(node.func, ast.Attribute) and node.func.attr == 'alias':
+            for inner in ast.walk(node.func.value):
+                if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
+                    callees.add(id(inner))
+        if isinstance(node.func, ast.Call) and isinstance(node.func.func, ast.Attribute):
+            alias_call = node.func
+            assert isinstance(alias_call.func, ast.Attribute)
+            if alias_call.func.attr == 'alias':
+                for inner in ast.walk(alias_call.func.value):
+                    if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
+                        callees.add(id(inner))
         # Dotted calls read through a module, not a wire; a base shadowing an
         # enclosing wire stays a read so the call rejects the ambiguity.
         func: ast.expr = node.func
@@ -1604,7 +1620,11 @@ def _callee_ids(state: _LoweringState, statements: list[ast.stmt], enclosing: Ma
             callees.add(id(func))
         if _is_par_map_call(state, node):
             callable_expr = _par_map_callable_expr(node)
-            if isinstance(callable_expr, ast.Name):
+            if isinstance(callable_expr, ast.Call):
+                for inner in ast.walk(callable_expr):
+                    if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
+                        callees.add(id(inner))
+            elif isinstance(callable_expr, ast.Name):
                 callees.add(id(callable_expr))
             elif isinstance(callable_expr, ast.Attribute):
                 for inner in ast.walk(callable_expr):
@@ -1737,6 +1757,151 @@ def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) ->
     )
 
 
+def _alias_call_parts(state: _LoweringState, alias_call: ast.Call) -> tuple[ast.expr, str]:
+    """Split one `.alias('name')` call into its declaration reference and explicit placement name."""
+    candidate: ast.expr | None = alias_call.args[0] if len(alias_call.args) == 1 else None
+    if (
+        candidate is None
+        or alias_call.keywords
+        or not isinstance(candidate, ast.Constant)
+        or not isinstance(candidate.value, str)
+    ):
+        msg = (
+            'placement aliases name the stored placement, so they must be written out; '
+            + "call `.alias('name')` with one quoted name instead"
+        )
+        _reject(state, node=alias_call, reason=msg)
+    alias: str = candidate.value
+    try:
+        validate_link_label(alias)
+    except ValueError as exception:
+        msg = (
+            f'placement alias `{alias}` is invalid as a link label ({exception}); '
+            + 'use alphanumerics and underscores without leading or trailing underscores instead'
+        )
+        _reject(state, node=alias_call, reason=msg)
+    assert isinstance(alias_call.func, ast.Attribute)
+    base = alias_call.func.value
+    if not isinstance(base, (ast.Name, ast.Attribute)):
+        msg = (
+            'calls resolve by module-level name to importable declarations; '
+            + "call tasks and graphs by their plain names with `.alias('name')` on the declaration instead"
+        )
+        _reject(state, node=alias_call, reason=msg)
+    return base, alias
+
+
+def _split_alias_target(state: _LoweringState, expression: ast.Call) -> tuple[ast.expr, str | None]:
+    """Split `decl.alias('name')(...)` into its declaration reference and explicit placement name."""
+    func = expression.func
+    if not (isinstance(func, ast.Call) and isinstance(func.func, ast.Attribute) and func.func.attr == 'alias'):
+        return expression.func, None
+    assert isinstance(func, ast.Call)
+    base, alias = _alias_call_parts(state, alias_call=func)
+    return base, alias
+
+
+def _split_base(base: ast.expr) -> tuple[str, list[str]] | None:
+    """Split a declaration reference into its base name and attributes, innermost first."""
+    node = base
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if not isinstance(node, ast.Name):
+        return None
+    return node.id, parts
+
+
+def _base_short_name(state: _LoweringState, base: ast.expr, node: ast.AST) -> str:
+    """Return the trailing name of a declaration reference, rejecting shadowed or indirect reads."""
+    if isinstance(base, ast.Name):
+        if base.id in state.names:
+            msg = (
+                'a name cannot be both a wire and a declaration; '
+                + f'{base.id!r} is also used as a result name; rename one of them instead'
+            )
+            _reject(state, node=node, reason=msg)
+        return base.id
+    if isinstance(base, ast.Attribute):
+        split = _split_base(base)
+        if split is None:
+            msg = (
+                'calls resolve by module-level name to importable declarations; '
+                + 'call tasks and graphs by their plain names instead'
+            )
+            _reject(state, node=node, reason=msg)
+        base_name, parts = split
+        if base_name in state.names:
+            msg = (
+                'a name cannot be both a wire and a declaration; '
+                + f'{base_name!r} is also used as a result name; rename one of them instead'
+            )
+            _reject(state, node=node, reason=msg)
+        return parts[0]
+    msg = (
+        'calls resolve by module-level name to importable declarations; '
+        + 'call tasks and graphs by their plain names instead'
+    )
+    _reject(state, node=node, reason=msg)
+
+
+def _resolve_base(state: _LoweringState, base: ast.expr, node: ast.AST) -> tuple[t.Any, str]:
+    """Resolve a declaration reference through modules, returning the target and its path."""
+    if isinstance(base, ast.Name):
+        if base.id in state.names:
+            msg = (
+                'a name cannot be both a wire and a declaration; '
+                + f'{base.id!r} is also used as a result name; rename one of them instead'
+            )
+            _reject(state, node=node, reason=msg)
+        return state.definition.function.__globals__.get(base.id), base.id
+    split = _split_base(base)
+    assert split is not None, 'declaration references are validated before resolution'
+    base_name, parts = split
+    if base_name in state.names:
+        msg = (
+            'a name cannot be both a wire and a declaration; '
+            + f'{base_name!r} is also used as a result name; rename one of them instead'
+        )
+        _reject(state, node=node, reason=msg)
+    namespace = state.definition.function.__globals__
+    dotted = '.'.join([base_name, *reversed(parts)])
+    target = namespace.get(base_name)
+    if target is None:
+        msg = 'calls must name an importable declaration; ' + f'unknown name {dotted!r}; check the spelling instead'
+        _reject(state, node=node, reason=msg)
+    if not inspect.ismodule(target):
+        msg = (
+            'calls resolve through modules to registered declarations; '
+            + f'{base_name!r} is not a module; import the module instead'
+        )
+        _reject(state, node=node, reason=msg)
+    for attr in reversed(parts):
+        target = getattr(target, attr, None)
+        if target is None:
+            msg = 'calls must name an importable declaration; ' + f'unknown name {dotted!r}; check the spelling instead'
+            _reject(state, node=node, reason=msg)
+    return target, dotted
+
+
+def _unwrap_placement(target: t.Any) -> tuple[t.Any, str | None]:
+    """Unwrap a stored `.alias('name')` handle to its declaration and explicit placement name."""
+    if isinstance(target, PlacementHandle):
+        return target.target, target.placement_name
+    return target, None
+
+
+def _claim_explicit_name(state: _LoweringState, alias: str, node: ast.AST) -> str:
+    """Claim an explicit placement name, rejecting reuse within one graph body."""
+    taken: set[str] = {placed.name for placed in state.tasks}
+    if alias in taken:
+        msg = f'placement name `{alias}` is already used in this graph; ' + 'use a new name for each placement instead'
+        _reject(state, node=node, reason=msg)
+    state.used[alias] = max(state.used.get(alias, 0), 1)
+    return alias
+
+
 def _call_target_name(state: _LoweringState, expression: ast.expr) -> str:
     """Return the placement name of a direct call, rejecting shadowed or indirect calls."""
     if not isinstance(expression, ast.Call):
@@ -1745,16 +1910,19 @@ def _call_target_name(state: _LoweringState, expression: ast.expr) -> str:
             + 'call tasks and graphs by their plain names instead'
         )
         _reject(state, node=expression, reason=msg)
-    if isinstance(expression.func, ast.Name):
-        if expression.func.id in state.names:
+    base, _ = _split_alias_target(state, expression)
+    if isinstance(base, ast.Name):
+        if base.id in state.names:
             msg = (
                 'a name cannot be both a wire and a declaration; '
-                + f'{expression.func.id!r} is also used as a result name; rename one of them instead'
+                + f'{base.id!r} is also used as a result name; rename one of them instead'
             )
             _reject(state, node=expression, reason=msg)
-        return expression.func.id
-    if isinstance(expression.func, ast.Attribute):
-        return _dotted_name(state, expression=expression)
+        return base.id
+    if isinstance(base, ast.Attribute):
+        as_call = ast.Call(func=base, args=[], keywords=[])
+        ast.copy_location(as_call, expression)
+        return _dotted_name(state, expression=as_call)
     msg = (
         'calls resolve by module-level name to importable declarations; '
         + 'call tasks and graphs by their plain names instead'
@@ -1797,16 +1965,25 @@ def _dotted_name(state: _LoweringState, expression: ast.Call) -> str:
 
 def _registered_target(
     state: _LoweringState, expression: ast.expr, name: str
-) -> FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle:
-    """Return the task handle or graph behind a call target."""
+) -> tuple[FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle, str | None]:
+    """Return the task handle or graph behind a call target with its explicit placement name."""
+    assert isinstance(expression, ast.Call)
     namespace = state.definition.function.__globals__
-    label = name
-    if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Attribute):
-        target, label = _resolve_dotted(state, expression=expression)
+    base, explicit = _split_alias_target(state, expression)
+    if isinstance(base, ast.Attribute):
+        as_call = ast.Call(func=base, args=[], keywords=[])
+        ast.copy_location(as_call, expression)
+        target, label = _resolve_dotted(state, expression=as_call)
     else:
-        target = namespace.get(name)
+        assert isinstance(base, ast.Name)
+        target, label = namespace.get(base.id), base.id
+    if isinstance(target, PlacementHandle):
+        stored: str | None = target.placement_name
+        target = target.target
+        if explicit is None:
+            explicit = stored
     if isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle)):
-        return target
+        return target, explicit
     if target is None and label in vars(builtins):
         msg = (
             'built-ins run as plain Python with no record kept; '
@@ -1973,9 +2150,18 @@ def _resolves_to_par_map(state: _LoweringState, expression: ast.Call, name: str)
 
 def _lower_par_map(state: _LoweringState, expression: ast.Call) -> _Reference:
     """Place a fan-out map over an owned container."""
+    if isinstance(expression.func, ast.Call):
+        msg = (
+            'maps take their name from the mapped callable, so the map call itself takes no alias; '
+            + "pass the alias on the callable instead, e.g. `par_map(task.alias('name'), values)`"
+        )
+        _reject(state, node=expression.func, reason=msg)
     func_expr, collection_expr, after_keyword = _bind_par_map_arguments(state, expression=expression)
-    target = _resolve_par_map_callable(state, expression=func_expr)
-    if isinstance(func_expr, ast.Attribute):
+    target, explicit = _resolve_par_map_callable(state, expression=func_expr)
+    if isinstance(func_expr, ast.Call):
+        base, _ = _alias_call_parts(state, alias_call=func_expr)
+        call_name = _base_short_name(state, base, node=func_expr)
+    elif isinstance(func_expr, ast.Attribute):
         call_name = func_expr.attr
     else:
         assert isinstance(func_expr, ast.Name)
@@ -1996,7 +2182,10 @@ def _lower_par_map(state: _LoweringState, expression: ast.Call) -> _Reference:
     _check_par_map_callable(state, node=func_expr, label=call_name, spec=mapped_spec, body=mapped_body)
     collection = _lower_value(state, collection_expr)
     container = _check_par_map_collection(state, node=collection_expr, value=collection)
-    instance = _claim_name(state, f'map_{call_name}')
+    if explicit is not None:
+        instance = _claim_explicit_name(state, explicit, node=func_expr)
+    else:
+        instance = _claim_name(state, f'map_{call_name}')
     given: dict[str, _CapturedValue] = {}
     _wire(state, instance=instance, port='collection', value=collection, given=given)
     state.tasks.append(MapControl(name=instance, inputs=given, spec=mapped_spec, body=mapped_body, container=container))
@@ -2041,9 +2230,17 @@ def _bind_par_map_arguments(
 
 def _resolve_par_map_callable(
     state: _LoweringState, expression: ast.expr
-) -> FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle:
-    """Resolve the mapped callable to its task handle or graph, rejecting anything else."""
-    if isinstance(expression, ast.Name):
+) -> tuple[FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle, str | None]:
+    """Resolve the mapped callable to its task handle or graph, with its explicit placement name."""
+    label: str
+    explicit: str | None = None
+    if isinstance(expression, ast.Call):
+        if not (isinstance(expression.func, ast.Attribute) and expression.func.attr == 'alias'):
+            msg = 'maps apply a registered declaration per element; pass a `@task` or `@graph` by name instead.'
+            _reject(state, node=expression, reason=msg)
+        base, explicit = _alias_call_parts(state, alias_call=expression)
+        target, label = _resolve_base(state, base, node=expression)
+    elif isinstance(expression, ast.Name):
         name = expression.id
         if name in state.names:
             msg = (
@@ -2052,7 +2249,7 @@ def _resolve_par_map_callable(
             )
             _reject(state, node=expression, reason=msg)
         target = state.definition.function.__globals__.get(name)
-        label: str = name
+        label = name
     elif isinstance(expression, ast.Attribute):
         as_call = ast.Call(func=expression, args=[], keywords=[])
         ast.copy_location(as_call, expression)
@@ -2060,8 +2257,12 @@ def _resolve_par_map_callable(
     else:
         msg = 'maps apply a registered declaration per element; pass a `@task` or `@graph` by name instead.'
         _reject(state, node=expression, reason=msg)
+    if isinstance(target, PlacementHandle):
+        if explicit is None:
+            explicit = target.placement_name
+        target = target.target
     if isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle)):
-        return target
+        return target, explicit
     if target is None and label not in vars(builtins):
         msg = 'calls must name an importable declaration; ' + f'unknown name {label!r}; check the spelling instead'
         _reject(state, node=expression, reason=msg)
@@ -2287,10 +2488,12 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     assert isinstance(expression, ast.Call)
     if _resolves_to_par_map(state, expression, name):
         return _lower_par_map(state, expression)
-    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle = (
-        _registered_target(state, expression=expression, name=name)
-    )
-    instance: str = _claim_name(state, name=name)
+    resolved, explicit = _registered_target(state, expression=expression, name=name)
+    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle = resolved
+    if explicit is not None:
+        instance = _claim_explicit_name(state, explicit, node=expression)
+    else:
+        instance = _claim_name(state, name=name)
     if isinstance(target, GraphHandle):
         body: GraphIR = _lower_graph(target, stack=state.stack)
         task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)

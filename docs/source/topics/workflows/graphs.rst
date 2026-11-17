@@ -265,6 +265,24 @@ At runtime it runs as a child process of the graph.
 A work chain keeps its own outline and child processes, so it appears in the provenance as a workflow nested under the graph.
 Task and graph names become link labels in the provenance graph, so they must consist of alphanumerics and underscores and must not start or end with an underscore.
 
+Explicit placement names
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+A task or graph called through ``.alias('scf')`` names its placement explicitly instead of reusing the task name:
+
+.. code:: python
+
+    @graph
+    def two_steps(x: int, y: int) -> int:
+        first = add.alias('scf')(x=x, y=y)
+        return add.alias('nscf')(x=first, y=y)
+
+The constructor works for function tasks, ``CalcJob`` and ``WorkChain`` tasks, nested graphs, generic tasks, dotted and module call targets such as ``tasks.add.alias('scf')``, and the callable mapped with ``par_map``.
+The alias is local to the call: it never mutates the task handle, so a later plain ``add(...)`` still places under its own name.
+It accepts only a non-empty string literal following the link-label contract; a variable or an invalid name fails when the graph is built.
+The compiled template, the provenance call labels, and the ``task_metadata`` entries below all carry the alias.
+This is unrelated to the module-level ``Forward`` input alias under :ref:`spreading <topics:workflows:graphs:spreading>`, which reuses an input declaration across graphs.
+
 Calculation job options
 ^^^^^^^^^^^^^^^^^^^^^^^
 

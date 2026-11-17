@@ -124,6 +124,10 @@ Loading a node whose storage has not been migrated now raises `IncompatibleStora
 
 ### New features
 
+#### Explicit placement names in source graphs
+
+A task or graph call accepts an explicit placement name through `task.alias('scf')(...)`, for function tasks, `CalcJob` and `WorkChain` tasks, nested graphs, generic tasks, dotted and module call targets, and `par_map` callables. The alias names the compiled placement, the provenance call label, and the `task_metadata` entry, without mutating the task handle. It takes a non-empty string literal following the link-label contract; anything else fails at build time. Unaliased repeats keep their existing automatic numeric names.
+
 #### Parallel maps in source graphs
 
 `aiida.engine.par_map(task_or_graph, values)` maps a unary task or graph over an `orm.DataList` or the values of an `orm.DataDict` inside a `@graph` body.

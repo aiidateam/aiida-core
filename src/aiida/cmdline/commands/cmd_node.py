@@ -52,9 +52,11 @@ def verdi_node():
 @options.ORDER_DIRECTION()
 @options.LIMIT()
 @options.RAW()
-def node_list(entry_point, subclassing, project, past_days, order_by, order_dir, limit, raw):
+@options.DESCENDANT()
+@options.ANCESTOR()
+def node_list(entry_point, subclassing, project, past_days, order_by, order_dir, limit, raw, descendant, ancestor):
     """Query all nodes with optional filtering and ordering."""
-    from aiida.orm import Node
+    from aiida.orm import Node, QueryBuilder
     from aiida.plugins.factories import DataFactory
 
     node_class = DataFactory(entry_point) if entry_point else Node
@@ -64,13 +66,19 @@ def node_list(entry_point, subclassing, project, past_days, order_by, order_dir,
     else:
         filters = {}
 
-    query = node_class.collection.query(
-        filters,
-        project=list(project),
-        limit=limit,
-        subclassing=subclassing,
-        order_by=[{order_by: order_dir}],
-    )
+    query = QueryBuilder()
+    query.append(node_class, filters=filters, project=list(project), tag='node', subclassing=subclassing)
+    query.order_by({node_class: [{order_by: order_dir}]})
+
+    if limit:
+        query.limit(limit)
+
+    if descendant:
+        query.append(Node, filters={'id': descendant.pk}, with_ancestors='node')
+
+    if ancestor:
+        query.append(Node, filters={'id': ancestor.pk}, with_descendants='node')
+
     echo_tabulate(query.all(), headers=project if not raw else [], tablefmt='plain' if raw else None)
 
 

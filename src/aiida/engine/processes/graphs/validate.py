@@ -54,7 +54,7 @@ def validate_graph(graph: GraphIR) -> None:
         except GraphTypeCheckError as exception:
             msg = f'task `{task.name}` declares ports the spec cannot represent.'
             raise GraphTypeCheckError(msg) from exception
-        _validate_region(task)
+        _validate_region(graph, task)
         if isinstance(task, InlineOperation):
             _validate_operation(task)
     _validate_outputs(graph, boundary)
@@ -127,7 +127,7 @@ def _validate_edge(graph: GraphIR, edge: Dependency) -> None:
         _check_types(origin, port, f'dependency `{edge.source}` to `{edge.target}`')
 
 
-def _validate_region(task: GraphTask) -> None:
+def _validate_region(graph: GraphIR, task: GraphTask) -> None:
     """Check that control-flow bodies agree on their condition and outputs."""
     if isinstance(task, BranchControl):
         if task.condition_port in task.body.inputs or task.condition_port in task.otherwise.inputs:
@@ -149,7 +149,7 @@ def _validate_region(task: GraphTask) -> None:
             )
             raise GraphTypeCheckError(msg)
     if isinstance(task, MapControl):
-        _validate_map(task)
+        _validate_map(graph, task)
     if isinstance(task, LoopControl) and type(task.max_iterations) is not int:
         msg = f'loop `{task.name}` needs an integer `max_iterations`.'
         raise GraphTypeCheckError(msg)
@@ -165,27 +165,74 @@ def _validate_region(task: GraphTask) -> None:
         raise GraphTypeCheckError(msg)
 
 
-def _validate_map(task: MapControl) -> None:
-    """Check that a map carries one unary callable with a single leaf output."""
+def _validate_map(graph: GraphIR, task: MapControl) -> None:
+    """Check that a map carries one callable with a single leaf output per element.
 
+    A plain map names a unary callable. A `partial` map binds every input but one,
+    naming the remaining input in `element`: the bound inputs travel with every item
+    through the normal placement wires while each element wires into `element`.
+    """
     if (task.spec is None) == (task.body is None):
         msg = f'map `{task.name}` carries exactly one mapped callable: a task `spec` or a nested graph `body`.'
         raise GraphTypeCheckError(msg)
     if task.body is not None:
         validate_graph(task.body)
-    fields = task.mapped_inputs.fields
-    if len(fields) != 1:
-        msg = (
-            f'map `{task.name}` wires one element into one input, so the callable takes exactly one input; '
-            'map a unary task or graph instead.'
-        )
-        raise GraphTypeCheckError(msg)
+    fields = [name for name, _ in task.mapped_inputs.fields]
+    if task.element is None:
+        if len(fields) != 1:
+            msg = (
+                f'map `{task.name}` wires one element into one input, so the callable takes exactly one input; '
+                'map a unary task or graph instead.'
+            )
+            raise GraphTypeCheckError(msg)
+    else:
+        if task.element not in fields:
+            msg = (
+                f'map `{task.name}` binds partial inputs around `{task.element}`, '
+                'which is not an input of the mapped callable; check the spelling instead.'
+            )
+            raise GraphTypeCheckError(msg)
+        if 'collection' in fields and task.element != 'collection':
+            msg = (
+                f'map `{task.name}` wires its collection under `collection`, '
+                'so a mapped input named `collection` cannot be bound; '
+                'map the `collection` input as the element instead.'
+            )
+            raise GraphTypeCheckError(msg)
+        for port in _map_wired_ports(graph, task):
+            if port == 'collection':
+                continue
+            if port == task.element:
+                msg = (
+                    f'map `{task.name}` wires each element into `{task.element}`, '
+                    'so that input cannot also be wired; leave it unbound instead.'
+                )
+                raise GraphTypeCheckError(msg)
+            if port not in fields:
+                msg = (
+                    f'map `{task.name}` wires `{port}`, '
+                    'which is not an input of the mapped callable; check the spelling instead.'
+                )
+                raise GraphTypeCheckError(msg)
     if not task.mapped_result_port:
         msg = (
             f'map `{task.name}` collects one output per element, so the callable returns exactly one value; '
             'map a unary task or graph with one output instead.'
         )
         raise GraphTypeCheckError(msg)
+
+
+def _map_wired_ports(graph: GraphIR, task: MapControl) -> set[str]:
+    """Return the top-level input names wired into a map placement through any route."""
+    wired = set(task.inputs)
+    for edge in graph.dependencies:
+        if edge.target == task.name and edge.target_port is not None:
+            wired.add(edge.target_port.split('.')[0])
+    for targets in graph.inputs.values():
+        for route in targets:
+            if route.task == task.name:
+                wired.add(route.port.split('.')[0])
+    return wired
 
 
 def _validate_operation(task: InlineOperation) -> None:

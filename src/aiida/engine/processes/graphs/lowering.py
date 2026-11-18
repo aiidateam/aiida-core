@@ -369,6 +369,24 @@ _ReferenceTree: t.TypeAlias = '_Reference | dict[str, _ReferenceTree]'
 
 
 @dataclass
+class _PartialBinding:
+    """A `partial` bound in one graph body, fixing some inputs of a task or graph.
+
+    The binding carries no placement: it records the ultimate target and the fixed
+    input values captured at declaration time. Each fixed value is a lowered
+    `_CapturedValue` holding declaration-time references, so later rebinding of the
+    same name cannot change it. Each use site merges these with its own arguments
+    into one ordinary placement; a `par_map` use fans out with the remaining input
+    as its element. `fixed` keys are top-level input names; namespace values nest.
+    """
+
+    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle
+    call_name: str
+    explicit: str | None
+    fixed: dict[str, _CapturedValue]
+
+
+@dataclass
 class _LoweringState:
     """The placements, wirings, and references collected while lowering one graph body."""
 
@@ -382,6 +400,8 @@ class _LoweringState:
     input_shapes: dict[str, Shape] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
     used: Counter[str] = field(default_factory=Counter)
+    partials: dict[str, _PartialBinding] = field(default_factory=dict)
+    synthetic_fixed: dict[str, _CapturedValue] = field(default_factory=dict)
 
     @property
     def key(self) -> str:
@@ -674,6 +694,12 @@ def _declare_graph_inputs(state: _LoweringState, function: ast.FunctionDef) -> N
     defaults = _parameter_defaults(state, function=function)
     boundary = namespace_shape_for(state.definition.hints, tuple(arg.arg for arg in parameters), defaults=defaults)
     for arg in parameters:
+        if arg.arg == 'partial':
+            msg = (
+                '`partial` is reserved for binding fixed inputs without an import, '
+                + 'so no graph input may take that name; rename the input instead'
+            )
+            _reject(state, node=arg, reason=msg)
         state.inputs[arg.arg] = []
         shape = boundary.select(arg.arg)
         state.input_shapes[arg.arg] = shape
@@ -904,6 +930,18 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
         )
         _reject(state, node=statement, reason=msg)
     for name in names:
+        if name == 'partial':
+            msg = (
+                '`partial` is reserved for binding fixed inputs without an import, '
+                + 'so it cannot name a placement or binding; pick another name instead'
+            )
+            _reject(state, node=statement, reason=msg)
+        if name in state.partials and not rebind:
+            msg = (
+                'each placement is stored once under its name, so names cannot be reused; '
+                + f'{name!r} already binds a `partial`; assign each result a new name instead of reusing one'
+            )
+            _reject(state, node=statement, reason=msg)
         if name in state.names and not rebind:
             if name in state.input_shapes:
                 msg = (
@@ -917,6 +955,15 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
             )
             _reject(state, node=statement, reason=msg)
     value = statement.value
+    if isinstance(value, ast.Call) and _is_partial_call(state, value):
+        if len(names) != 1:
+            msg = (
+                'a `partial` binds fixed inputs without running anything, so it takes one name; '
+                + 'bind it to one name instead'
+            )
+            _reject(state, node=statement, reason=msg)
+        _bind_partial(state, name=names[0], node=value)
+        return names[0]
     if isinstance(value, ast.Call):
         ref: _Reference = _lower_call(state, expression=value)
     elif _is_inline_operation(value):
@@ -953,7 +1000,11 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool 
     target: ast.expr = statement.targets[0]
     assert isinstance(target, ast.Tuple)
     names: list[str] = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
-    if not names or len(names) != len(target.elts) or (not rebind and any(name in state.names for name in names)):
+    if (
+        not names
+        or len(names) != len(target.elts)
+        or (not rebind and any(name in state.names or name in state.partials for name in names))
+    ):
         msg = (
             'unpacking maps positions to declared output ports, so every element needs a fresh name; '
             + 'give each unpacked output a new name instead'
@@ -1489,8 +1540,14 @@ def _wire_branch_inputs(
     """Wire the condition and the region inputs into a branch placement."""
     given: dict[str, _CapturedValue] = {}
     _wire(state, instance=instance, port=_CONDITION_PORT, value=_lower_value(state, test), given=given)
+    for side in (first, second):
+        for name in side.child.inputs:
+            if name in side.child.synthetic_fixed:
+                _wire_fixed_value(state, instance, name, side.child.synthetic_fixed[name], given)
     read = {path.split('.')[0] for side in (first, second) for path in side.child.inputs}
     for name in sorted(read):
+        if any(name in side.child.synthetic_fixed for side in (first, second)):
+            continue
         _wire(state, instance=instance, port=name, value=state.names[name], given=given)
     return given
 
@@ -1690,16 +1747,28 @@ def _callee_ids(state: _LoweringState, statements: list[ast.stmt], enclosing: Ma
             continue
         callees.add(id(node.func))
         if isinstance(node.func, ast.Attribute) and node.func.attr == 'alias':
-            for inner in ast.walk(node.func.value):
-                if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
-                    callees.add(id(inner))
+            aliased_self = _partial_alias_binding(state, node)
+            if aliased_self is not None:
+                _add_partial_target_callees(state, aliased_self, enclosing, callees)
+            else:
+                for inner in ast.walk(node.func.value):
+                    if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
+                        callees.add(id(inner))
         if isinstance(node.func, ast.Call) and isinstance(node.func.func, ast.Attribute):
             alias_call = node.func
             assert isinstance(alias_call.func, ast.Attribute)
             if alias_call.func.attr == 'alias':
-                for inner in ast.walk(alias_call.func.value):
-                    if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
-                        callees.add(id(inner))
+                aliased_partial = _partial_alias_binding(state, alias_call)
+                if aliased_partial is not None:
+                    _add_partial_target_callees(state, aliased_partial, enclosing, callees)
+                else:
+                    for inner in ast.walk(alias_call.func.value):
+                        if (
+                            isinstance(inner, ast.Name)
+                            and isinstance(inner.ctx, ast.Load)
+                            and inner.id not in enclosing
+                        ):
+                            callees.add(id(inner))
         # Dotted calls read through a module, not a wire; a base shadowing an
         # enclosing wire stays a read so the call rejects the ambiguity.
         func: ast.expr = node.func
@@ -1709,7 +1778,13 @@ def _callee_ids(state: _LoweringState, statements: list[ast.stmt], enclosing: Ma
             callees.add(id(func))
         if _is_par_map_call(state, node):
             callable_expr = _par_map_callable_expr(node)
-            if isinstance(callable_expr, ast.Call):
+            if isinstance(callable_expr, ast.Call) and _is_partial_call(state, callable_expr):
+                _add_partial_target_callees(state, callable_expr, enclosing, callees)
+            elif callable_expr is not None and _partial_alias_binding(state, callable_expr) is not None:
+                aliased = _partial_alias_binding(state, callable_expr)
+                assert aliased is not None
+                _add_partial_target_callees(state, aliased, enclosing, callees)
+            elif isinstance(callable_expr, ast.Call):
                 for inner in ast.walk(callable_expr):
                     if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
                         callees.add(id(inner))
@@ -1719,7 +1794,60 @@ def _callee_ids(state: _LoweringState, statements: list[ast.stmt], enclosing: Ma
                 for inner in ast.walk(callable_expr):
                     if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
                         callees.add(id(inner))
+        if _is_partial_call(state, node):
+            # Only the bound target resolves as a declaration; fixed values are
+            # ordinary wires and stay readable as region inputs.
+            _add_partial_target_callees(state, node, enclosing, callees)
+        aliased_binding = _partial_alias_binding(state, node)
+        if aliased_binding is not None:
+            _add_partial_target_callees(state, aliased_binding, enclosing, callees)
     return callees
+
+
+def _add_partial_target_callees(
+    state: _LoweringState, binding_call: ast.Call, enclosing: Mapping[str, _Reference], callees: set[int]
+) -> None:
+    """Mark only the declaration names behind a partial binding as callees.
+
+    Fixed values stay readable as region inputs, so only the ultimate target
+    chain counts; nested partial targets recurse without their fixed keywords.
+    """
+    target = _partial_target_expr(binding_call)
+    if target is None:
+        return
+    if isinstance(target, ast.Call) and _is_partial_call(state, target):
+        _add_partial_target_callees(state, target, enclosing, callees)
+        return
+    if (
+        isinstance(target, ast.Call)
+        and isinstance(target.func, ast.Attribute)
+        and target.func.attr == 'alias'
+        and isinstance(target.func.value, ast.Call)
+        and _is_partial_call(state, target.func.value)
+    ):
+        _add_partial_target_callees(state, target.func.value, enclosing, callees)
+        return
+    for inner in ast.walk(target):
+        if (
+            isinstance(inner, ast.Name)
+            and isinstance(inner.ctx, ast.Load)
+            and inner.id not in enclosing
+            and inner.id != 'partial'
+        ):
+            callees.add(id(inner))
+
+
+def _partial_alias_binding(state: _LoweringState, expression: ast.expr) -> ast.Call | None:
+    """Return the inline ``partial(...)`` behind an ``.alias(...)`` use, or ``None``."""
+    if (
+        isinstance(expression, ast.Call)
+        and isinstance(expression.func, ast.Attribute)
+        and expression.func.attr == 'alias'
+        and isinstance(expression.func.value, ast.Call)
+        and _is_partial_call(state, expression.func.value)
+    ):
+        return expression.func.value
+    return None
 
 
 def _member_test_skips(state: _LoweringState, statements: list[ast.stmt]) -> set[int]:
@@ -1758,6 +1886,9 @@ def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) ->
             continue
         reads[node.id] = node
     child = _LoweringState(state.definition, stack=state.stack)
+    for partial_name, binding in state.partials.items():
+        if partial_name not in assigned:
+            child.partials[partial_name] = binding
     for name in sorted(reads):
         if name not in state.names:
             msg = (
@@ -1782,6 +1913,9 @@ def _route_region(
 ) -> None:
     """Route the enclosing values a nested region reads."""
     for name in child.inputs:
+        if name in child.synthetic_fixed:
+            _wire_fixed_value(state, instance, name, child.synthetic_fixed[name], given)
+            continue
         base, _, sub = name.partition('.')
         if base not in state.names:
             continue
@@ -1889,6 +2023,12 @@ def _resolve_base(state: _LoweringState, expression: ast.expr) -> tuple[t.Any, s
     if base.id in state.names:
         msg = f'a name cannot be both a wire and a declaration; {base.id!r} is also used as a result name'
         _reject(state, node=expression, reason=msg)
+    if base.id in state.partials:
+        msg = (
+            f'{base.id!r} binds a `partial`, not a task or graph; '
+            + 'call it with its remaining inputs, or pass it to `par_map` instead'
+        )
+        _reject(state, node=expression, reason=msg)
     symbols = state.definition.symbols
     label = '.'.join([base.id, *parts])
     name = base.id
@@ -1938,6 +2078,507 @@ def _resolve_callable(
     else:
         msg = f'only registered declarations carry port contracts; unregistered call {label!r}; add `@task` or `@graph`'
     _reject(state, node=expression, reason=msg)
+
+
+def _partial_target_shape(
+    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle,
+    state: _LoweringState,
+) -> NamespaceShape:
+    """Return the input contract a partial target binds against."""
+    if isinstance(target, GraphHandle):
+        return _lower_graph(target, stack=state.stack).input_shape
+    return target._task_spec.input_shape
+
+
+def _is_partial_call(state: _LoweringState, node: ast.Call) -> bool:
+    """Return whether a call is the intrinsic bare ``partial(...)`` binding."""
+    if not isinstance(node.func, ast.Name) or node.func.id != 'partial':
+        return False
+    return 'partial' not in state.names and 'partial' not in state.partials and 'partial' not in state.input_shapes
+
+
+def _partial_target_expr(node: ast.Call) -> ast.expr | None:
+    """Return the bound target of a ``partial(...)`` call, or ``None`` when absent."""
+    if node.args:
+        return node.args[0]
+    return None
+
+
+def _resolve_partial_target(
+    state: _LoweringState, expression: ast.expr
+) -> tuple[
+    FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle,
+    str,
+    str | None,
+    dict[str, _CapturedValue],
+]:
+    """Resolve a partial target to its ultimate declaration, carrying composed bindings."""
+    if isinstance(expression, ast.Call) and _is_partial_call(state, expression):
+        nested = _build_partial_binding(state, expression)
+        return nested.target, nested.call_name, nested.explicit, dict(nested.fixed)
+    base: ast.expr = expression
+    explicit: str | None = None
+    if (
+        isinstance(expression, ast.Call)
+        and isinstance(expression.func, ast.Attribute)
+        and expression.func.attr == 'alias'
+    ):
+        assert isinstance(expression.func.value, ast.expr)
+        candidate_base: ast.expr = expression.func.value
+        if isinstance(candidate_base, ast.Call) and _is_partial_call(state, candidate_base):
+            nested = _build_partial_binding(state, candidate_base)
+            return nested.target, nested.call_name, _alias_name(state, expression), dict(nested.fixed)
+        base, explicit = _alias_call_parts(state, expression)
+    if isinstance(base, ast.Name) and base.id in state.partials:
+        binding = state.partials[base.id]
+        return binding.target, binding.call_name, explicit or binding.explicit, dict(binding.fixed)
+    target, label = _resolve_base(state, base)
+    if target is par_map:
+        msg = '`par_map` fans out over a collection; it cannot be bound by `partial`; bind a task or graph instead'
+        _reject(state, node=expression, reason=msg)
+    if not isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle)):
+        if target is None and label in vars(builtins):
+            msg = f'only registered declarations carry provenance; built-in {label!r}: wrap it in a task instead'
+        else:
+            msg = (
+                f'only registered declarations carry port contracts; unregistered call {label!r}; '
+                + 'add `@task` or `@graph`'
+            )
+        _reject(state, node=expression, reason=msg)
+    return target, label.rsplit('.', 1)[-1], explicit, {}
+
+
+def _capture_fixed_value(state: _LoweringState, shape: Shape, expression: ast.expr) -> _CapturedValue:
+    """Lower one fixed input value, capturing declaration-time references."""
+    if isinstance(expression, ast.Call):
+        msg = (
+            'a `partial` fixes inputs without running anything, so fixed values cannot call; '
+            + 'pass a wire or literal instead'
+        )
+        _reject(state, node=expression, reason=msg)
+    if isinstance(expression, ast.Dict) and isinstance(shape, NamespaceShape):
+        seen = set()
+        nested = {}
+        for key, value in zip(expression.keys, expression.values, strict=True):
+            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                msg = (
+                    'dictionary syntax for fixed namespaces must be known before anything runs; '
+                    + 'namespace keys must be string literals without unpacking; compute dynamic keys in tasks'
+                )
+                _reject(state, node=expression, reason=msg)
+            name = key.value
+            if name in seen:
+                msg = 'one port takes one value; ' + f'duplicate input {name!r}; pass it once'
+                _reject(state, node=expression, reason=msg)
+            try:
+                child = shape.select(name)
+            except KeyError:
+                msg = (
+                    'namespaces wire against declared contracts; '
+                    + f'{name!r} is not a declared name here; check the spelling instead'
+                )
+                _reject(state, node=expression, reason=msg)
+            seen.add(name)
+            nested[name] = _capture_fixed_value(state, child, value)
+        return nested
+    if isinstance(expression, ast.Dict):
+        try:
+            value = ast.literal_eval(expression)
+        except (ValueError, TypeError):
+            msg = (
+                'a mapping here either spells out fixed inputs or points at a whole input, nothing in between; '
+                + 'dictionary-valued ports require a literal value or a reference to the whole port'
+            )
+            _reject(state, node=expression, reason=msg)
+        try:
+            checked = json_default(value)
+        except GraphTypeCheckError:
+            msg = (
+                'stored inputs only hold finite JSON values; dictionary values must be finite JSON, '
+                + 'so compute non-finite values in tasks instead'
+            )
+            _reject(state, node=expression, reason=msg)
+        return t.cast('_CapturedValue', checked)
+    if isinstance(expression, ast.Constant) and expression.value is None and _drops_none_value(shape):
+        return {}
+    return _lower_value(state, expression)
+
+
+def _build_partial_binding(state: _LoweringState, node: ast.Call) -> _PartialBinding:
+    """Build an unnamed partial binding from a ``partial(...)`` call without storing it."""
+    if len(node.args) != 1:
+        msg = (
+            '`partial` binds one callable with its fixed inputs; '
+            + 'call `partial(target, fixed=value, ...)` with the target positionally and the rest by keyword instead'
+        )
+        _reject(state, node=node, reason=msg)
+    target_expr = _partial_target_expr(node)
+    if target_expr is None:
+        msg = (
+            '`partial` binds one callable with its fixed inputs; '
+            + 'call `partial(target, fixed=value, ...)` with the target positionally and the rest by keyword instead'
+        )
+        _reject(state, node=node, reason=msg)
+    target, call_name, explicit, composed = _resolve_partial_target(state, target_expr)
+    shape = _partial_target_shape(target, state)
+    fixed = dict(composed)
+    for keyword in node.keywords:
+        if keyword.arg is None:
+            msg = 'inputs wire by name, so spreading hides which is which; bind each fixed input by keyword instead'
+            _reject(state, node=keyword, reason=msg)
+        if keyword.arg == 'after':
+            msg = 'a `partial` fixes inputs without running anything, so ordering waits for the eventual call instead'
+            _reject(state, node=keyword, reason=msg)
+        if keyword.arg in fixed:
+            msg = 'one port takes one value; ' + f'duplicate fixed input {keyword.arg!r}; pass it once'
+            _reject(state, node=keyword, reason=msg)
+        try:
+            child = shape.select(keyword.arg)
+        except KeyError:
+            msg = (
+                'calls wire against declared contracts; '
+                + f'{keyword.arg!r} is not an input of {call_name!r}; check the spelling instead'
+            )
+            _reject(state, node=keyword, reason=msg)
+        captured = _capture_fixed_value(state, child, keyword.value)
+        if isinstance(captured, dict) and not captured:
+            continue
+        fixed[keyword.arg] = captured
+    if not fixed:
+        msg = (
+            'a `partial` fixes inputs without running anything, so it needs at least one fixed input; '
+            + 'pass one by keyword instead'
+        )
+        _reject(state, node=node, reason=msg)
+    return _PartialBinding(target=target, call_name=call_name, explicit=explicit, fixed=fixed)
+
+
+def _bind_partial(state: _LoweringState, name: str, node: ast.Call) -> None:
+    """Store a named partial binding, capturing fixed values at declaration time."""
+    binding = _build_partial_binding(state, node)
+    state.partials[name] = binding
+
+
+def _alias_name(state: _LoweringState, alias_call: ast.Call) -> str:
+    """Return the placement alias of an ``.alias('name')`` call, validating the name."""
+    candidate: ast.expr | None = alias_call.args[0] if len(alias_call.args) == 1 else None
+    if (
+        candidate is None
+        or alias_call.keywords
+        or not isinstance(candidate, ast.Constant)
+        or not isinstance(candidate.value, str)
+    ):
+        msg = (
+            'placement aliases name the stored placement, so they must be written out; '
+            + "call `.alias('name')` with one quoted name instead"
+        )
+        _reject(state, node=alias_call, reason=msg)
+    alias: str = candidate.value
+    try:
+        validate_link_label(alias)
+    except ValueError as exception:
+        msg = (
+            f'placement alias `{alias}` is invalid as a link label ({exception}); '
+            + 'use alphanumerics and underscores without leading or trailing underscores instead'
+        )
+        _reject(state, node=alias_call, reason=msg)
+    return alias
+
+
+def _partial_call_parts(state: _LoweringState, func: ast.expr) -> tuple[_PartialBinding, str | None] | None:
+    """Split a partial use into its binding and a use-site alias, or return ``None``."""
+    if isinstance(func, ast.Name) and func.id in state.partials:
+        return state.partials[func.id], None
+    if isinstance(func, ast.Call) and isinstance(func.func, ast.Attribute) and func.func.attr == 'alias':
+        base = func.func.value
+        binding: _PartialBinding | None = None
+        if isinstance(base, ast.Name) and base.id in state.partials:
+            binding = state.partials[base.id]
+        elif isinstance(base, ast.Call) and _is_partial_call(state, base):
+            binding = _build_partial_binding(state, base)
+        if binding is not None:
+            return binding, _alias_name(state, func)
+        return None
+    if isinstance(func, ast.Call) and _is_partial_call(state, func):
+        return _build_partial_binding(state, func), None
+    return None
+
+
+def _synthetic_name(state: _LoweringState, base: str) -> str:
+    """Return a valid branch/loop input name carrying one outer fixed value."""
+    cleaned = ''.join(character if character.isalnum() else '_' for character in base).strip('_') or 'partial'
+    if not cleaned[0].isalpha():
+        cleaned = f'partial_{cleaned}'
+    taken = {placed.name for placed in state.tasks} | set(state.used)
+    name = cleaned
+    count = 2
+    while name in state.inputs or name in state.input_shapes or name in state.names or name in taken:
+        name = f'{cleaned}_{count}'
+        count += 1
+    state.used[name] = 1
+    return name
+
+
+def _needs_synthetic(state: _LoweringState, captured: _CapturedValue) -> bool:
+    """Return whether a captured fixed value points outside the current template.
+
+    Task outputs of enclosing scopes cannot edge into a nested template, and neither
+    can graph inputs the region collection never saw because the binding hid them.
+    Both travel on synthetic region inputs; visible wires lower directly.
+    """
+    if isinstance(captured, dict):
+        return any(_needs_synthetic(state, item) for item in captured.values())
+    if not isinstance(captured, _Reference):
+        return False
+    if captured.task is not None:
+        return captured.task not in {placed.name for placed in state.tasks}
+    base = captured.port.split('.')[0] if captured.port else ''
+    return base not in state.names
+
+
+def _wire_fixed_value(
+    state: _LoweringState, instance: str, port: str, captured: _CapturedValue, given: dict[str, _CapturedValue]
+) -> None:
+    """Wire one captured fixed value, routing outer task outputs through region inputs."""
+    if isinstance(captured, dict):
+        for field, item in captured.items():
+            _wire_fixed_value(state, instance, f'{port}.{field}', item, given)
+        return
+    if _needs_synthetic(state, captured):
+        assert isinstance(captured, _Reference)
+        name = _synthetic_name(state, f'partial_{port.replace(".", "_")}')
+        if name not in state.inputs:
+            state.inputs[name] = []
+            state.input_shapes[name] = captured.shape
+            state.names[name] = _Reference(None, port=name, shape=captured.shape)
+            state.synthetic_fixed[name] = captured
+        elif state.synthetic_fixed.get(name) != captured:
+            # A different value (or a real input colliding with the deterministic
+            # name) needs its own region input rather than reusing this wire.
+            name = _synthetic_name(state, f'{name}_fixed')
+            state.inputs[name] = []
+            state.input_shapes[name] = captured.shape
+            state.names[name] = _Reference(None, port=name, shape=captured.shape)
+            state.synthetic_fixed[name] = captured
+        _wire(state, instance=instance, port=port, value=state.names[name], given=given)
+        return
+    _wire(state, instance=instance, port=port, value=captured, given=given)
+
+
+def _merge_given(
+    first: dict[str, _CapturedValue],
+    second: dict[str, _CapturedValue],
+    state: _LoweringState,
+    node: ast.AST,
+    *,
+    shape: NamespaceShape,
+) -> dict[str, _CapturedValue]:
+    """Merge fixed and call-time wirings, rejecting conflicting leaf paths.
+
+    Namespace inputs merge field by field, so a fixed ``config={'a': x}`` and a
+    call-time ``config={'b': y}`` combine while a repeated leaf still rejects.
+    """
+    merged = dict(first)
+    for path, value in second.items():
+        if path not in merged:
+            merged[path] = value
+            continue
+        try:
+            child = shape.select(path)
+        except KeyError:
+            child = None
+        merged[path] = _merge_values(merged[path], value, f'{path}', child, state, node)
+    return merged
+
+
+def _merge_values(
+    first: _CapturedValue,
+    second: _CapturedValue,
+    path: str,
+    shape: Shape | None,
+    state: _LoweringState,
+    node: ast.AST,
+) -> _CapturedValue:
+    """Merge two wirings at one input path, recursing only through namespaces."""
+    if isinstance(first, dict) and isinstance(second, dict) and isinstance(shape, NamespaceShape):
+        merged: dict[str, _CapturedValue] = dict(first)
+        for field, value in second.items():
+            if field not in merged:
+                merged[field] = value
+                continue
+            try:
+                child = shape.select(field)
+            except KeyError:
+                child = None
+            merged[field] = _merge_values(merged[field], value, f'{path}.{field}', child, state, node)
+        return merged
+    msg = f'{path!r} is already fixed by the `partial`; pass the remaining inputs instead'
+    _reject(state, node=node, reason=msg)
+
+
+def _fixed_leaf_paths(fixed: dict[str, _CapturedValue], shape: NamespaceShape) -> set[str]:
+    """Return the dotted leaf paths a partial binding already occupies."""
+    paths: set[str] = set()
+
+    def _collect(value: _CapturedValue, contract: Shape | None, prefix: str) -> None:
+        if isinstance(value, dict) and isinstance(contract, NamespaceShape):
+            if not value:
+                paths.add(prefix)
+                return
+            for field, item in value.items():
+                try:
+                    child = contract.select(field)
+                except KeyError:
+                    child = None
+                _collect(item, child, f'{prefix}.{field}')
+            return
+        paths.add(prefix)
+
+    for name, item in fixed.items():
+        try:
+            child = shape.select(name)
+        except KeyError:
+            child = None
+        _collect(item, child, name)
+    return paths
+
+
+def _call_leaf_paths(keyword: ast.keyword, shape: NamespaceShape) -> set[str]:
+    """Return the dotted leaf paths one call-time keyword would occupy."""
+    assert keyword.arg is not None
+    try:
+        child = shape.select(keyword.arg)
+    except KeyError:
+        return {keyword.arg}
+    return _expression_leaf_paths(keyword.value, child, keyword.arg)
+
+
+def _expression_leaf_paths(expression: ast.expr, contract: Shape, prefix: str) -> set[str]:
+    """Return the dotted paths a call-time expression would occupy under a contract."""
+    if isinstance(expression, ast.Dict) and isinstance(contract, NamespaceShape):
+        paths: set[str] = set()
+        for key, value in zip(expression.keys, expression.values, strict=True):
+            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                return {prefix}
+            try:
+                nested = contract.select(key.value)
+            except KeyError:
+                nested = contract
+            paths.update(_expression_leaf_paths(value, nested, f'{prefix}.{key.value}'))
+        return paths or {prefix}
+    return {prefix}
+
+
+def _check_partial_overlap(
+    state: _LoweringState,
+    binding: _PartialBinding,
+    call_keywords: list[ast.keyword],
+    shape: NamespaceShape,
+) -> None:
+    """Reject call-time inputs that repeat a leaf the partial already fixed."""
+    fixed = _fixed_leaf_paths(binding.fixed, shape)
+    for keyword in call_keywords:
+        assert keyword.arg is not None
+        for path in _call_leaf_paths(keyword, shape):
+            for taken in fixed:
+                if path == taken or path.startswith(f'{taken}.') or taken.startswith(f'{path}.'):
+                    msg = f'{path!r} is already fixed by the `partial`; pass the remaining inputs instead'
+                    _reject(state, node=keyword, reason=msg)
+
+
+def _lower_partial_call(
+    state: _LoweringState, binding: _PartialBinding, expression: ast.Call, explicit_override: str | None
+) -> _Reference:
+    """Place one partial use, merging fixed and call-time inputs into one ordinary placement."""
+    inputs = _partial_target_shape(binding.target, state)
+    after = None
+    positional = list(expression.args)
+    keywords = []
+    for keyword in expression.keywords:
+        if keyword.arg == 'after':
+            if after is not None:
+                msg = 'one port takes one value; duplicate input `after`; pass it once.'
+                _reject(state, node=keyword, reason=msg)
+            after = keyword
+            continue
+        keywords.append(keyword)
+    if any(keyword.arg is None for keyword in keywords):
+        keywords = _spread_keywords(
+            state, expression=expression, name=binding.call_name, inputs=inputs, keywords=keywords
+        )
+    remaining = [field for field, _ in inputs.fields if field not in binding.fixed]
+    bound_positional = []
+    if positional:
+        if len(positional) > len(remaining):
+            msg = (
+                'positional arguments follow declared input order, so extras map to nothing; '
+                + f'too many positional arguments for partial of `{binding.call_name}`; drop the extras'
+            )
+            _reject(state, node=expression, reason=msg)
+        for field, arg in zip(remaining, positional):
+            bound_positional.append(ast.keyword(arg=field, value=arg))
+    seen: set[str | None] = set()
+    call_keywords: list[ast.keyword] = []
+    for keyword in [*bound_positional, *keywords]:
+        if keyword.arg in seen:
+            msg = 'one port takes one value; ' + f'duplicate input {keyword.arg!r}; pass it once'
+            _reject(state, node=keyword, reason=msg)
+        seen.add(keyword.arg)
+        call_keywords.append(keyword)
+    _check_partial_overlap(state, binding, call_keywords, inputs)
+    explicit = explicit_override or binding.explicit
+    if explicit is not None:
+        instance = _claim_placement(state, explicit, node=expression)
+    else:
+        instance = _claim_placement(state, name=binding.call_name, node=expression)
+    task: ProcessTask | SubgraphTask
+    given: dict[str, _CapturedValue]
+    if isinstance(binding.target, GraphHandle):
+        body = _lower_graph(binding.target, stack=state.stack)
+        given = {}
+        for port, captured in binding.fixed.items():
+            _wire_fixed_value(state, instance, port, captured, given)
+        wired = _lower_keywords(
+            state, instance=instance, name=binding.call_name, inputs=body.input_shape, keywords=call_keywords
+        )
+        given = _merge_given(given, wired, state, expression, shape=body.input_shape)
+        task = SubgraphTask(name=instance, inputs=given, body=body)
+        shape_inputs = body.input_shape
+        result_port = body.result_port
+        result_shape = body.result_shape
+    else:
+        spec = binding.target._task_spec
+        narrowed = _solved_partial_spec(
+            binding.target, binding, call_keywords, state, spec=spec, result_port=spec.result_port
+        )
+        given = {}
+        for port, captured in binding.fixed.items():
+            _wire_fixed_value(state, instance, port, captured, given)
+        wired = _lower_keywords(
+            state, instance=instance, name=binding.call_name, inputs=narrowed.input_shape, keywords=call_keywords
+        )
+        given = _merge_given(given, wired, state, expression, shape=narrowed.input_shape)
+        task = ProcessTask(name=instance, inputs=given, spec=narrowed)
+        shape_inputs = narrowed.input_shape
+        result_port = narrowed.result_port
+        result_shape = narrowed.result_shape
+    if isinstance(task, ProcessTask):
+        runtime_paths = task.spec.runtime_input_paths()
+    else:
+        runtime_paths = frozenset()
+    missing = _missing_required_inputs(
+        state, instance=instance, shape=shape_inputs, given=task.inputs, runtime_paths=runtime_paths
+    )
+    if missing:
+        msg = (
+            'required inputs must be wired before the graph is stored; '
+            + f'partial of `{binding.call_name}` is missing required inputs: {missing}; pass them at the call'
+        )
+        _reject(state, node=expression, reason=msg)
+    state.tasks.append(task)
+    if after is not None:
+        _wire_after(state, instance=instance, keyword=after)
+    return _Reference(instance, port=result_port, shape=result_shape)
 
 
 def _claim_placement(state: _LoweringState, name: str, node: ast.AST, *, is_map: bool = False) -> str:
@@ -2105,6 +2746,11 @@ def _lower_par_map(state: _LoweringState, expression: ast.Call) -> _Reference:
         )
         _reject(state, node=expression.func, reason=msg)
     func_expr, collection_expr, after_keyword = _bind_par_map_arguments(state, expression=expression)
+    partial_use = _partial_call_parts(state, func_expr)
+    if partial_use is not None:
+        return _lower_partial_map(
+            state, partial_use[0], expression, func_expr, collection_expr, after_keyword, partial_use[1]
+        )
     target, call_name, explicit = _resolve_callable(state, func_expr)
     if not isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle)):
         msg = 'maps apply registered declarations per element; pass a task or graph instead'
@@ -2138,6 +2784,160 @@ def _lower_par_map(state: _LoweringState, expression: ast.Call) -> _Reference:
         _wire_after(state, instance=instance, keyword=after_keyword)
     collected = DataList if container == 'list' else DataDict
     return _Reference(instance, port='result', shape=LeafShape(types=(collected,)))
+
+
+def _captured_kind(captured: _CapturedValue) -> type | None:
+    """Return the single ORM type a captured fixed value carries, or ``None`` without evidence."""
+    if isinstance(captured, _Reference):
+        shape = captured.shape
+        if not isinstance(shape, LeafShape) or not shape.types:
+            return None
+        mapped = [_node_type(kind) for kind in shape.types]
+        mapped = [kind for kind in mapped if kind is not None and kind is not type(None)]
+        return mapped[0] if len(mapped) == 1 else None
+    if isinstance(captured, bool):
+        return _node_type(bool)
+    if isinstance(captured, int):
+        return _node_type(int)
+    if isinstance(captured, float):
+        return _node_type(float)
+    if isinstance(captured, str):
+        return _node_type(str)
+    return None
+
+
+def _solved_partial_spec(
+    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle,
+    binding: _PartialBinding,
+    call_keywords: list[ast.keyword],
+    state: _LoweringState,
+    *,
+    spec: TaskIR,
+    result_port: str,
+) -> TaskIR:
+    """Solve a generic partial target combining call-time and fixed evidence.
+
+    Ordinary solving probes the call expressions; a type variable carried only by
+    fixed inputs would stay unsolved, so fixed captures contribute their stored
+    shapes alongside the call arguments. Conflicting evidence stays unsolved,
+    matching the plain-task contract for shared type variables.
+    """
+    typevars, output_var = _typevar_solution(target)
+    if output_var is None or not result_port:
+        return spec
+    kinds: list[type] = []
+    tainted = False
+    for name in typevars.get(output_var, []):
+        keyword = next((item for item in call_keywords if item.arg == name), None)
+        if keyword is not None:
+            kind = _probe_wired_type(state, keyword.value)
+            if kind is None:
+                tainted = True
+            else:
+                kinds.append(kind)
+        elif name in binding.fixed:
+            kind = _captured_kind(binding.fixed[name])
+            if kind is None:
+                tainted = True
+            else:
+                kinds.append(kind)
+    if tainted or not kinds or any(kind != kinds[0] for kind in kinds):
+        return spec
+    merged = dict(spec.declared_outputs.fields)
+    merged[result_port] = LeafShape(types=(kinds[0],))
+    narrowed_shape = NamespaceShape(fields=tuple(merged.items()))
+    return replace(spec, declared_outputs=narrowed_shape)
+
+
+def _lower_partial_map(
+    state: _LoweringState,
+    binding: _PartialBinding,
+    expression: ast.Call,
+    func_expr: ast.expr,
+    collection_expr: ast.expr,
+    after_keyword: ast.keyword | None,
+    explicit_override: str | None,
+) -> _Reference:
+    """Place a fan-out map over a partial, binding every input but the element."""
+    if isinstance(binding.target, CalcJobTaskHandle):
+        msg = (
+            'maps dispatch one child per element with shared inputs, so per-item launch metadata has no placement '
+            f'to key by; `CalcJob` task `{binding.call_name}` cannot run under `par_map`; map a task function, '
+            'a `WorkChain`, or a nested graph instead'
+        )
+        _reject(state, node=func_expr, reason=msg)
+    shape = _partial_target_shape(binding.target, state)
+    remaining = [field for field, _ in shape.fields if field not in binding.fixed]
+    if len(remaining) != 1:
+        msg = (
+            f'map `partial` of `{binding.call_name}` binds every input but one, naming the remaining input; '
+            + f'{len(remaining)} inputs remain unbound; fix all but one input instead'
+        )
+        _reject(state, node=func_expr, reason=msg)
+    element = remaining[0]
+    if 'collection' in binding.fixed and element != 'collection':
+        msg = (
+            f'map `{binding.call_name}` wires its collection under `collection`, '
+            'so a mapped input named `collection` cannot be bound; '
+            'map the `collection` input as the element instead'
+        )
+        _reject(state, node=func_expr, reason=msg)
+    mapped_body: GraphIR | None = None
+    mapped_spec: TaskIR | None = None
+    explicit = explicit_override or binding.explicit
+    if explicit is not None:
+        instance = _claim_placement(state, explicit, node=func_expr, is_map=True)
+    else:
+        instance = _claim_placement(state, f'map_{binding.call_name}', node=func_expr, is_map=True)
+    if isinstance(binding.target, GraphHandle):
+        mapped_body = _lower_graph(binding.target, stack=state.stack)
+        mapped_spec = None
+    else:
+        mapped_body = None
+        base_spec = binding.target._task_spec
+        mapped_spec = _solved_partial_spec(
+            binding.target, binding, [], state, spec=base_spec, result_port=base_spec.result_port
+        )
+    _check_partial_map_callable(state, node=func_expr, label=binding.call_name, spec=mapped_spec, body=mapped_body)
+    collection = _lower_value(state, collection_expr)
+    container = _check_par_map_collection(state, node=collection_expr, value=collection)
+    given: dict[str, _CapturedValue] = {}
+    for port, captured in binding.fixed.items():
+        _wire_fixed_value(state, instance, port, captured, given)
+    _wire(state, instance=instance, port='collection', value=collection, given=given)
+    state.tasks.append(
+        MapControl(
+            name=instance, inputs=given, spec=mapped_spec, body=mapped_body, container=container, element=element
+        )
+    )
+    if after_keyword is not None:
+        _wire_after(state, instance=instance, keyword=after_keyword)
+    collected = DataList if container == 'list' else DataDict
+    return _Reference(instance, port='result', shape=LeafShape(types=(collected,)))
+
+
+def _check_partial_map_callable(
+    state: _LoweringState, node: ast.AST, label: str, spec: TaskIR | None, body: GraphIR | None
+) -> None:
+    """Reject partial-mapped callables without exactly one leaf output per element."""
+    if spec is not None:
+        result_port = spec.result_port
+        result_shape: Shape = spec.result_shape
+    elif body is not None:
+        result_port = body.result_port
+        result_shape = body.result_shape
+    else:
+        msg = (
+            'maps collect one output per element into the result container, so the callable returns exactly one value; '
+            + f'`{label}` must declare a single output; map a unary task or graph with one output instead'
+        )
+        _reject(state, node=node, reason=msg)
+    if not result_port or not isinstance(result_shape, LeafShape):
+        msg = (
+            'maps collect one output per element into the result container, so the callable returns exactly one value; '
+            + f'`{label}` must declare a single output; map a unary task or graph with one output instead'
+        )
+        _reject(state, node=node, reason=msg)
 
 
 def _bind_par_map_arguments(
@@ -2419,8 +3219,12 @@ def _lower_operation(state: _LoweringState, node: ast.BinOp | ast.Compare | ast.
 
 
 def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
-    """Place a task or graph call with wired graph inputs."""
+    """Place a task, graph, or partial use with wired graph inputs."""
     assert isinstance(expression, ast.Call)
+    partial_use = _partial_call_parts(state, expression.func)
+    if partial_use is not None:
+        binding, explicit_override = partial_use
+        return _lower_partial_call(state, binding, expression, explicit_override)
     target, name, explicit = _resolve_callable(state, expression.func)
     if target is par_map:
         return _lower_par_map(state, expression)

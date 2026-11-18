@@ -7,6 +7,10 @@
 * Builder `_update` serializes mapping-valued static inputs, including `DataDict`, instead of treating them as namespaces. Existing namespace-update behavior is unchanged.
 * File staging can find owned files inside `DataDict` and `DataList` inputs before those containers are stored, without cloning or detaching their members.
 
+### Graph partial input bindings
+
+Graph bodies accept a general `partial(...)` input binding that needs no import: `configured = partial(add, y=y)` fixes some inputs of a task, `CalcJob`/`WorkChain` task, or graph once, and each use (`configured(x=x)`, `configured(x)`, inline `partial(add, y=y)(x=x)`, or composed `partial(configured, more=wire)`) merges the fixed values with its own arguments into one ordinary placement. Fixed values capture the declaration-time references, keep the target's placement naming (including `.alias(...)`), contracts, type checking, and config paths, and travel as ordinary wires with dependency edges. `par_map` over a partial is one consumer of the same mechanism, binding every input but one with each element wiring into the remaining input. `partial` is a reserved graph-language name and cannot name an input, wire, or binding. No runtime `functools` behavior is involved.
+
 ### Breaking changes
 
 #### Inline collection expressions in source graphs

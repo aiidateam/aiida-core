@@ -1160,11 +1160,12 @@ class GraphRun:
             elements = list(collection)
         else:
             elements = [collection[key] for key in collection]
-        item_input = task.mapped_inputs.fields[0][0]
+        item_input = task.element if task.element is not None else task.mapped_inputs.fields[0][0]
+        fixed = {port: value for port, value in inputs.items() if port != 'collection'}
         template = self._template_of(scope_key)
         for index, element in enumerate(elements):
             base = self._item_base(template, task.name, index)
-            item_inputs = {item_input: element}
+            item_inputs = {**fixed, item_input: element}
             if task.spec is not None:
                 label = self._claim(scope['prefix'] + base)
                 scope.setdefault('instances', {}).setdefault(task.name, []).append(label)

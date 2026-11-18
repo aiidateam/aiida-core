@@ -840,7 +840,13 @@ class GraphTask(abc.ABC):
             if kind == 'map':
                 nested = GraphIR.from_dict(data['body']) if data.get('body') is not None else None
                 mapped = TaskIR.from_dict(data['spec']) if data.get('spec') is not None else None
-                return MapControl(spec=mapped, body=nested, container=data['container'], **common)
+                return MapControl(
+                    spec=mapped,
+                    body=nested,
+                    container=data['container'],
+                    element=data.get('element'),
+                    **common,
+                )
         except KeyError as exception:
             msg = f'malformed graph task declaration; missing key {exception}.'
             raise GraphTypeCheckError(msg) from exception
@@ -965,19 +971,25 @@ class LoopControl(BodyTask):
 
 @dataclass(frozen=True, kw_only=True)
 class MapControl(GraphTask):
-    """A fan-out applying one unary task or graph to every element of an owned container.
+    """A fan-out applying one task or graph to every element of an owned container.
 
     ``collection`` is the input port receiving the ``DataList``/``DataDict`` wire; exactly one
-    of ``spec`` (a unary task) or ``body`` (a unary nested graph) carries the mapped callable.
+    of ``spec`` (a task) or ``body`` (a nested graph) carries the mapped callable.
     ``container`` records the lowered collection kind, so the single ``result`` output keeps it.
     The scheduler dispatches one child per element plus a collector calculation that creates
     the result container; the graph itself only returns that existing container.
+
+    A plain ``par_map(task, values)`` maps a unary callable and leaves ``element`` unset.
+    A ``partial`` map binds every input but one, naming the remaining input in ``element``:
+    each element wires into ``element`` while the bound inputs travel with every item through
+    the normal ``inputs`` and dependency wires. ``element`` is ``None`` for legacy unary maps.
     """
 
     KIND: t.ClassVar[_TaskKind] = 'map'
     spec: TaskIR | None = None
     body: GraphIR | None = None
     container: t.Literal['list', 'dict'] = 'list'
+    element: str | None = None
 
     def __post_init__(self) -> None:
         """Reject maps that do not carry exactly one mapped callable of a known container kind."""
@@ -989,27 +1001,61 @@ class MapControl(GraphTask):
             raise GraphTypeCheckError(msg)
 
     @property
+    def fixed_names(self) -> tuple[str, ...]:
+        """Return the bound input names travelling with every item, or `()` for unary maps."""
+        if self.element is None:
+            return ()
+        return tuple(name for name, _ in self.mapped_inputs.fields if name != self.element)
+
+    @property
     def mapped_inputs(self) -> NamespaceShape:
         """Return the input contract the mapped callable applies to each element."""
         if self.spec is not None:
             return self.spec.input_shape
-        assert self.body is not None
-        return self.body.input_shape
+        if self.body is not None:
+            return self.body.input_shape
+        msg = f'map `{self.name}` carries exactly one mapped callable: a task `spec` or a nested graph `body`.'
+        raise GraphTypeCheckError(msg)
 
     @property
     def mapped_result_port(self) -> str:
         """Return the single output port the mapped callable produces per element."""
         if self.spec is not None:
             return self.spec.result_port
-        assert self.body is not None
-        return self.body.result_port
+        if self.body is not None:
+            return self.body.result_port
+        msg = f'map `{self.name}` carries exactly one mapped callable: a task `spec` or a nested graph `body`.'
+        raise GraphTypeCheckError(msg)
 
     @override
     def input_ports(self) -> tuple[PortNamespace, ...]:
-        """Return the collection input accepting owned lists and mappings."""
+        """Return the collection input plus every `partial`-bound fixed input.
+
+        The mapped element itself is never wired: it arrives from the collection, so only
+        ``collection`` and the bound inputs resolve here. A bound input named ``collection``
+        would collide with the collection wire and is rejected when the map is lowered.
+        """
         namespace = PortNamespace('inputs')
         namespace['collection'] = InputPort('collection', valid_type=(DataList, DataDict))
+        if self.element is not None:
+            source = self.spec.inputs if self.spec is not None else self._body_inputs()
+            for name in self.fixed_names:
+                port = source.get(name)
+                if port is None:
+                    msg = (
+                        f'map `{self.name}` wires `{name}`, '
+                        'which is not an input of the mapped callable; check the spelling instead.'
+                    )
+                    raise GraphTypeCheckError(msg)
+                namespace[name] = port
         return (namespace,)
+
+    def _body_inputs(self) -> PortNamespace:
+        """Return the input contracts of the mapped nested graph."""
+        if self.body is None:
+            msg = f'map `{self.name}` carries exactly one mapped callable: a task `spec` or a nested graph `body`.'
+            raise GraphTypeCheckError(msg)
+        return self.body.build_input_namespace()
 
     @override
     def output_ports(self) -> PortNamespace:
@@ -1021,13 +1067,16 @@ class MapControl(GraphTask):
 
     @override
     def to_dict(self) -> dict[str, t.Any]:
-        """Return the placement with its mapped callable and container kind."""
-        return {
+        """Return the placement with its mapped callable, container kind, and bound element."""
+        data: dict[str, t.Any] = {
             **super().to_dict(),
             'spec': self.spec.to_dict() if self.spec is not None else None,
             'body': self.body.to_dict() if self.body is not None else None,
             'container': self.container,
         }
+        if self.element is not None:
+            data['element'] = self.element
+        return data
 
 
 @dataclass(frozen=True, kw_only=True)

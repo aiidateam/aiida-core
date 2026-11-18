@@ -254,6 +254,7 @@ The graph body supports:
 * module-qualified calls (``my_module.add(...)``) and explicitly aliased placements (``decl.alias('name')(...)``), required whenever one task or graph is placed twice in the same body;
 * namespace ``dict`` literals (``nodes={'text': text}``) and ``**bundle`` spreading (:ref:`topics:workflows:graphs:spreading`);
 * ``after=`` ordering: ``add(x=x, y=1, after=prepared)`` waits for the ``prepared`` placement without using its outputs; ``after=(first, second)`` waits for both; ``after`` is reserved and cannot be a task parameter;
+* ``partial`` bindings: ``configured = partial(add, y=y)`` fixes some inputs of a task or graph once and reuses the binding for ordinary calls and maps (:ref:`topics:workflows:graphs:partial`); ``partial`` needs no import and cannot name an input, wire, or binding;
 
 Each call is assigned to a name, including calls to tasks without outputs; ``return`` and the tests of ``if`` and ``while`` also take inline expressions and calls directly.
 Each name is bound once; only ``if`` arms and ``while`` bodies rebind names bound before them.
@@ -1061,6 +1062,43 @@ The reserved ``after`` argument makes a task wait for another task without using
 
 ``after=(first, second)`` waits for both.
 Task functions cannot have a parameter named ``after``.
+
+.. _topics:workflows:graphs:partial:
+
+Partial input bindings
+----------------------
+
+``partial`` binds some inputs of a task or graph without running anything, so one binding serves every use that shares those inputs.
+It needs no import: the bare ``partial`` name is reserved in graph bodies and always binds.
+Each use merges the fixed values with its own arguments into one ordinary placement, keeping the target's placement naming (including ``.alias(...)``), contracts, and type checking:
+
+.. code:: python
+
+    @graph
+    def calibrated(x: int, y: int, z: int) -> int:
+        configured = partial(add, y=y)
+        first = configured(x=x)
+        second = configured.alias('second_add')(x=z)
+        return add.alias('total_add')(x=first, y=second)
+
+A use takes the remaining inputs by keyword or, positionally, in the declared order of the inputs the binding leaves open: ``configured(item)`` and ``configured(x=item)`` both wire ``x``.
+Bindings compose (``partial(configured, more=wire)``), nest inline (``partial(add, y=y)(x=x)``), and work in branch arms and loop bodies.
+Fixed values capture the declaration-time references, so a later rebinding of the same name cannot change them.
+Fixed inputs bind by keyword only; a positional fixed input, a duplicate or unknown fixed input, a missing required input at the call, or an illegal target (anything that is not a task or graph) fails when the graph is built.
+A namespaced input merges field by field: fixing ``config={'first': a}`` and calling with ``config={'second': b}`` combines the disjoint leaves, while repeating a leaf still fails.
+A use-site alias applies generically, including to inline bindings: ``partial(add, y=y).alias('named')(x=x)`` and ``par_map(partial(add, y=y).alias('named'), values)`` place under ``named``.
+A graph partial used on its own inlines exactly like the graph.
+
+Mapping over a partial is one consumer of the same mechanism: ``par_map`` over a partial binds every input but one, and each element wires into the single remaining input:
+
+.. code:: python
+
+    @graph
+    def calibrated_all(values: orm.DataList, y: int) -> orm.DataList:
+        configured = partial(add, y=y)
+        return par_map(configured, values)
+
+The mapped target keeps its usual map contract of exactly one leaf output, and the map keeps its usual collection, ordering, and collector behavior; shared fixed inputs travel as ordinary wires, so every item waits for the fixed upstream outputs.
 
 .. _topics:workflows:graphs:maps:
 

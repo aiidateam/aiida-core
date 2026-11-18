@@ -266,6 +266,7 @@ def test_prompt_simple(run_cli_command):
         ({'is_flag': True}, '?\ny\n', 'Opt [y/N]: ', 'True'),
         ({'is_flag': True}, '?\nn\n', 'Opt [y/N]: ', 'False'),
         ({'is_flag': True, 'default': True}, '?\n\n', 'Opt [Y/n]: ', 'True'),
+        ({'is_flag': True, 'default': None}, '?\nn\n', 'Opt [y/n]: ', 'False'),
     ),
 )
 def test_prompt_flag_help(run_cli_command, option_kwargs, user_input, expected_prompt, expected):

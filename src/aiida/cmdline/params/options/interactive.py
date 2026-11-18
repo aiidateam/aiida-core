@@ -103,7 +103,8 @@ class InteractiveOption(ConditionalOption):
             # ``click.Option.prompt_for_value`` prompts for boolean flags with ``click.confirm``, which only accepts
             # yes/no answers and has no ``value_proc`` hook, so the special characters never reach ``process_value``.
             default = self.get_default(ctx)
-            suffix = ' [Y/n]' if default else ' [y/N]'
+            # Mirror ``click.confirm``: without a default there is no capitalised answer, as Enter is not accepted.
+            suffix = ' [y/n]' if default is None else ' [Y/n]' if default else ' [y/N]'
             return click.prompt(
                 f'{self.prompt}{suffix}',
                 default=default,

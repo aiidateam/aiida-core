@@ -24,7 +24,20 @@ from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
 from aiida.engine.processes.port_model import _is_a_plain_class, _is_structured, _namespace_value, _without_marks
-from aiida.orm import Bool, Dict, EnumData, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
+from aiida.orm import (
+    Bool,
+    DataDict,
+    DataList,
+    Dict,
+    EnumData,
+    Float,
+    Int,
+    List,
+    Node,
+    Str,
+    from_aiida_type,
+    to_aiida_type,
+)
 from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
@@ -225,6 +238,15 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
                 raise TypeError(msg)
 
         super().__init__(*args, **kwargs)
+
+    def serialize(self, value: t.Any) -> Node:
+        """Serialize owned-container declarations without routing through JSON containers."""
+        kinds = self.valid_type if isinstance(self.valid_type, tuple) else (self.valid_type,)
+        if DataList in kinds and isinstance(value, list):
+            return DataList(value)
+        if DataDict in kinds and isinstance(value, dict):
+            return DataDict(value)
+        return super().serialize(value)
 
     def prepare(self, value: t.Any) -> PreparedInputs:
         """Convert a filled input to its runtime type without coercing unrelated values.
@@ -501,6 +523,11 @@ def _runtime_value(
         converted = from_aiida_type(value)
         return converted if isinstance(converted, valid_type) else value
     types = valid_type if isinstance(valid_type, tuple) else (valid_type,)
+    for kind in types:
+        if kind is DataList and isinstance(value, list):
+            return DataList(value)
+        if kind is DataDict and isinstance(value, dict):
+            return DataDict(value)
     if serializer is not None and any(issubclass(kind, Node) for kind in types):
         return serializer(value)
     return value
@@ -561,12 +588,29 @@ def _node_type(annotation: t.Any) -> t.Any | None:
     return _VALID_TYPE_MAP.get(annotation)
 
 
+def _owned_container_type(annotation: t.Any) -> type[DataList] | type[DataDict] | None:
+    """Map Python containers of data nodes to their owned storage representation."""
+    annotation = _without_marks(annotation)
+    origin = t.get_origin(annotation)
+    arguments = t.get_args(annotation)
+    if origin is list and len(arguments) == 1:
+        member = arguments[0]
+    elif origin is dict and len(arguments) == 2 and arguments[0] is str:
+        member = arguments[1]
+    else:
+        return None
+    member = _without_marks(member)
+    if _is_a_plain_class(member) and issubclass(member, DataNode):
+        return DataList if origin is list else DataDict
+    return None
+
+
 def _runtime_type(annotation: t.Any) -> t.Any | None:
     """Return the runtime type for one annotation, or None when it declares none."""
     if annotation is t.Any:
         return None
     if t.get_origin(annotation) in (list, dict):
-        return t.get_origin(annotation)
+        return _owned_container_type(annotation) or t.get_origin(annotation)
     if _is_a_plain_class(annotation):
         return annotation
     return None

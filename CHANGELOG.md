@@ -9,6 +9,10 @@
 
 ### Breaking changes
 
+#### Python ORM containers in graphs store as owned containers
+
+Graph and task ports annotated with Python containers of data nodes, such as `list[orm.Int]` or `dict[str, orm.Int]` (including the `typing.List`/`typing.Dict` spellings), now store as owned `orm.DataList`/`orm.DataDict` containers instead of JSON `List`/`Dict` nodes. Task bodies receive a plain Python `list`/`dict` holding the member nodes, while the provenance wire carries the owned container. Ports annotated directly with `orm.DataList`/`orm.DataDict` still receive the node itself, and plain `list[int]`/`dict[str, int]` still store as JSON nodes. Only direct members of one `DataNode` subclass are mapped. Previously an ORM-valued container annotation stored as JSON; relaunch affected graphs so their wires use the owned representation.
+
 #### Local child completion no longer waits for database polling
 
 `Runner.call_on_process_finish` now notifies watchers directly when a child scheduled through the same runner's `submit` or `schedule` terminates, including unsuccessful exits, exceptions and kills. Local graphs and nested WorkChains consequently resume without waiting for `runner.poll.interval`, even without a broker. Callbacks still observe finalized terminal process state; execution tasks that fail or are cancelled before recording termination fall back to polling. Processes not tracked by the current runner, including children after checkpoint restoration, retain broadcast notifications and database polling. No configuration or database migration is required.

@@ -43,12 +43,12 @@ from aiida.engine.processes.port_model import (
     _namespace_value,
     _without_marks,
 )
-from aiida.engine.processes.ports import PortNamespace, _infer_node_types
+from aiida.engine.processes.ports import PortNamespace, _infer_node_types, _owned_container_type, _runtime_value
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.engine.utils import is_process_function
-from aiida.orm import CalcFunctionNode, CalcJobNode, Data, EnumData, WorkChainNode, to_aiida_type
+from aiida.orm import CalcFunctionNode, CalcJobNode, Data, DataList, EnumData, WorkChainNode, to_aiida_type
 from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
@@ -190,13 +190,9 @@ def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
     if _is_structured(return_annotation):
         spec.outputs_from(return_annotation)
         return
-    if t.get_origin(return_annotation) in (list, dict):
-        origin = t.get_origin(return_annotation)
-    else:
-        origin = return_annotation
     spec.output(
         Process.SINGLE_OUTPUT_LINKNAME,
-        valid_type=_infer_node_types(origin) or (DataNode,),
+        valid_type=_infer_node_types(return_annotation) or (DataNode,),
     )
 
 
@@ -260,6 +256,17 @@ class TaskProcess(FunctionProcessBase):
         cls._named_outputs = is_typeddict(return_annotation) or _is_structured(return_annotation)
 
     @override
+    def _function_arguments(self) -> tuple[list[t.Any], dict[str, t.Any]]:
+        args, kwargs = super()._function_arguments()
+        bound = inspect.signature(self._func).bind(*args, **kwargs)
+        hints = t.get_type_hints(self._func, include_extras=True)
+        for name, value in bound.arguments.items():
+            kind = _owned_container_type(hints.get(name))
+            if kind is not None and isinstance(value, kind):
+                bound.arguments[name] = list(value) if kind is DataList else dict(value.items())
+        return list(bound.args), bound.kwargs
+
+    @override
     def _prepare_result(self, result: t.Any) -> t.Any:
         annotation = t.get_type_hints(self._func, include_extras=True).get('return')
         _, codes = _result_contract(annotation)
@@ -290,7 +297,7 @@ class TaskProcess(FunctionProcessBase):
         if _is_structured(_as_port_model(success)):
             self._store_value(self.spec().outputs['value'], result.value, 'value')
             return ExitCode()
-        self.out('value', result.value if isinstance(result.value, Data) else to_aiida_type(result.value))
+        self._store_leaf(self.spec().outputs['value'], result.value, 'value')
         return ExitCode()
 
     def _store_value(self, port: Port | PortNamespace, value: t.Any, path: str) -> None:
@@ -325,7 +332,8 @@ class TaskProcess(FunctionProcessBase):
     def _store_leaf(self, port: Port, value: t.Any, path: str) -> None:
         """Store one leaf arm; `None` stores nothing, so only an optional port admitting it accepts it."""
         if value is not None:
-            self.out(path, value if isinstance(value, Data) else to_aiida_type(value))
+            stored = _runtime_value(port.valid_type, value)
+            self.out(path, stored if isinstance(stored, DataNode) else to_aiida_type(stored))
             return
         if port.required:
             msg = (
@@ -391,10 +399,10 @@ class TaskProcess(FunctionProcessBase):
         if len(values) != len(names):
             msg = f'task declares {len(names)} outputs {names} but returned {len(values)} values.'
             raise GraphValidationError(msg)
-        stored = {
-            name: value if isinstance(value, DataNode) else to_aiida_type(value)
-            for name, value in zip(names, values, strict=True)
-        }
+        stored: dict[str, DataNode] = {}
+        for name, value in zip(names, values, strict=True):
+            converted = _runtime_value(outputs[name].valid_type, value)
+            stored[name] = converted if isinstance(converted, DataNode) else to_aiida_type(converted)
         super()._out_result(stored)
 
 

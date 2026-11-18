@@ -772,6 +772,30 @@ Task outputs are fixed by the return annotation:
         pair = arithmetic(x=x, y=y)
         return {'total': pair.sum, 'product': pair.product}
 
+A container holding data nodes stores as an owned container instead of JSON: ``list[orm.Int]`` and ``typing.List[orm.Int]`` store as ``orm.DataList``, while ``dict[str, orm.Int]`` and ``typing.Dict[str, orm.Int]`` store as ``orm.DataDict``.
+The same spelling works on task inputs, task outputs, and graph ports, so one placement can pack the container and the next can consume it.
+The task body still receives a plain Python ``list`` or ``dict`` holding the member nodes, while the provenance wire carries the owned container.
+Annotating the port directly with ``orm.DataList`` or ``orm.DataDict`` keeps passing the node itself.
+Plain ``list[int]`` and ``dict[str, int]`` still store as JSON ``List`` and ``Dict`` nodes.
+Only a direct member annotation of one ``DataNode`` subclass is mapped.
+
+.. code:: python
+
+    from aiida.orm import Int
+
+    @task
+    def pack(x: int, y: int) -> list[Int]:
+        return [Int(x), Int(y)]
+
+    @task
+    def total(values: list[Int]) -> int:
+        return sum(member.value for member in values)
+
+    @graph
+    def summed(x: int, y: int) -> int:
+        packed = pack(x=x, y=y)
+        return total(values=packed)
+
 A graph returning one value declares one output named ``result``, and a graph returning a ``dict`` declares one output per key.
 A nested ``dict`` declares nested outputs, and returning a whole namespace regroups its existing leaves under one output without creating data.
 A leaf without a node, such as a ``None`` value for a nullable field, stays out of the emitted outputs.

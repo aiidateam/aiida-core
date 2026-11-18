@@ -233,3 +233,119 @@ def test_wrong_container_type_rejected() -> None:
     """A mapping where a list is declared fails validation instead of coercing."""
     with pytest.raises(GraphValidationError):
         run_get_node(containers.list_passthrough, values=DataDict({'a': Int(1)}))
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration, inputs, expected',
+    [
+        pytest.param(containers.py_list_chain, {'x': 2, 'y': 3}, 5, id='py-list-chain'),
+        pytest.param(containers.typing_list_chain, {'x': 2, 'y': 3}, 5, id='typing-list-chain'),
+        pytest.param(containers.py_dict_chain, {'a': 2, 'b': 3}, 5, id='py-dict-chain'),
+        pytest.param(containers.typing_dict_chain, {'a': 2, 'b': 3}, 5, id='typing-dict-chain'),
+    ],
+)
+@pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])
+def test_py_container_chains_execute(
+    declaration: GraphHandle, inputs: dict[str, t.Any], expected: int, serialized: bool
+) -> None:
+    """Python ORM containers chain through placements, from declarations and serialized IR alike."""
+    assert declaration.build() is None
+    if serialized:
+        spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(declaration).to_dict())))
+        outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, inputs))
+    else:
+        outputs, node = run_get_node(declaration, **inputs)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration, raw, stored_type, expected',
+    [
+        pytest.param(containers.py_list_consume, [1, 2], DataList, {'members': [1, 2], 'total': 3}, id='py-list-input'),
+        pytest.param(
+            containers.py_dict_consume,
+            {'a': 1, 'b': 2},
+            DataDict,
+            {'members': {'a': 1, 'b': 2}, 'total': 3},
+            id='py-dict-input',
+        ),
+    ],
+)
+@pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])
+def test_py_container_graph_inputs_execute(
+    declaration: GraphHandle, raw: t.Any, stored_type: type, expected: dict[str, t.Any], serialized: bool
+) -> None:
+    """Python ORM container graph inputs store as owned containers with member values intact."""
+    assert declaration.build() is None
+    if isinstance(raw, list):
+        values: t.Any = [Int(item) for item in raw]
+    else:
+        values = {key: Int(item) for key, item in raw.items()}
+    if serialized:
+        spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(declaration).to_dict())))
+        outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, {'values': values}))
+    else:
+        outputs, node = run_get_node(declaration, values=values)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected['total']
+    stored = node.inputs['values']
+    assert isinstance(stored, stored_type)
+    assert stored.is_stored
+    if isinstance(stored, DataList):
+        assert [member.value for member in stored] == expected['members']
+        assert all(isinstance(member, Int) for member in stored)
+    else:
+        assert {key: member.value for key, member in stored.items()} == expected['members']
+        assert all(isinstance(member, Int) for member in stored.values())
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration, stored_type',
+    [
+        pytest.param(containers.empty_py_list_graph, DataList, id='empty-py-list'),
+        pytest.param(containers.empty_py_dict_graph, DataDict, id='empty-py-dict'),
+    ],
+)
+@pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])
+def test_empty_py_container_graphs_execute(declaration: GraphHandle, stored_type: type, serialized: bool) -> None:
+    """Empty Python ORM container outputs store as empty owned containers."""
+    assert declaration.build() is None
+    if serialized:
+        spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(declaration).to_dict())))
+        outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, {}))
+    else:
+        outputs, node = run_get_node(declaration)
+    assert node.is_finished_ok
+    result = outputs['result']
+    assert isinstance(result, stored_type)
+    assert len(result) == 0
+    assert result.element_type is None
+    assert result.is_stored
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_py_task_container_io() -> None:
+    """Tasks produce and consume Python ORM containers as stored owned containers."""
+    packed, node = containers.pack_py_list.run_get_node(x=2, y=3)
+    assert node.is_finished_ok
+    assert isinstance(packed, DataList)
+    assert [member.value for member in packed] == [2, 3]
+    assert all(isinstance(member, Int) for member in packed)
+    total, node = containers.py_list_sum.run_get_node(values=[Int(2), Int(3)])
+    assert node.is_finished_ok
+    assert total.value == 5
+    assert isinstance(node.inputs['values'], DataList)
+    assert [member.value for member in node.inputs['values']] == [2, 3]
+    mapping, node = containers.pack_py_dict.run_get_node(a=2, b=3)
+    assert node.is_finished_ok
+    assert isinstance(mapping, DataDict)
+    assert {key: member.value for key, member in mapping.items()} == {'a': 2, 'b': 3}
+    total, node = containers.py_dict_sum.run_get_node(values={'a': Int(2), 'b': Int(3)})
+    assert node.is_finished_ok
+    assert total.value == 5
+    assert isinstance(node.inputs['values'], DataDict)
+    assert {key: member.value for key, member in node.inputs['values'].items()} == {'a': 2, 'b': 3}

@@ -109,6 +109,8 @@ class GraphProcess(Process):
     def _create_and_setup_db_record(self) -> t.Any:
         graph = GraphIR.from_dict(self.inputs[self._GRAPH].get_dict())
         stored = _serialize_graph_inputs(graph, dict(self.inputs.get(self._GRAPH_INPUTS, {})))
+        # Checkpoint the normalized containers, not the unstored members they copied.
+        self._raw_inputs = AttributesFrozendict({**(self.raw_inputs or {}), self._GRAPH_INPUTS: stored})
         self._input_sources = AttributesFrozendict({**self._input_sources, self._GRAPH_INPUTS: stored})
         self._parsed_inputs = AttributesFrozendict(
             {**self.inputs, self._GRAPH_INPUTS: graph.build_input_namespace().prepare(stored).runtime}

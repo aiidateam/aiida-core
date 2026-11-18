@@ -168,11 +168,19 @@ class CalculationQueryBuilder:
             filters['ctime'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
         builder = orm.QueryBuilder()
+        builder.distinct()
         builder.append(cls=orm.ProcessNode, filters=filters, project=unique_projections, tag='process')
 
         if relationships is not None:
             for tag, entity in relationships.items():
-                builder.append(cls=type(entity), filters={'id': entity.pk}, **{tag: 'process'})  # type: ignore[arg-type]
+                if isinstance(entity, (list, tuple)):
+                    if not entity:
+                        continue
+                    entity_cls = type(entity[0])
+                    pks = [item.pk for item in entity]
+                    builder.append(cls=entity_cls, filters={'id': {'in': pks}}, **{tag: 'process'})  # type: ignore[arg-type]
+                else:
+                    builder.append(cls=type(entity), filters={'id': entity.pk}, **{tag: 'process'})  # type: ignore[arg-type]
 
         if order_by is not None:
             builder.order_by({'process': order_by})

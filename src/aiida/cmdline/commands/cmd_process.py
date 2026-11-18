@@ -77,7 +77,7 @@ def verdi_process():
 @options.PROJECT(type=types.LazyChoice(valid_projections), default=default_projections)
 @options.ORDER_BY()
 @options.ORDER_DIRECTION()
-@options.GROUP(help='Only include entries that are a member of this group.')
+@options.GROUPS(help='Only include entries that are a member of these groups.')
 @options.ALL(help='Show all entries, regardless of their process state.')
 @options.PROCESS_STATE()
 @options.PROCESS_LABEL()
@@ -92,7 +92,7 @@ def verdi_process():
 def process_list(
     ctx,
     all_entries,
-    group,
+    groups,
     process_state,
     process_label,
     paused,
@@ -121,8 +121,8 @@ def process_list(
 
     relationships = {}
 
-    if group:
-        relationships['with_node'] = group
+    if groups:
+        relationships['with_node'] = list(groups)
 
     builder = CalculationQueryBuilder()
     filters = builder.get_filters(all_entries, process_state, process_label, paused, exit_status, failed)

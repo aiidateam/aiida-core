@@ -1306,6 +1306,18 @@ def branch_shapes_agree(first: Shape, second: Shape) -> bool:
     return False
 
 
+def collection_members_agree(first: Shape, second: Shape) -> bool:
+    """Compare collection members without rechecking scalar port compatibility."""
+    if isinstance(first, NamespaceShape) and isinstance(second, NamespaceShape):
+        other = dict(second.fields)
+        return all(name in other and collection_members_agree(child, other[name]) for name, child in first.fields)
+    if isinstance(first, LeafShape) and isinstance(second, LeafShape):
+        if first.element is None or second.element is None:
+            return True
+        return branch_shapes_agree(first.element, second.element)
+    return False
+
+
 def merge_branch_shape(first: Shape | None, second: Shape | None) -> Shape | None:
     """Return the branch output contract without fabricating a known member from one arm."""
     if first is None or second is None or not branch_shapes_agree(first, second):

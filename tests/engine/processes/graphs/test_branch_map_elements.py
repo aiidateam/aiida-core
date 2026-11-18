@@ -14,9 +14,13 @@ claiming the taken arm's member. Matching arms keep their member, and maps
 expose the mapped callable's result as the result container's member.
 """
 
+import json
+
 import pytest
 
 from aiida.common.exceptions import GraphTypeCheckError
+from aiida.engine.launch import run_get_node
+from aiida.engine.processes.graphs.ir import GraphIR
 from aiida.engine.processes.graphs.lowering import compile_graph, graph, par_map, task
 from aiida.engine.processes.graphs.shapes import LeafShape
 from aiida.orm import DataList
@@ -61,6 +65,16 @@ def choose_mixed_lists(x: int, flag: bool) -> list[int]:
 
 
 @graph
+def choose_nullable_scalar(value: int | None, flag: bool) -> int | None:
+    """Join a nullable input with a non-nullable task result."""
+    if flag:
+        selected = value
+    else:
+        selected = bump(x=0)
+    return selected
+
+
+@graph
 def map_ints(values: DataList) -> DataList:
     """Map a scalar task over an owned list."""
     return par_map(bump, values)
@@ -75,6 +89,18 @@ def test_mismatched_branch_members_rejected() -> None:
     """Integer-list against string-list arms fail at build."""
     with pytest.raises(GraphTypeCheckError, match='incompatible collection members'):
         compile_graph(choose_mixed_lists)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('flag, expected', [(True, 2), (False, 1)])
+def test_nullable_scalar_branch_keeps_existing_contract(flag: bool, expected: int) -> None:
+    """Member validation must not reject compatible nullable scalar branches."""
+    assert choose_nullable_scalar.build() is None
+    spec = compile_graph(choose_nullable_scalar)
+    assert GraphIR.from_dict(json.loads(json.dumps(spec.to_dict()))).to_dict() == spec.to_dict()
+    outputs, node = run_get_node(choose_nullable_scalar, value=2, flag=flag)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
 
 
 def test_mapped_result_propagates_member() -> None:

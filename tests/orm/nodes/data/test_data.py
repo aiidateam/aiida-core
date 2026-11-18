@@ -106,9 +106,7 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
 
             instance = data_class()
             instance.set_reference_bandsdata(bands)
-            instance.set_projectiondata(
-                orbital, list_of_pdos=numpy.asarray([1.0]), list_of_energy=numpy.asarray([1.0]), bands_check=False
-            )
+            instance.set_projectiondata(orbital, list_of_pdos=numpy.asarray([1.0]), list_of_energy=numpy.asarray([1.0]))
             return instance
 
         if data_class is orm.Code:

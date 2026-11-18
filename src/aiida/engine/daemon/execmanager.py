@@ -19,7 +19,7 @@ import shutil
 import typing as t
 from collections.abc import Mapping
 from logging import LoggerAdapter
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from uuid import uuid4
 
@@ -326,6 +326,7 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
             )
             remote_dirname = Path(dest_rel_path).parent
             try:
+                await _raise_if_pattern_below_file(transport, remote_abs_path)
                 await transport.makedirs_async(workdir.joinpath(remote_dirname), ignore_existing=True)
                 await transport.symlink_async(remote_abs_path, workdir.joinpath(dest_rel_path))
             except OSError:
@@ -337,6 +338,33 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
         else:
             msg = f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
             raise OSError(msg)
+
+
+async def _raise_if_pattern_below_file(transport: Transport, remote_abs_path: str) -> None:
+    """Raise if ``remote_abs_path`` is a pattern below a file, e.g. ``file/*`` or ``file/sub/*``.
+
+    Such a pattern can never match anything, so the transport would silently create no symlinks at all.
+
+    :raises NotADirectoryError: if the nearest existing ancestor of the pattern is a file.
+    """
+    if not has_magic(remote_abs_path):
+        return
+
+    literal_parts = []
+    for part in PurePosixPath(remote_abs_path).parts:
+        if has_magic(part):
+            break
+        literal_parts.append(part)
+
+    literal_path = PurePosixPath(*literal_parts)
+
+    # The nearest existing ancestor decides: a missing directory is left to the transport as before.
+    for path in (literal_path, *literal_path.parents):
+        if await transport.path_exists_async(path):
+            if await transport.isfile_async(path):
+                msg = f'`{remote_abs_path}` can never match: `{path}` is a file, not a directory.'
+                raise NotADirectoryError(msg)
+            return
 
 
 async def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir: Path):

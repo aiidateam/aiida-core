@@ -1,3 +1,5 @@
+.. _topics:workflows:graphs:
+
 Graphs
 ======
 
@@ -41,7 +43,7 @@ Tasks are the only place that runs Python, creates data, and records provenance.
 The full rule list lives under :ref:`topics:workflows:graphs:language`.
 
 Each call to a task or graph in a body is a placement.
-Calling the same task twice creates two placements; each runs as its own child process with its own inputs, outputs, and provenance links.
+Calling the same task twice creates two placements, each running as its own child process with its own inputs, outputs, and provenance links; name repeated placements with distinct ``.alias('name')`` calls, as a bare second call fails when the graph is built.
 A named value passed between placements is a wire.
 Nested graphs, branch arms, loop iterations, and map items run as scopes of the same graph process: no intermediate process nodes, with hierarchical call labels preserving the scope identity.
 
@@ -123,8 +125,12 @@ The sketch below builds an equivalent workflow to the ``converge`` recipe above,
 
 .. code:: python
 
-    from aiida.engine import WorkChain, while_
+    from aiida.engine import WorkChain, calcfunction, while_
     from aiida.orm import Dict, Int
+
+    @calcfunction
+    def make_report(value: Int, attempts: Int) -> Dict:
+        return Dict({'value': value.value, 'attempts': attempts.value})
 
     class Converge(WorkChain):
         @classmethod
@@ -151,7 +157,7 @@ The sketch below builds an equivalent workflow to the ``converge`` recipe above,
             self.ctx.attempts += 1
 
         def report(self):
-            self.out('report', Dict({'value': self.ctx.value.value, 'attempts': self.ctx.attempts}))
+            self.out('report', make_report(self.ctx.value, Int(self.ctx.attempts)))
 
 The same workflow as a graph (see :ref:`topics:workflows:graphs:recipe`) reduces the boilerplate.
 
@@ -205,7 +211,7 @@ Building it reports the exact validation error, with the offending source line a
 
 .. code:: text
 
-    aiida.common.exceptions.GraphLanguageError: bad:9:5: without an `else`
+    aiida.common.exceptions.GraphLanguageError: /path/to/file.py:9:5: __main__:bad: without an `else`
     arm the branch keeps the prior binding, so `chosen` must be assigned
     before the `if`; assign it first or add an `else` arm instead
         if flag:
@@ -487,10 +493,12 @@ Where to define graphs
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Graphs and tasks can be defined in a module, a script, or a notebook.
-No entry points or plugin packaging are needed: a graph is submitted directly from where it is defined, unlike a process class that must be installed and registered to be launchable by the daemon.
+No entry points or plugin packaging are needed: a graph is submitted directly from where it is defined, and the daemon only needs to import the module.
 Each submission carries the graph structure and a pickled copy of every task, so the daemon needs no access to the files that define them.
 These copies include helpers defined in the same file as the task.
 Helpers imported from other files are referenced by name, so the daemon imports them; those files must be installed or on the daemon's ``PYTHONPATH``.
+
+.. _topics:workflows:graphs:inspecting:
 
 Validating graphs and inspecting runs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -556,7 +564,7 @@ A task or graph called through ``.alias('scf')`` names its placement explicitly 
 Runtime configuration
 ^^^^^^^^^^^^^^^^^^^^^
 
-Graphs submit like any other process: ``run_get_node(multiply_add_calc, x=2, y=3, z=4)`` takes flat workflow arguments, or the same mapping under ``inputs=``. Execution settings travel separately, under the launch-only ``runtime_config`` channel -- they are not workflow inputs, so they never enter provenance or checkpoints as such.
+Graphs submit like any other process: ``run_get_node(multiply_add_calc, x=2, y=3, z=4)`` takes flat workflow arguments, or the same mapping under ``inputs=``. Execution settings travel separately, under the launch-only ``runtime_config`` channel: they never masquerade as scientific inputs, though the snapshot itself is stored on the graph node so restarts keep working.
 Each process placement takes an ordinary process input mapping, including a nested ``metadata`` mapping:
 
 .. code:: python
@@ -1178,10 +1186,6 @@ Literal values in the graph body, such as the ``1`` in ``add(x=x, y=1)``, are st
 Task functions receive the types their annotations declare: Python values for Python annotations, nodes for ORM annotations.
 Values a task computes but does not return leave no trace in the provenance graph.
 
-.. _topics:workflows:graphs:inspecting:
-
-.. _topics:workflows:graphs:limitations:
-
 .. _topics:workflows:graphs:gallery:
 
 Example gallery
@@ -1350,6 +1354,12 @@ Run a ``WorkChain`` and combine it with a ``CalcJob`` in one graph
     from aiida.engine import WorkChain
     from aiida.orm import Int
 
+    from aiida.engine import calcfunction
+
+    @calcfunction
+    def store_sum(x: Int, y: Int) -> Int:
+        return Int(x.value + y.value)
+
     class AddWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):
@@ -1360,7 +1370,7 @@ Run a ``WorkChain`` and combine it with a ``CalcJob`` in one graph
             spec.outline(cls.add_numbers)
 
         def add_numbers(self):
-            self.out('result', Int(self.inputs.x.value + self.inputs.y.value))
+            self.out('result', store_sum(self.inputs.x, self.inputs.y))
 
     add_chain = task(AddWorkChain)
 
@@ -1369,6 +1379,8 @@ Run a ``WorkChain`` and combine it with a ``CalcJob`` in one graph
         stepped = add_chain(x=x, y=y)
         total = add_calc(x=stepped.result, y=z)
         return total.sum
+
+Add chains compute through a calculation, so their outputs are stored nodes.
 
 Legacy processes keep their outline and children; the graph only connects them. See :ref:`topics:workflows:graphs:task_kinds`.
 
@@ -1380,6 +1392,12 @@ Submit a ``WorkChain`` on its own
     from aiida.engine import WorkChain
     from aiida.orm import Int
 
+    from aiida.engine import calcfunction
+
+    @calcfunction
+    def store_sum(x: Int, y: Int) -> Int:
+        return Int(x.value + y.value)
+
     class AddWorkChain(WorkChain):
         @classmethod
         def define(cls, spec):
@@ -1390,7 +1408,7 @@ Submit a ``WorkChain`` on its own
             spec.outline(cls.add_numbers)
 
         def add_numbers(self):
-            self.out('result', Int(self.inputs.x.value + self.inputs.y.value))
+            self.out('result', store_sum(self.inputs.x, self.inputs.y))
 
     add_chain = task(AddWorkChain)
 
@@ -1468,6 +1486,8 @@ Bind shared inputs once with ``partial``:
 
 ``partial`` needs no import and binds nothing by itself; each call site places independently. See :ref:`topics:workflows:graphs:partial`.
 
+
+.. _topics:workflows:graphs:limitations:
 
 Known limitations
 -----------------

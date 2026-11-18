@@ -368,6 +368,61 @@ async def test_upload_remote_symlink_list(
     assert (filepath_workdir / 'path' / 'sub' / 'file_c.txt').read_text() == 'file_c'
 
 
+@pytest.mark.parametrize('pattern', ('file_a.txt/*', 'file_a.txt/sub/*.txt'))
+@pytest.mark.asyncio
+async def test_upload_remote_symlink_list_pattern_below_file(
+    fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path, create_file_hierarchy, pattern
+):
+    """A pattern in ``remote_symlink_list`` whose literal part is a file can never match and should raise.
+
+    Regression test for https://github.com/aiidateam/aiida-core/issues/6803
+    """
+    create_file_hierarchy(file_hierarchy, tmp_path)
+    node, calc_info = node_and_calc_info
+
+    calc_info.remote_symlink_list = [(node.computer.uuid, f'{tmp_path}/{pattern}', '.')]
+
+    async with node.computer.get_transport() as transport:
+        with pytest.raises(NotADirectoryError, match='is a file, not a directory'):
+            await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+
+
+@pytest.mark.asyncio
+async def test_upload_remote_symlink_list_pattern_in_directory(
+    fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path, create_file_hierarchy
+):
+    """A pattern in ``remote_symlink_list`` below a directory still links every match."""
+    create_file_hierarchy(file_hierarchy, tmp_path)
+    node, calc_info = node_and_calc_info
+
+    calc_info.remote_symlink_list = [(node.computer.uuid, f'{tmp_path}/path/sub/*', '.')]
+
+    async with node.computer.get_transport() as transport:
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+
+    filepath_workdir = pathlib.Path(node.get_remote_workdir())
+    linked = sorted(path.name for path in filepath_workdir.iterdir() if path.is_symlink())
+    assert linked == ['file_c.txt', 'file_d.txt']
+    assert (filepath_workdir / 'file_c.txt').read_text() == 'file_c'
+
+
+@pytest.mark.asyncio
+async def test_upload_remote_symlink_list_pattern_below_missing_directory(
+    fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path, create_file_hierarchy
+):
+    """A pattern below a missing directory keeps the previous behavior of linking nothing without raising."""
+    create_file_hierarchy(file_hierarchy, tmp_path)
+    node, calc_info = node_and_calc_info
+
+    calc_info.remote_symlink_list = [(node.computer.uuid, f'{tmp_path}/missing/sub/*', '.')]
+
+    async with node.computer.get_transport() as transport:
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+
+    filepath_workdir = pathlib.Path(node.get_remote_workdir())
+    assert not any(path.is_symlink() for path in filepath_workdir.iterdir())
+
+
 @pytest.mark.parametrize(
     'order, expected',
     (

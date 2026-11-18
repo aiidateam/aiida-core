@@ -34,10 +34,10 @@ ConfigType = dict[str, t.Any]
 # When the configuration file format is changed in a backwards-incompatible way, the oldest compatible version should
 # be set to the new current version.
 
-CURRENT_CONFIG_VERSION = 11
-OLDEST_COMPATIBLE_CONFIG_VERSION = 11
+CURRENT_CONFIG_VERSION = 12
+OLDEST_COMPATIBLE_CONFIG_VERSION = 12
 # Highest configuration version for which this code can run downgrade migrations, even if it cannot load it.
-MAXIMUM_DOWNGRADE_CONFIG_VERSION = 11
+MAXIMUM_DOWNGRADE_CONFIG_VERSION = 12
 
 CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
@@ -514,6 +514,39 @@ class AiidaV3Migration(SingleMigration):
             self._downgrade_options(profile.get('options', {}))
 
 
+class AddPrefixToProcessControlBackend(SingleMigration):
+    """The ``process_control.backend`` key should be prefixed with ``core.``.
+
+    The legacy ``rabbitmq`` entry point was renamed to ``core.rabbitmq`` when broker entry points were introduced.
+    At runtime the old value is still accepted (see ``Manager.get_broker``), but stored configurations should use
+    the fully qualified entry point name, mirroring ``AddPrefixToStorageBackendTypes``.
+    """
+
+    down_revision = 11
+    down_compatible = 11
+    up_revision = 12
+    up_compatible = 12
+
+    def upgrade(self, config: ConfigType) -> None:
+        for profile_name, profile in config.get('profiles', {}).items():
+            backend = profile.get('process_control', {}).get('backend', None)
+            if backend == 'rabbitmq':
+                profile['process_control']['backend'] = 'core.rabbitmq'
+            elif backend not in ('core.rabbitmq', 'core.zeromq', None):
+                CONFIG_LOGGER.warning(f'profile {profile_name!r} had unknown process control backend {backend!r}')
+
+    def downgrade(self, config: ConfigType) -> None:
+        for profile_name, profile in config.get('profiles', {}).items():
+            backend = profile.get('process_control', {}).get('backend', None)
+            if backend == 'core.rabbitmq':
+                profile.setdefault('process_control', {})['backend'] = 'rabbitmq'
+            elif backend not in ('rabbitmq', 'core.zeromq', None):
+                CONFIG_LOGGER.warning(
+                    f'profile {profile_name!r} has process control backend {backend!r} that will not be compatible '
+                    'with the version of `aiida-core` that can be used with the new version of the configuration.'
+                )
+
+
 MIGRATIONS = (
     Initial,
     AddProfileUuid,
@@ -526,6 +559,7 @@ MIGRATIONS = (
     AddPrefixToStorageBackendTypes,
     RenameRmqAndLogging,
     AiidaV3Migration,
+    AddPrefixToProcessControlBackend,
 )
 
 

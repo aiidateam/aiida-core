@@ -297,6 +297,24 @@ Below is a list with all available subcommands.
       show         Show generic information on one or more nodes.
 
 
+.. _reference:command-line:verdi-notebook:
+
+``verdi notebook``
+------------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Manage Jupyter notebooks.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      install  Register a Jupyter kernel for this environment and configuration directory.
+
+
 .. _reference:command-line:verdi-plugin:
 
 ``verdi plugin``

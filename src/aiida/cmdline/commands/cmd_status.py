@@ -53,6 +53,33 @@ STATUS_SYMBOLS = {
 }
 
 
+def get_registered_kernel(config_dir: str) -> str | None:
+    """Return the display name of a Jupyter kernel targeting this configuration, if any.
+
+    Kernels registered with `verdi notebook install` pin the environment and configuration directory in their
+    specification, both of which a Jupyter server would otherwise not inherit. Returns `None` when no kernel
+    targets this configuration or the specifications are unreadable; `verdi status` must not break over this
+    optional feature.
+
+    :raises ImportError: if `jupyter_client` is not installed.
+    """
+    from jupyter_client.kernelspec import KernelSpecManager
+
+    manager = KernelSpecManager()
+    try:
+        names = manager.find_kernel_specs()
+    except Exception:
+        return None
+    for name in sorted(names):
+        try:
+            spec = manager.get_kernel_spec(name)
+        except Exception:
+            continue
+        if (spec.env or {}).get('AIIDA_PATH') == config_dir:
+            return spec.display_name
+    return None
+
+
 @verdi.command('status')
 @options.PRINT_TRACEBACK()
 @click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
@@ -90,6 +117,19 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
         message = 'Unable to read AiiDA profile'
         print_status(ServiceStatus.ERROR, 'profile', message, exception=exc, print_traceback=print_traceback)
         sys.exit(ExitCode.CRITICAL)  # stop here - without a profile we cannot access anything
+
+    # A kernel registered with `verdi notebook install` is how a notebook reads this same configuration.
+    # This needs the optional `jupyter_client`; without it there is nothing to report.
+    try:
+        kernel = get_registered_kernel(str(configure_directory))
+    except ImportError:
+        pass
+    else:
+        if kernel is not None:
+            print_status(ServiceStatus.UP, 'notebook', f"kernel '{kernel}' registered for this configuration")
+        else:
+            print_status(ServiceStatus.WARNING, 'notebook', 'no kernel registered for this configuration')
+            echo.echo_report("Run 'verdi notebook install' to use this configuration in Jupyter notebooks.")
 
     # Check the backend storage
     storage_head_version = None

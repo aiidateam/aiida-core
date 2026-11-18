@@ -161,13 +161,10 @@ def fanout(values: list[int]) -> int:
     return result
 
 
-# rejected at lowering: write out one call per value instead.
+# Rejected: task calls in comprehensions require explicit graph placements.
 @graph
 def list_comprehension(values: list[int]) -> int:
-    """Map over inputs inline; scatter is a runtime control, not syntax.
-
-    Unroll the placements instead.
-    """
+    """Task calls cannot run inside a pure inline comprehension."""
     _ = [add(x=value, y=1) for value in values]
     return add(x=1, y=1)
 

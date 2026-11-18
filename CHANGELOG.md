@@ -9,6 +9,15 @@
 
 ### Breaking changes
 
+#### Inline collection expressions in source graphs
+
+Graph bodies now accept inline collection expressions over typed `list[T]`/`dict[str, T]` collections: integer indexing of lists with negatives, string-key lookup of mappings with runtime keys, public annotated item reads such as `item.value`, one-type list/dict literals within collection expressions, and filtered, nested list/dict comprehensions with `mapping.items()` pair iteration.
+Previously each of these forms failed at build time with a diagnostic telling authors to pass whole collections or write out one call per value; each form now lowers to an `expression` inline placement that evaluates inside the graph process.
+The engine semantics match scalar inline operations: no child processes, no `CREATE` links, checkpointed scope values, and only task outputs entering the provenance.
+A root graph cannot return a newly computed collection or scalar, and returning an existing owned member itself still fails at launch under the unchanged owned-container contract.
+Still rejected at build time are task or method calls inside an expression, slices, set/generator comprehensions, private attribute reads, missing element annotations, and `DataList[T]` generics (prefer `list[orm.Int]` hints, or an explicit `orm.DataList` passed whole without inline indexing).
+Templates carrying expressions serialize as graph declaration version `0.3`, while existing scalar-only `0.2` and no-op `0.1` declarations remain readable; stored declarations and checkpoints that avoid the new forms need no migration.
+
 #### Python ORM containers in graphs store as owned containers
 
 Graph and task ports annotated with Python containers of data nodes, such as `list[orm.Int]` or `dict[str, orm.Int]` (including the `typing.List`/`typing.Dict` spellings), now store as owned `orm.DataList`/`orm.DataDict` containers instead of JSON `List`/`Dict` nodes. Task bodies receive a plain Python `list`/`dict` holding the member nodes, while the provenance wire carries the owned container. Ports annotated directly with `orm.DataList`/`orm.DataDict` still receive the node itself, and plain `list[int]`/`dict[str, int]` still store as JSON nodes. Only direct members of one `DataNode` subclass are mapped. Previously an ORM-valued container annotation stored as JSON; relaunch affected graphs so their wires use the owned representation.

@@ -213,10 +213,9 @@ def wrong_type(x: str) -> int:
     return add(x=x, y=1)
 
 
-# rejected at lowering: collections travel whole.
 @graph
 def subscript_load(values: list[int]) -> int:
-    """Read one element; collections travel whole."""
+    """Read one element inline and pass it to a task."""
     return add(x=values[0], y=1)
 
 

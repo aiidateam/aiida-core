@@ -52,6 +52,7 @@ class LeafShape(_ValueShape):
     """One value with optional valid types."""
 
     types: tuple[type, ...] | None = None
+    element: Shape | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -192,6 +193,18 @@ def _forwarded_shape(
     return _without_excluded(shape, exclude)
 
 
+def _element_shape(annotation: t.Any) -> Shape | None:
+    """Return the member contract of a `list[T]` or `dict[str, T]` declaration, if any."""
+    bare = _without_marks(annotation)
+    origin = t.get_origin(bare)
+    arguments = t.get_args(bare)
+    if origin is list and len(arguments) == 1:
+        return shape_for_annotation(arguments[0])
+    if origin is dict and len(arguments) == 2 and arguments[0] is str:
+        return shape_for_annotation(arguments[1])
+    return None
+
+
 def shape_for_annotation(
     annotation: object, *, required: bool = True, default: object = UNSPECIFIED, help: str | None = None
 ) -> Shape:
@@ -213,7 +226,11 @@ def shape_for_annotation(
     fields = _fields_of(annotation)
     if fields is None:
         return LeafShape(
-            types=_infer_runtime_types(annotation) or None, required=required, default=default, help=resolved_help
+            types=_infer_runtime_types(annotation) or None,
+            element=_element_shape(annotation),
+            required=required,
+            default=default,
+            help=resolved_help,
         )
     return NamespaceShape(
         fields=tuple(
@@ -272,6 +289,8 @@ def dump_shape(shape: Shape, *, defaults: bool = True) -> dict[str, t.Any]:
             if shape.types is None
             else [None if kind is type(None) else get_object_loader().identify_object(kind) for kind in shape.types],
         )
+        if shape.element is not None:
+            result['element'] = dump_shape(shape.element, defaults=defaults)
     elif isinstance(shape, NamespaceShape):
         result.update(
             kind='namespace', fields={name: dump_shape(field, defaults=defaults) for name, field in shape.fields}
@@ -292,10 +311,12 @@ def load_shape(data: Mapping[str, t.Any]) -> Shape:
     default = json_default(data['default']) if 'default' in data else UNSPECIFIED
     if data['kind'] == 'leaf':
         types = data.get('types')
+        element_data = data.get('element')
         return LeafShape(
             types=None
             if types is None
             else tuple(type(None) if kind is None else get_object_loader().load_object(kind) for kind in types),
+            element=load_shape(element_data) if element_data is not None else None,
             required=required,
             help=help,
             default=default,

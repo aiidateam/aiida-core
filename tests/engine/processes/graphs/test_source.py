@@ -53,6 +53,14 @@ def test_build_does_not_invoke_graph_or_task_bodies(monkeypatch: pytest.MonkeyPa
     assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
 
 
+def test_collection_index_builds_inline_expression() -> None:
+    """Indexing a typed collection wires an inline value into a task."""
+    assert ports.subscript_load.build() is None
+    spec = compile_graph(ports.subscript_load)
+    assert spec.tasks[0].operation == 'expression'
+    assert spec.dependencies == (Dependency(spec.tasks[0].name, 'add', 'result', 'x'),)
+
+
 def test_signed_literals_keep_their_sign() -> None:
     assert compile_graph(parameters.signed_literals).tasks[0].inputs == {'x': -3, 'y': 1}
 
@@ -211,7 +219,7 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(assignments.augmented_assignment, 'move it into a task', id='aug-assign'),
         pytest.param(assignments.annotated_assignment, 'drop the annotation', id='ann-assign'),
         pytest.param(loops.fanout, 'for loops are not supported', id='fanout'),
-        pytest.param(loops.list_comprehension, 'write out one call per value', id='listcomp'),
+        pytest.param(loops.list_comprehension, 'calls never run inline', id='listcomp'),
         pytest.param(loops.local_use_before_def, 'before the loop instead', id='loop-use-before-def'),
         pytest.param(loops.local_conditional_assign, 'before the loop instead', id='loop-conditional-assign'),
         pytest.param(loops.local_leaks_after_loop, 'is not known here', id='loop-post-loop-access'),
@@ -221,7 +229,6 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(ports.literal_return, 'return a task output or graph input', id='literal'),
         pytest.param(ports.make_config, "unregistered call 'Configuration'", id='make-config'),
         pytest.param(ports.missing_final_return, 'end the graph with a return', id='missing-return'),
-        pytest.param(ports.subscript_load, 'pass the whole collection', id='subscript-load'),
         pytest.param(ports.nonfinite_dict_value, 'finite JSON', id='nonfinite-dict'),
         pytest.param(statements.nested_definition, 'move it into a task', id='nested-def'),
         pytest.param(statements.with_block, 'move it into a task', id='with'),

@@ -49,10 +49,25 @@ __all__ = (
 #: `<`, `<=`, `>`, `>=`, `==`, `!=`, unary `-`, unary `+`, and `not`, in order, plus `const`
 #: for scalar literal bindings, which bind no operator spelling.
 OperationKind: t.TypeAlias = t.Literal[
-    'add', 'sub', 'mul', 'floordiv', 'mod', 'lt', 'le', 'gt', 'ge', 'eq', 'ne', 'neg', 'pos', 'not', 'const'
+    'add',
+    'sub',
+    'mul',
+    'floordiv',
+    'mod',
+    'lt',
+    'le',
+    'gt',
+    'ge',
+    'eq',
+    'ne',
+    'neg',
+    'pos',
+    'not',
+    'const',
+    'expression',
 ]
 
-#: Every supported inline operation.
+#: Scalar operations evaluated here; collection trees use the expression interpreter.
 OPERATIONS: t.Final = frozenset(
     {'add', 'sub', 'mul', 'floordiv', 'mod', 'lt', 'le', 'gt', 'ge', 'eq', 'ne', 'neg', 'pos', 'not', 'const'}
 )

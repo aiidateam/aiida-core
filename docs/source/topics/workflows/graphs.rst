@@ -168,7 +168,7 @@ As compared to work chains, graphs provide: less code to write, static pre-runti
 
 Graphs do not do:
 
-* arbitrary Python (method calls, comprehensions, and imports belong in tasks);
+* arbitrary Python (method calls and imports belong in tasks; list and dict comprehensions are inline, see :ref:`topics:workflows:graphs:inline_collections`);
 * dynamic submission (the placements are fixed when the graph is built -- a ``WorkChain`` can instead submit a number of processes computed at run time, or pick the process class from an intermediate result);
 * unstored runs (see :ref:`topics:workflows:graphs:limitations`).
 
@@ -248,6 +248,7 @@ The graph body supports:
 * graph inputs and earlier-bound names as arguments, plus literals (``1``, ``'done'``, ``True``, ``None``) and scalar bindings (``attempts = 0``);
 * ``if``/``elif``/``else``, ``while``, and ``x if condition else y``, with inline expressions and task calls directly in the tests (:ref:`topics:workflows:graphs:control_flow`);
 * inline arithmetic, comparisons, and unary operators (:ref:`topics:workflows:graphs:inline`);
+* collection expressions over typed lists and mappings: integer indexing with negatives, string-key lookup with runtime keys, public annotated item reads such as ``item.value``, and filtered, nested list and dict comprehensions with ``mapping.items()`` pair iteration (:ref:`topics:workflows:graphs:inline_collections`);
 * a single final ``return`` of a name, a field, or a call, or of a ``dict`` of those with literal string keys; a graph with no outputs ends with an explicit ``return {}``;
 * field and namespace selection (``.key``, ``['key']``, ``.result``; ``.result`` on a single-output call is optional) and multi-output unpacking (``value, error = step(...)``);
 * module-qualified calls (``my_module.add(...)``) and explicitly aliased placements (``decl.alias('name')(...)``), required whenever one task or graph is placed twice in the same body;
@@ -277,7 +278,7 @@ A ``while`` tests an inline comparison directly and steps its counter with inlin
 
 Scalar literals bind the same way, without a task, such as ``attempts = 0``, ``running = False``, or ``mode = 'square'``.
 A bound name wires its value into task arguments, branch arms, and loop state exactly like a computed inline result.
-Only finite numbers, strings, booleans, and ``None`` bind; anything else (collections, formatting, indexing) still belongs in a task or a graph input.
+Only finite numbers, strings, booleans, and ``None`` bind; anything else (formatting, method calls, nested task calls) still belongs in a task, while collections use the inline forms below.
 
 Inline results are ephemeral orchestration state, not scientific data:
 
@@ -286,10 +287,45 @@ Inline results are ephemeral orchestration state, not scientific data:
 * **Root graphs never return a newly computed scalar:** returning ``n`` above would publish a value with no creator, breaking the rule that workflows return existing data while only tasks create new data. A root graph returns task outputs, graph inputs, or collector-built containers, or nothing, declared explicitly with ``return {}``. Use an explicit task for a scientific result computed from inline state. Returning a bound literal directly fails when the graph is built, for the same reason.
 * **Nested helpers may return control state:** a subgraph can return an inline value for its caller to consume as orchestration state, since the caller scope, not the provenance, receives it.
 * **Explicit tasks are never inlined:** a ``@task`` function always runs as its own child process, even when its body is a single expression. Inlining never invents a calculation absent from the source.
-* **Cheap by construction:** inline expressions run inside the graph process, so keep them to the supported operators. Anything else (formatting, indexing, comprehensions, nested calls) belongs in a task and still raises ``GraphLanguageError``. Division by zero and non-finite results fail the run.
+* **Cheap by construction:** inline expressions run inside the graph process, so keep them to the supported operators. Anything else (formatting, method calls, nested task calls, slices, set and generator comprehensions, private attribute reads) belongs in a task and still raises ``GraphLanguageError``. Division by zero and non-finite results fail the run.
 
 Loop iterations run one at a time and each iteration completes its whole scope before the next begins, so placements without a data dependency still run sequentially.
 For example, stepping an inline counter after a calculation needs no ``after`` edge: the next iteration starts only after the calculation scope completes.
+
+.. _topics:workflows:graphs:inline_collections:
+
+Inline collections
+^^^^^^^^^^^^^^^^^^
+
+Typed lists and mappings thread through inline expressions without a task: annotate the port as ``list[T]`` or ``dict[str, T]`` on a graph input, a task input, or a task output, and every use below reads the declared element type.
+A missing element annotation fails the build, so spell the member type instead of guessing.
+Index a list with an integer, where negative positions count back from the end, and index a mapping with a string, where the key itself can be a wired value resolved at runtime.
+Read public annotated item state directly, such as ``item.value`` on an owned ``Int`` member, while private names and method calls stay task concerns.
+Collect filtered and nested results eagerly with list and dict comprehensions, including ``for key, value in mapping.items()`` pair iteration over a mapping; iterating a mapping directly yields its keys.
+Comprehensions size themselves at runtime, so empty inputs simply collect empty results.
+Collection literals inside these expressions must have one declared element type; standalone literal bindings remain unsupported.
+
+.. code:: python
+
+    from aiida.engine import graph, task
+
+    @task
+    def sum_values(values: list[int]) -> int:
+        return sum(values)
+
+    @graph
+    def scaled_filtered(values: list[int], scale: int) -> int:
+        scaled = [item * scale for item in values if item > 0]
+        return sum_values(values=scaled)
+
+The graph filters and scales its inputs inline, then the consumer task stores the scientific result.
+A comprehension over a task-produced list reads the packing task's element hint without re-annotation, so ``[item * scale for item in packed]`` types its members from a ``pack`` task returning ``list[int]``.
+Comprehensions over owned members keep the owned contract when they forward the members themselves, so ``[item for item in values]`` over ``list[Int]`` validates against a downstream ``list[Int]`` consumer; unwrapped or computed members fall back to plain contracts, so ``[item.value + 1 for item in values]`` feeds a ``list[int]`` consumer instead.
+Generic ``DataList[T]`` annotations are not supported: prefer ``list[orm.Int]`` hints where indexing and comprehensions apply, or annotate the port explicitly as ``orm.DataList`` and pass it whole without inline indexing, since its element is absent.
+Task or method calls inside an expression, slices, set or generator comprehensions, private attribute reads, and nested boolean combinations or conditional expressions inside a comprehension all stay task concerns and fail the build.
+The engine semantics match scalar inline operations: expressions evaluate inside the graph process with no child processes, no ``CREATE`` links, and no provenance of their own; their values checkpoint with the scope while only task outputs are stored.
+A root graph never returns a newly computed collection or scalar; route the value through a task and return the task output instead.
+Returning an existing owned member itself stays under the unchanged owned-container contract and fails at launch, so consume it in a task first.
 
 .. _topics:workflows:graphs:control_flow:
 

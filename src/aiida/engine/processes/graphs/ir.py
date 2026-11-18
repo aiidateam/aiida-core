@@ -17,14 +17,17 @@ import sys
 import typing as t
 from collections.abc import Mapping
 from copy import copy, deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cached_property
+
+from typing_extensions import is_typeddict
 
 from aiida.common import _callables as callables
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.graphs.expressions import infer_expression_shape
 from aiida.engine.processes.graphs.inputs import _port_for_shape, _shape_from_port
 from aiida.engine.processes.graphs.operations import (
     BINARY_OPERATIONS,
@@ -37,8 +40,16 @@ from aiida.engine.processes.graphs.operations import (
     OperationKind,
     const_result_shape,
 )
-from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
-from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
+from aiida.engine.processes.graphs.results import Result, _result_contract
+from aiida.engine.processes.graphs.shapes import (
+    LeafShape,
+    NamespaceShape,
+    Shape,
+    dump_shape,
+    load_shape,
+    shape_for_annotation,
+)
+from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types, _node_type
 from aiida.engine.processes.process import Process
 from aiida.orm import Code, DataDict, DataList
 from aiida.orm.nodes.data.datanode import DataNode
@@ -60,6 +71,7 @@ __all__ = (
     'TaskIR',
 )
 
+_GRAPH_IR_EXPRESSION_VERSION: t.Final = '0.3'
 _GRAPH_IR_VERSION: t.Final = '0.2'
 _GRAPH_IR_LEGACY_VERSION: t.Final = '0.1'
 _TASK_IR_VERSION: t.Final = '0.1'
@@ -334,6 +346,78 @@ TypevarPositions: t.TypeAlias = dict[t.Any, list[str]]
 """Bare type variables mapped to the input ports declaring them."""
 
 
+def _overlay_element(base: Shape, annotated: Shape | None) -> Shape:
+    """Overlay collection members from ``annotated`` onto ``base``, keeping base types."""
+    if annotated is None:
+        return base
+    if isinstance(base, LeafShape) and isinstance(annotated, LeafShape):
+        if annotated.element is None:
+            return base
+        return replace(base, element=annotated.element)
+    if isinstance(base, NamespaceShape) and isinstance(annotated, NamespaceShape):
+        by_name = dict(annotated.fields)
+        return replace(
+            base,
+            fields=tuple((name, _overlay_element(child, by_name.get(name))) for name, child in base.fields),
+        )
+    return base
+
+
+def _task_func_annotations(process_class: type[Process]) -> dict[str, t.Any] | None:
+    """Return the task function hints, or `None` when unavailable or unresolvable."""
+    func = getattr(process_class, '_func', None)
+    if func is None or not callable(func):
+        return None
+    try:
+        return t.get_type_hints(func, include_extras=True)
+    except (NameError, TypeError, SyntaxError):
+        # String annotations name objects outside the task module; only ports describe the contract then.
+        return None
+
+
+def _shape_for_success(annotation: t.Any) -> Shape | None:
+    """Expand a success annotation, naming `TypedDict` outputs per key."""
+    if not is_typeddict(annotation):
+        return shape_for_annotation(annotation)
+    try:
+        hints = t.get_type_hints(annotation, include_extras=True)
+    except (NameError, TypeError, SyntaxError):
+        return None
+    return NamespaceShape(fields=tuple((key, shape_for_annotation(hints.get(key))) for key in hints))
+
+
+def _with_input_elements(process_class: type[Process], shape: NamespaceShape) -> NamespaceShape:
+    """Overlay hint members onto input ``shape``; ports keep types and requiredness."""
+    hints = _task_func_annotations(process_class)
+    if not hints:
+        return shape
+    annotated = {name: shape_for_annotation(hint) for name, hint in hints.items() if name != 'return'}
+    if not annotated:
+        return shape
+    return replace(
+        shape, fields=tuple((name, _overlay_element(child, annotated.get(name))) for name, child in shape.fields)
+    )
+
+
+def _with_result_elements(process_class: type[Process], shape: Shape) -> Shape:
+    """Overlay return-annotation members onto result ``shape``; the `Result` error arm is untouched."""
+    hints = _task_func_annotations(process_class)
+    if not hints or 'return' not in hints:
+        return shape
+    success, _ = _result_contract(hints['return'])
+    annotated = _shape_for_success(success)
+    if annotated is None:
+        return shape
+    if t.get_origin(hints['return']) is Result and isinstance(shape, NamespaceShape):
+        return replace(
+            shape,
+            fields=tuple(
+                (name, _overlay_element(child, annotated) if name == 'value' else child) for name, child in shape.fields
+            ),
+        )
+    return _overlay_element(shape, annotated)
+
+
 @dataclass(frozen=True)
 class TaskIR:
     """A task's executor and its static input/output contracts.
@@ -451,17 +535,17 @@ class TaskIR:
 
     @property
     def input_shape(self) -> NamespaceShape:
-        """Return the fixed input contracts as nested shapes."""
+        """Return the fixed input contracts as nested shapes, with annotation elements."""
         shape = _shape_from_port(self.inputs)
         assert isinstance(shape, NamespaceShape)
-        return shape
+        return _with_input_elements(self.process_class, shape)
 
     @property
     def result_shape(self) -> Shape:
-        """Return the result port contracts, or the whole outputs namespace."""
+        """Return the result port contracts, with annotation elements, or the whole outputs namespace."""
         selected = self.outputs[self.result_port] if self.result_port else self.outputs
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
-        return _shape_from_port(selected)
+        return _with_result_elements(self.process_class, _shape_from_port(selected))
 
     def runtime_input_paths(self) -> frozenset[str]:
         """Return the minimal input path prefixes runtime configuration may supply.
@@ -986,11 +1070,24 @@ class InlineOperation(GraphTask):
     operation: OperationKind
     input_shape: NamespaceShape
     result_shape: LeafShape
+    expression: dict[str, t.Any] | None = None
 
     def __post_init__(self) -> None:
         """Reject unknown operators and operand contracts the operator cannot read."""
-        if self.operation not in OPERATIONS:
-            msg = f'unknown operation `{self.operation}`; expected one of {sorted(OPERATIONS)}.'
+        if self.operation != 'expression' and self.operation not in OPERATIONS:
+            msg = f'unknown operation `{self.operation}`; expected one of {sorted(OPERATIONS)} or expression.'
+            raise GraphTypeCheckError(msg)
+        if self.operation == 'expression':
+            if self.expression is None:
+                msg = 'an inline collection expression requires an expression tree.'
+                raise GraphTypeCheckError(msg)
+            inferred = infer_expression_shape(self.expression, dict(self.input_shape.fields))
+            if inferred != self.result_shape:
+                msg = 'inline expression result does not match its inferred contract.'
+                raise GraphTypeCheckError(msg)
+            return
+        if self.expression is not None:
+            msg = 'only expression placements carry an expression tree.'
             raise GraphTypeCheckError(msg)
         if self.operation == 'const':
             self._check_const()
@@ -1049,6 +1146,7 @@ class InlineOperation(GraphTask):
             'operation': self.operation,
             'input_shape': dump_shape(self.input_shape),
             'result_shape': dump_shape(self.result_shape),
+            **({'expression': self.expression} if self.expression is not None else {}),
         }
 
     @classmethod
@@ -1069,28 +1167,118 @@ class InlineOperation(GraphTask):
                 operation=data['operation'],
                 input_shape=input_shape,
                 result_shape=result_shape,
+                expression=data.get('expression'),
             )
         except KeyError as exception:
             msg = f'malformed operation task declaration; missing key {exception}.'
             raise GraphTypeCheckError(msg) from exception
 
 
-def _task_contains_operation(task: GraphTask) -> bool:
+def _task_contains_operation(task: GraphTask, *, expression_only: bool = False) -> bool:
     """Return whether a placement evaluates an inline operation, at any nesting depth."""
     if isinstance(task, InlineOperation):
-        return True
+        return not expression_only or task.operation == 'expression'
     if isinstance(task, MapControl):
-        return task.body is not None and _graph_contains_operation(task.body)
+        return task.body is not None and _graph_contains_operation(task.body, expression_only=expression_only)
     if isinstance(task, BranchControl):
-        return _graph_contains_operation(task.body) or _graph_contains_operation(task.otherwise)
+        return _graph_contains_operation(task.body, expression_only=expression_only) or _graph_contains_operation(
+            task.otherwise, expression_only=expression_only
+        )
     if isinstance(task, BodyTask):
-        return _graph_contains_operation(task.body)
+        return _graph_contains_operation(task.body, expression_only=expression_only)
     return False
 
 
-def _graph_contains_operation(graph: GraphIR) -> bool:
+def _graph_contains_operation(graph: GraphIR, *, expression_only: bool = False) -> bool:
     """Return whether any placement of a template evaluates an inline operation."""
-    return any(_task_contains_operation(task) for task in graph.tasks)
+    return any(_task_contains_operation(task, expression_only=expression_only) for task in graph.tasks)
+
+
+def _select_shape(shape: Shape, path: str) -> Shape | None:
+    """Return the nested contracts at a dotted path, or `None` when absent."""
+    current = shape
+    for segment in path.split('.') if path else ():
+        if not isinstance(current, NamespaceShape):
+            return None
+        try:
+            current = current.select(segment)
+        except KeyError:
+            return None
+    return current
+
+
+def _relative_shape(shape: Shape, prefix: str, port: str) -> Shape | None:
+    """Return source contracts for an endpoint port relative to a task or body result."""
+    if prefix:
+        if port == prefix:
+            return shape
+        if port.startswith(f'{prefix}.') and isinstance(shape, LeafShape) and isinstance(shape.element, NamespaceShape):
+            return _select_shape(shape.element, port[len(prefix) + 1 :])
+        return None
+    return _select_shape(shape, port) if isinstance(shape, NamespaceShape) else None
+
+
+def _normalized_value_types(types: tuple[type, ...]) -> tuple[t.Any, ...]:
+    """Return element types with ORM/Python spellings unified (`int` reads as `Int`)."""
+    return tuple(_node_type(kind) if _node_type(kind) is not None else kind for kind in types)
+
+
+def _leaf_types_agree(first: tuple[type, ...] | None, second: tuple[type, ...] | None) -> bool:
+    """Return whether two known value contracts accept each other, ignoring unknown sides."""
+    if first is None or second is None:
+        return True
+    try:
+        expected, received = _normalized_value_types(first), _normalized_value_types(second)
+        return all(any(issubclass(kind, other) for other in received) for kind in expected) and all(
+            any(issubclass(kind, other) for other in expected) for kind in received
+        )
+    except TypeError:
+        return tuple(first) == tuple(second)
+
+
+def branch_shapes_agree(first: Shape, second: Shape) -> bool:
+    """Return whether two branch outputs agree on value types, recursing into members.
+
+    Requiredness, defaults, and documentation are intentionally ignored: only the value
+    contracts matter. An unknown side (`None` types or a missing member) agrees with
+    anything, so callers must not claim the known side from such agreement.
+    """
+    if isinstance(first, NamespaceShape) and isinstance(second, NamespaceShape):
+        if {name for name, _ in first.fields} != {name for name, _ in second.fields}:
+            return False
+        other = dict(second.fields)
+        return all(branch_shapes_agree(child, other[name]) for name, child in first.fields)
+    if isinstance(first, LeafShape) and isinstance(second, LeafShape):
+        if not _leaf_types_agree(first.types, second.types):
+            return False
+        if first.element is None or second.element is None:
+            return True
+        return branch_shapes_agree(first.element, second.element)
+    return False
+
+
+def merge_branch_shape(first: Shape | None, second: Shape | None) -> Shape | None:
+    """Return the branch output contract without fabricating a known member from one arm."""
+    if first is None or second is None or not branch_shapes_agree(first, second):
+        return None
+    if isinstance(first, NamespaceShape) and isinstance(second, NamespaceShape):
+        other = dict(second.fields)
+        merged = tuple((name, merge_branch_shape(child, other[name])) for name, child in first.fields)
+        if any(shape is None for _, shape in merged):
+            return None
+        return replace(first, fields=tuple((name, t.cast('Shape', shape)) for name, shape in merged))
+    if isinstance(first, LeafShape) and isinstance(second, LeafShape):
+        if first.types is None or second.types is None:
+            return replace(first, types=None, element=None)
+        if first.element is None:
+            return first
+        if second.element is None:
+            return replace(first, element=None)
+        merged_element = merge_branch_shape(first.element, second.element)
+        if merged_element is None:
+            return None
+        return replace(first, element=merged_element)
+    return None
 
 
 @dataclass(frozen=True)
@@ -1111,7 +1299,10 @@ class GraphIR:
         from aiida.engine.processes.graphs.validate import validate_graph
 
         validate_graph(self)
-        version = _GRAPH_IR_VERSION if _graph_contains_operation(self) else _GRAPH_IR_LEGACY_VERSION
+        if _graph_contains_operation(self, expression_only=True):
+            version = _GRAPH_IR_EXPRESSION_VERSION
+        else:
+            version = _GRAPH_IR_VERSION if _graph_contains_operation(self) else _GRAPH_IR_LEGACY_VERSION
         if self.version != version:
             object.__setattr__(self, 'version', version)
 
@@ -1149,11 +1340,58 @@ class GraphIR:
 
     @property
     def result_shape(self) -> Shape:
-        """Return the result port contracts, or the whole outputs namespace."""
+        """Return the result port contracts, or the whole outputs namespace.
+
+        Stored ports keep types and requiredness; element contracts overlay from the
+        source endpoint so nested collections survive regrouping.
+        """
         namespace = self.build_output_namespace()
         selected = namespace[self.result_port] if self.result_port else namespace
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
-        return _shape_from_port(selected)
+        base = _shape_from_port(selected)
+        if self.result_port:
+            annotated = self._tree_shape(self.outputs[self.result_port])
+        else:
+            annotated = self._tree_shape(self.outputs)
+        return _overlay_element(base, annotated)
+
+    def _tree_shape(self, source: OutputTree | dict[str, OutputTree]) -> Shape | None:
+        """Return the source element contracts for one output subtree."""
+        if isinstance(source, dict):
+            fields: list[tuple[str, Shape]] = []
+            for name, child in source.items():
+                shaped = self._tree_shape(child)
+                if shaped is None:
+                    return None
+                fields.append((name, shaped))
+            return NamespaceShape(fields=tuple(fields))
+        return self._endpoint_shape(source)
+
+    def _endpoint_shape(self, endpoint: Endpoint) -> Shape | None:
+        """Return the source contracts for one output endpoint, or `None` when unknown."""
+        if endpoint.task is None:
+            return _select_shape(self.input_shape, endpoint.port)
+        try:
+            task = self.task(endpoint.task)
+        except KeyError:
+            return None
+        if isinstance(task, ProcessTask):
+            return _relative_shape(task.spec.result_shape, task.spec.result_port, endpoint.port)
+        if isinstance(task, InlineOperation):
+            return task.result_shape if endpoint.port == task.result_port else None
+        if isinstance(task, MapControl):
+            mapped = task.spec.result_shape if task.spec is not None else task.body.result_shape  # type: ignore[union-attr]
+            if not isinstance(mapped, LeafShape):
+                return None
+            collected = DataList if task.container == 'list' else DataDict
+            return _relative_shape(LeafShape(types=(collected,), element=mapped), 'result', endpoint.port)
+        if isinstance(task, (SubgraphTask, LoopControl)):
+            return _relative_shape(task.body.result_shape, task.body.result_port, endpoint.port)
+        if isinstance(task, BranchControl):
+            taken = _relative_shape(task.body.result_shape, task.body.result_port, endpoint.port)
+            other = _relative_shape(task.otherwise.result_shape, task.otherwise.result_port, endpoint.port)
+            return merge_branch_shape(taken, other)
+        return None
 
     def build_output_namespace(self) -> PortNamespace:
         """Return the nested outputs with their stored types.
@@ -1232,10 +1470,10 @@ class GraphIR:
     def from_dict(cls, data: Mapping[str, t.Any]) -> GraphIR:
         """Rebuild a graph template from its serialized form."""
         version = data.get('version')
-        if version not in (_GRAPH_IR_VERSION, _GRAPH_IR_LEGACY_VERSION):
+        if version not in (_GRAPH_IR_EXPRESSION_VERSION, _GRAPH_IR_VERSION, _GRAPH_IR_LEGACY_VERSION):
             msg = (
                 f'cannot read a graph declaration of version `{version}`; supported versions are '
-                f'`{_GRAPH_IR_LEGACY_VERSION}` and `{_GRAPH_IR_VERSION}`.'
+                f'`{_GRAPH_IR_LEGACY_VERSION}`, `{_GRAPH_IR_VERSION}`, and `{_GRAPH_IR_EXPRESSION_VERSION}`.'
             )
             raise GraphTypeCheckError(msg)
         try:

@@ -27,6 +27,7 @@ from aiida.common.links import LinkType
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.generic.ports import UNSPECIFIED
+from aiida.engine.processes.graphs.expressions import evaluate_expression
 from aiida.engine.processes.graphs.inputs import _at, _drops_none_value, _place, _prepare_graph_inputs
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
@@ -1036,7 +1037,11 @@ class GraphRun:
                 else:
                     msg = f'inline operation `{task.name}` is missing required input `{port_name}`.'
                     raise GraphRuntimeError(msg)
-        result = evaluate_operation(task.operation, inputs)
+        if task.operation == 'expression':
+            assert task.expression is not None
+            result = evaluate_expression(task.expression, inputs)
+        else:
+            result = evaluate_operation(task.operation, inputs)
         scope.setdefault('values', {})[task.name] = result
         self._invalidate()
 

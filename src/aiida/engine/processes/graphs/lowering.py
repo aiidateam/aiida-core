@@ -32,6 +32,7 @@ from aiida.common.links import validate_link_label
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.calcjobs import CalcJob
 from aiida.engine.processes.exit_code import ExitCodeEnum
+from aiida.engine.processes.graphs.expressions import compile_expression, infer_expression_shape
 from aiida.engine.processes.graphs.inputs import _drops_none_value, _place
 from aiida.engine.processes.graphs.ir import (
     _CONDITION_PORT,
@@ -47,6 +48,7 @@ from aiida.engine.processes.graphs.ir import (
     Route,
     SubgraphTask,
     TaskIR,
+    merge_branch_shape,
 )
 from aiida.engine.processes.graphs.operations import (
     CONSTANT_PORT,
@@ -1276,7 +1278,9 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
     # Namespace arms expose their fields at the branch root, so the carried
     # name restarts at the whole branch namespace instead of the call port.
     carried = '' if _is_namespace_arm(first) or _is_namespace_arm(second) else port or selected.port
-    state.names[first.name] = _Reference(instance, port=carried, shape=selected.shape)
+    merged = merge_branch_shape(selected.shape, second.child.names[second.name].shape)
+    # Incompatible arms retain the existing validation path, including boolean diagnostics.
+    state.names[first.name] = _Reference(instance, port=carried, shape=merged if merged is not None else selected.shape)
     return first.name
 
 
@@ -1976,13 +1980,17 @@ def _probe_shape(state: _LoweringState, expression: ast.expr) -> Shape | None:
             return None
         return reference.shape
     if isinstance(expression, ast.Attribute):
-        return _probe_field(state, expression.value, expression.attr)
+        field = _probe_field(state, expression.value, expression.attr)
+        return field if field is not None else _probe_expression_shape(state, expression)
     if (
         isinstance(expression, ast.Subscript)
         and isinstance(expression.slice, ast.Constant)
         and isinstance(expression.slice.value, str)
     ):
-        return _probe_field(state, expression.value, expression.slice.value)
+        field = _probe_field(state, expression.value, expression.slice.value)
+        return field if field is not None else _probe_expression_shape(state, expression)
+    if isinstance(expression, (ast.Subscript, ast.ListComp, ast.DictComp)):
+        return _probe_expression_shape(state, expression)
     if isinstance(expression, (ast.Constant, ast.UnaryOp)):
         try:
             value = ast.literal_eval(expression)
@@ -2004,6 +2012,24 @@ def _probe_field(state: _LoweringState, parent: ast.expr, attr: str) -> Shape | 
     try:
         return shape.select(attr)
     except KeyError:
+        return None
+
+
+def _probe_expression_shape(state: _LoweringState, node: ast.expr) -> Shape | None:
+    """Infer a collection expression without placing operations or binding locals."""
+
+    def resolve(expression: ast.expr) -> tuple[str, Shape]:
+        assert isinstance(expression, ast.Name)
+        shape = _probe_shape(state, expression)
+        if shape is None:
+            msg = f'unknown expression input `{expression.id}`.'
+            raise GraphTypeCheckError(msg)
+        return expression.id, shape
+
+    try:
+        expression, inputs = compile_expression(node, resolve)
+        return infer_expression_shape(expression, inputs)
+    except GraphTypeCheckError:
         return None
 
 
@@ -2331,6 +2357,42 @@ def _place_operation(
         )
     )
     return _Reference(instance, port=RESULT_PORT, shape=result_shape)
+
+
+def _place_expression(state: _LoweringState, node: ast.expr) -> _Reference:
+    """Place a pure collection expression with captured wires and lexically scoped locals."""
+    references: dict[str, _Reference] = {}
+
+    def resolve(expression: ast.expr) -> tuple[str, Shape]:
+        assert isinstance(expression, ast.Name)
+        reference = _lower_value(state, expression)
+        assert isinstance(reference, _Reference)
+        references[expression.id] = reference
+        return expression.id, reference.shape
+
+    try:
+        expression, inputs = compile_expression(node, resolve)
+        result = infer_expression_shape(expression, inputs)
+        if not isinstance(result, LeafShape):
+            msg = 'inline collection expressions produce one value, not an output namespace.'
+            raise GraphTypeCheckError(msg)
+    except GraphTypeCheckError as exception:
+        _reject(state, node=node, reason=str(exception))
+    instance = _claim_name(state, f'expression_{len(state.tasks) + 1}')
+    given: dict[str, _CapturedValue] = {}
+    for port, reference in references.items():
+        _wire(state, instance=instance, port=port, value=reference, given=given)
+    state.tasks.append(
+        InlineOperation(
+            name=instance,
+            operation='expression',
+            expression=expression,
+            inputs=given,
+            input_shape=NamespaceShape(fields=tuple(inputs.items())),
+            result_shape=result,
+        )
+    )
+    return _Reference(instance, port=RESULT_PORT, shape=result)
 
 
 def _lower_operation(state: _LoweringState, node: ast.BinOp | ast.Compare | ast.UnaryOp) -> _Reference:
@@ -2677,6 +2739,12 @@ def _lower_value(
     """Lower a value expression to a reference or literal."""
     if allow_call and isinstance(expression, ast.Call):
         return _lower_call(state, expression=expression)
+    if isinstance(expression, (ast.ListComp, ast.DictComp)):
+        return _place_expression(state, expression)
+    if isinstance(expression, ast.Subscript):
+        parent_shape = _probe_shape(state, expression.value)
+        if not isinstance(parent_shape, NamespaceShape):
+            return _place_expression(state, expression)
     if isinstance(expression, ast.BoolOp):
         return _lower_boolop(state, node=expression)
     if isinstance(expression, ast.IfExp):
@@ -2748,8 +2816,8 @@ def _select_field(
     if not isinstance(reference.shape, NamespaceShape):
         if reference.task is not None and reference.port == attr:
             return reference
-        msg = 'a single stored value has no fields to select; use the value directly instead'
-        _reject(state, node=node, reason=msg)
+        assert isinstance(node, ast.expr)
+        return _place_expression(state, node)
     path = f'{reference.port}.{attr}' if reference.port else attr
     try:
         shape = reference.shape.select(attr)

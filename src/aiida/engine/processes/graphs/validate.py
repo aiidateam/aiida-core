@@ -22,6 +22,7 @@ from aiida.engine.processes.graphs.ir import (
     OutputTree,
     _input_ports_at,
     _port_at,
+    branch_shapes_agree,
 )
 from aiida.engine.processes.graphs.operations import (
     BINARY_OPERATIONS,
@@ -141,6 +142,12 @@ def _validate_region(task: GraphTask) -> None:
         _check_compatible(
             task.body.build_output_namespace(), task.otherwise.build_output_namespace(), f'branch `{task.name}`'
         )
+        if not branch_shapes_agree(task.body.result_shape, task.otherwise.result_shape):
+            msg = (
+                f'branch `{task.name}` has incompatible collection members; '
+                'both arms must return the same member types.'
+            )
+            raise GraphTypeCheckError(msg)
     if isinstance(task, MapControl):
         _validate_map(task)
     if isinstance(task, LoopControl) and type(task.max_iterations) is not int:
@@ -183,7 +190,7 @@ def _validate_map(task: MapControl) -> None:
 
 def _validate_operation(task: InlineOperation) -> None:
     """Check that an inline operation declares the operand contracts and result its operator infers."""
-    if task.operation == 'const':
+    if task.operation in ('const', 'expression'):
         # `InlineOperation.__post_init__` already checks the bound value, its port, and the
         # result contract; inference below would re-derive the same identity shape.
         return

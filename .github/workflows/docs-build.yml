@@ -1,8 +1,9 @@
 name: docs-build
 
 on:
+  workflow_dispatch:
   push:
-    branches-ignore: [gh-pages]
+    branches: [main]
   pull_request:
     branches-ignore: [gh-pages]
     paths: [docs/**]

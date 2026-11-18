@@ -1,6 +1,6 @@
 codecov:
   notify:
-    after_n_builds: 1
+    after_n_builds: 5  # 4x tests (2 python x 2 brokers) + 1x test-pytest-fixtures
     wait_for_ci: no
   require_ci_to_pass: no
 

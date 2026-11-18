@@ -58,6 +58,9 @@ class Classifier(t.NamedTuple):
 
     ormclass_type_string: str
     process_type_string: str | None = None
+    # The node class a class-based node target was constructed from. ``None`` for raw string targets,
+    # which keep namespace-based semantics, and for non-node entities.
+    node_class: type | None = None
 
 
 class QueryBuilder:
@@ -257,7 +260,7 @@ class QueryBuilder:
 
         :param dict classifiers:
             Classifiers, containing the string that defines the type of the AiiDA ORM class.
-            For subclasses of Node, this is the Node._plugin_type_string, for other they are
+            For subclasses of Node, this is the Node.class_node_type, for other they are
             as defined as returned by :func:`QueryBuilder._get_ormclass`.
 
             Can also be a list of dictionaries, when multiple classes are passed to QueryBuilder.append
@@ -316,6 +319,12 @@ class QueryBuilder:
         :param subclassing:
             Whether to include subclasses of the given class (default **True**).
             E.g. Specifying a ProcessNode as cls will include CalcJobNode, WorkChainNode, CalcFunctionNode, etc..
+
+            For node classes, membership is determined by Python inheritance over the registered node plugins:
+            the base class itself does not need an entry point. A raw ``entity_type`` string instead filters
+            by stored-type namespace prefix, so a class target and its type string can select different nodes.
+            Nodes whose plugin cannot be loaded are excluded from class queries; use a raw ``entity_type``
+            string to match stored types without loading their plugins.
         :param edge_tag:
             The tag that the edge will get. If nothing is specified
             (and there is a meaningful edge) the default is tag1--tag2 with tag1 being the entity joining
@@ -1255,7 +1264,7 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> tuple[EntityTypes, Classifier]
     classifiers: Classifier
 
     if issubclass(cls, nodes.Node):
-        classifiers = Classifier(cls.class_node_type)
+        classifiers = Classifier(cls.class_node_type, node_class=cls)
         ormclass = EntityTypes.NODE
     elif issubclass(cls, groups.Group):
         type_string = cls._type_string
@@ -1282,7 +1291,7 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> tuple[EntityTypes, Classifier]
     # This is a special case, since Process is not an ORM class.
     # We need to deduce the ORM class used by the Process.
     elif issubclass(cls, Process):
-        classifiers = Classifier(cls._node_class._plugin_type_string, cls.build_process_type())
+        classifiers = Classifier(cls._node_class.class_node_type, cls.build_process_type(), node_class=cls._node_class)
         ormclass = EntityTypes.NODE
 
     else:
@@ -1321,7 +1330,7 @@ def _get_ormclass_from_str(type_string: str) -> tuple[EntityTypes, Classifier]:
         ormclass = EntityTypes.LINK
     else:
         # At this point, we assume it is a node. The only valid type string then is a string
-        # that matches exactly the _plugin_type_string of a node class
+        # that matches exactly the class_node_type of a node class
         is_valid_node_type_string(type_string, raise_on_false=True)
         classifiers = Classifier(type_string)
         ormclass = EntityTypes.NODE
@@ -1339,6 +1348,12 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
     """
     from aiida.common.escaping import escape_for_sql_like
     from aiida.orm.utils.node import get_query_type_from_type_string
+    from aiida.orm.utils.node_inheritance import node_type_filter
+
+    if classifiers.node_class is not None:
+        # Class targets select registered implementations through Python inheritance and so always filter
+        # by exact stored type identifiers. Raw string targets below keep namespace-based prefix semantics.
+        return node_type_filter(classifiers.node_class, subclassing=subclassing)
 
     value = classifiers.ormclass_type_string
 

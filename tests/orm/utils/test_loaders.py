@@ -11,9 +11,9 @@
 import pytest
 
 from aiida.common.exceptions import NotExistent
-from aiida.orm import Data, Group, Node
+from aiida.orm import Computer, Data, Group, Node
 from aiida.orm.utils import load_code, load_computer, load_entity, load_group, load_node
-from aiida.orm.utils.loaders import NodeEntityLoader
+from aiida.orm.utils.loaders import IdentifierType, NodeEntityLoader, OrmEntityLoader
 
 
 class TestOrmUtils:
@@ -47,6 +47,31 @@ class TestOrmUtils:
 
         with pytest.raises(TypeError):
             load_entity(entity_loader, label=1)
+
+    def test_infer_identifier_type(self):
+        """Test `OrmEntityLoader.infer_identifier_type`."""
+        # Integer -> ID
+        assert OrmEntityLoader.infer_identifier_type('123') == (123, IdentifierType.ID)
+        assert OrmEntityLoader.infer_identifier_type(123) == (123, IdentifierType.ID)
+
+        # Ambiguity breaker forces integer string to LABEL
+        assert OrmEntityLoader.infer_identifier_type('123!') == ('123', IdentifierType.LABEL)
+
+        # UUID-like string -> UUID
+        assert OrmEntityLoader.infer_identifier_type('cafe') == ('cafe', IdentifierType.UUID)
+
+        # Ambiguity breaker forces UUID-like string to LABEL
+        assert OrmEntityLoader.infer_identifier_type('cafe!') == ('cafe', IdentifierType.LABEL)
+
+        # Ambiguity breaker itself as label (issue #6415)
+        assert OrmEntityLoader.infer_identifier_type('!') == ('!', IdentifierType.LABEL)
+        assert OrmEntityLoader.infer_identifier_type('!!') == ('!', IdentifierType.LABEL)
+
+        # Escaped label ending with ambiguity breaker
+        assert OrmEntityLoader.infer_identifier_type('test!!') == ('test!', IdentifierType.LABEL)
+
+        # Regular label
+        assert OrmEntityLoader.infer_identifier_type('my-label') == ('my-label', IdentifierType.LABEL)
 
     def test_load_code(self):
         """Test the functionality of load_code."""
@@ -134,6 +159,33 @@ class TestOrmUtils:
         loaded_computer = load_computer(uuid=computer.uuid[:10])
         assert loaded_computer.uuid == computer.uuid
 
+        # Load computer with label equal to ambiguity breaker (issue #6415)
+        computer_bang = Computer(
+            label='!',
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp',
+        ).store()
+        try:
+            assert load_computer('!').uuid == computer_bang.uuid
+            assert load_computer('!!').uuid == computer_bang.uuid
+        finally:
+            Computer.collection.delete(computer_bang.pk)
+
+        # Load computer with label ending in ambiguity breaker
+        computer_bang_suffix = Computer(
+            label='test!',
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp',
+        ).store()
+        try:
+            assert load_computer('test!!').uuid == computer_bang_suffix.uuid
+        finally:
+            Computer.collection.delete(computer_bang_suffix.pk)
+
         with pytest.raises(NotExistent):
             load_computer('non-existent-uuid')
 
@@ -173,6 +225,21 @@ class TestOrmUtils:
         # Load through partial uuid including a dash
         loaded_group = load_group(uuid=group.uuid[:10])
         assert loaded_group.uuid == group.uuid
+
+        # Load group with label equal to ambiguity breaker (issue #6415)
+        group_bang = Group(label='!').store()
+        try:
+            assert load_group('!').uuid == group_bang.uuid
+            assert load_group('!!').uuid == group_bang.uuid
+        finally:
+            Group.collection.delete(group_bang.pk)
+
+        # Load group with label ending in ambiguity breaker
+        group_bang_suffix = Group(label='test!').store()
+        try:
+            assert load_group('test!!').uuid == group_bang_suffix.uuid
+        finally:
+            Group.collection.delete(group_bang_suffix.pk)
 
         with pytest.raises(NotExistent):
             load_group('non-existent-uuid')

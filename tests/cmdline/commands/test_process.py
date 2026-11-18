@@ -119,14 +119,20 @@ def fork_worker_context(aiida_profile, started_daemon_client):
         )
         process.start()
 
-        yield process
+        try:
+            yield process
+        finally:
+            if process.is_alive():
+                process.terminate()
+            process.join(timeout=10)
+            if process.is_alive():
+                process.kill()
+                process.join()
 
-        process.terminate()
-        process.join()
-
-    yield fork_worker
-
-    client.increase_workers(nb_workers)
+    try:
+        yield fork_worker
+    finally:
+        client.increase_workers(nb_workers)
 
 
 def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:

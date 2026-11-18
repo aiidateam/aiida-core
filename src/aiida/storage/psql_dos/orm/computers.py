@@ -8,10 +8,9 @@
 ###########################################################################
 """SqlAlchemy implementations for the `Computer` entity and collection."""
 
-from copy import copy
+import copy
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm.session import make_transient
 
 from aiida.common import exceptions
 from aiida.orm.implementation.computers import BackendComputer, BackendComputerCollection
@@ -46,18 +45,17 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     def copy(self):
         """Create an unstored clone of an already stored `Computer`."""
-        session = self.backend.get_session()
-
         if not self.is_stored:
             raise exceptions.InvalidOperation('You can copy a computer only after having stored it')
 
-        dbcomputer = copy(self.model)
-        make_transient(dbcomputer)
-        session.add(dbcomputer)
-
-        newobject = self.__class__.from_dbmodel(dbcomputer, self.backend)
-
-        return newobject
+        return self.backend.computers.create(
+            label=self.label,
+            hostname=self.hostname,
+            description=self.description,
+            transport_type=self.get_transport_type(),
+            scheduler_type=self.get_scheduler_type(),
+            metadata=copy.deepcopy(self.get_metadata()),
+        )
 
     def store(self):
         """Store the `Computer` instance."""

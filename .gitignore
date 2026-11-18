@@ -32,6 +32,7 @@ Pipfile
 # files created by coverage
 .cache
 .pytest_cache
+/.hypothesis/
 .coverage
 coverage.xml
 htmlcov/

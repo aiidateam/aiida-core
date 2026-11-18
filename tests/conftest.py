@@ -32,6 +32,7 @@ from pathlib import Path
 
 import click
 import pytest
+from hypothesis import settings as hypothesis_settings
 
 from aiida import get_profile, orm
 from aiida.common.folders import Folder
@@ -55,6 +56,12 @@ if t.TYPE_CHECKING:
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
 P = t.ParamSpec('P')
+
+# Deterministic property-based tests: `HYPOTHESIS_PROFILE=ci` (e.g. in CI) replays the same
+# examples on every run, while the default `dev` profile runs fewer examples for speed.
+hypothesis_settings.register_profile('ci', derandomize=True, deadline=None)
+hypothesis_settings.register_profile('dev', max_examples=20, deadline=None)
+hypothesis_settings.load_profile(os.getenv('HYPOTHESIS_PROFILE', 'dev'))
 
 
 class TestDbBackend(Enum):

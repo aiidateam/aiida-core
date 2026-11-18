@@ -501,7 +501,7 @@ def get_symbols_string(symbols, weights):
         return symbols[0]
 
     pieces = []
-    for symbol, weight in zip(symbols, weights):
+    for symbol, weight in zip(symbols, weights, strict=True):
         pieces.append(f'{symbol}{weight:4.2f}')
     if has_vacancies(weights):
         pieces.append(f'X{1.0 - sum(weights):4.2f}')
@@ -1121,7 +1121,7 @@ class StructureData(Data):
 
         def get_extremas_from_positions(positions):
             """Returns the minimum and maximum value for each dimension in the positions given"""
-            return list(zip(*[(min(values), max(values)) for values in zip(*positions)]))
+            return list(zip(*[(min(values), max(values)) for values in zip(*positions, strict=True)], strict=True))
 
         # Calculating the minimal cell:
         positions = np.array([site.position for site in self.sites])
@@ -1887,7 +1887,7 @@ class StructureData(Data):
             # case when no spin are defined
             for site in self.sites:
                 kind = self.get_kind(site.kind_name)
-                species.append(dict(zip(kind.symbols, kind.weights)))
+                species.append(dict(zip(kind.symbols, kind.weights, strict=True)))
             if any(
                 create_automatic_kind_name(self.get_kind(name).symbols, self.get_kind(name).weights) != name
                 for name in self.get_site_kindnames()
@@ -1928,7 +1928,7 @@ class StructureData(Data):
         species = []
         for site in self.sites:
             kind = self.get_kind(site.kind_name)
-            species.append(dict(zip(kind.symbols, kind.weights)))
+            species.append(dict(zip(kind.symbols, kind.weights, strict=True)))
 
         positions = [list(site.position) for site in self.sites]
         return Molecule(species, positions)
@@ -2098,7 +2098,7 @@ class Kind:
         normalized_weights = (i / w_sum for i in self._weights)
         element_masses = (_atomic_masses[sym] for sym in self._symbols)
         # Weighted mass
-        self._mass = sum(i * j for i, j in zip(normalized_weights, element_masses))
+        self._mass = sum(i * j for i, j in zip(normalized_weights, element_masses, strict=True))
 
     @property
     def name(self):
@@ -2411,7 +2411,7 @@ class Site:
                 tag_list[i] = new_tag
 
         found = False
-        for kind_candidate, tag_candidate in zip(kinds, tag_list):
+        for kind_candidate, tag_candidate in zip(kinds, tag_list, strict=True):
             if kind_candidate.name == self.kind_name:
                 kind = kind_candidate
                 tag = tag_candidate

@@ -649,7 +649,7 @@ A task fixes the names and node types inside such namespaces with ``inputs`` and
 .. code:: python
 
     from aiida.calculations.shell import ShellJob
-    from aiida.orm import SinglefileData
+    from aiida.orm import Code, SinglefileData
 
     cat = task(ShellJob, inputs={'nodes': {'text': SinglefileData}}, outputs={'stdout': SinglefileData})
     count_words = task(ShellJob, inputs={'nodes': {'text': SinglefileData}}, outputs={'stdout': SinglefileData})
@@ -1093,6 +1093,10 @@ Mapping over a partial is one consumer of the same mechanism: ``par_map`` over a
 
 .. code:: python
 
+    from aiida import orm
+    from aiida.engine import graph, par_map
+
+    # `add` is the intro task.
     @graph
     def calibrated_all(values: orm.DataList, y: int) -> orm.DataList:
         configured = partial(add, y=y)
@@ -1185,7 +1189,41 @@ Example gallery
 
 Complete, runnable graphs. Each links to the section that explains it.
 
-Branch on a flag:
+Multiply and add, the smallest complete graph:
+
+.. code:: python
+
+    @graph
+    def multiply_add(x: int, y: int, z: int) -> int:
+        product = multiply(x=x, y=y)
+        return add(x=product, y=z)
+They build on the ``add`` and ``multiply`` tasks from the intro, plus these shared definitions:
+
+.. code:: python
+
+    from aiida import orm
+    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result
+
+    class StepErrors(ExitCodeEnum):
+        UNSTABLE = ExitCode(410, 'Unstable step.')
+
+    @task
+    def run_step(x: int, attempt: int) -> Result[int, StepErrors]:
+        if attempt < 1:
+            return Err(StepErrors.UNSTABLE)
+        return Ok(x + 1)
+
+    @task
+    def ensure(value: int | None) -> None:
+        if value is None:
+            raise ValueError('the step never succeeded.')
+
+    @task
+    def expand_cell(structure: orm.StructureData) -> orm.StructureData:
+        return structure
+
+Branch on a flag
+^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -1199,7 +1237,8 @@ Branch on a flag:
 
 See :ref:`topics:workflows:graphs:control_flow`.
 
-Retry a declared failure with a budget:
+Retry a declared failure with a budget
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -1214,12 +1253,18 @@ Retry a declared failure with a budget:
 
 See :ref:`topics:workflows:graphs:retries`.
 
-Fan out over a container, then reduce inside one task (``for`` loops live in ``@task`` bodies, never in ``@graph`` bodies):
+Fan out over a container, then reduce inside one task
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+(``for`` loops live in ``@task`` bodies, never in ``@graph`` bodies)
 
 .. code:: python
 
+    from aiida import orm
+    from aiida.engine import par_map
+
     @task
-    def mean_cell_volume(structures: DataList) -> float:
+    def mean_cell_volume(structures: orm.DataList) -> float:
         if not structures:
             raise ValueError('empty structure list')
         total = 0.0
@@ -1228,13 +1273,14 @@ Fan out over a container, then reduce inside one task (``for`` loops live in ``@
         return total / len(structures)
 
     @graph
-    def mean_expanded_volume(structures: DataList) -> float:
+    def mean_expanded_volume(structures: orm.DataList) -> float:
         expanded = par_map(expand_cell, structures)
         return mean_cell_volume(structures=expanded)
 
 See :ref:`topics:workflows:graphs:maps`.
 
-Nest graphs as subgraphs:
+Nest graphs as subgraphs
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -1245,7 +1291,8 @@ Nest graphs as subgraphs:
 
 The nested graph runs as a scope of the same graph process, not as a child workflow. See :ref:`topics:workflows:graphs:control_flow`.
 
-Handle a declared error without retrying:
+Handle a declared error without retrying
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -1268,12 +1315,17 @@ Handle a declared error without retrying:
     def ratio_or_zero(numerator: float, denominator: float) -> float:
         value, error = divide(numerator=numerator, denominator=denominator)
         if error is None:
-            return value
-        return recover_zero(error=error)
+            selected = value
+        else:
+            selected = recover_zero(error=error)
+        return selected
 
 See :ref:`topics:workflows:graphs:declared_failures`.
 
-Run a ``CalcJob``; the executable arrives through ``runtime_config``, not the graph inputs:
+Run a ``CalcJob``
+^^^^^^^^^^^^^^^^^
+
+The executable arrives through ``runtime_config``, not the graph inputs.
 
 .. code:: python
 
@@ -1290,7 +1342,8 @@ Run a ``CalcJob``; the executable arrives through ``runtime_config``, not the gr
 Launch with ``runtime_config={'add_calc': {'code': code, 'metadata': {...}}}``.
 See :ref:`topics:workflows:graphs:runtime_config`.
 
-Run a ``WorkChain`` and combine it with a ``CalcJob`` in one graph:
+Run a ``WorkChain`` and combine it with a ``CalcJob`` in one graph
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -1319,7 +1372,8 @@ Run a ``WorkChain`` and combine it with a ``CalcJob`` in one graph:
 
 Legacy processes keep their outline and children; the graph only connects them. See :ref:`topics:workflows:graphs:task_kinds`.
 
-Submit a ``WorkChain`` on its own:
+Submit a ``WorkChain`` on its own
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -1342,14 +1396,15 @@ Submit a ``WorkChain`` on its own:
 
     @graph
     def add_twice(x: int, y: int) -> int:
-        first = add_chain(x=x, y=y)
-        return add_chain(x=first.result, y=y)
+        first = add_chain.alias('first')(x=x, y=y)
+        return add_chain.alias('second')(x=first.result, y=y)
 
 The work chain keeps its outline and children.
 Each placement runs as a child workflow process under the graph.
-See :ref:`topics:workflows:graphs:control_flow`.
+See :ref:`topics:workflows:graphs:task_kinds`.
 
-Pick a value with a conditional expression instead of a branch:
+Pick a value with a conditional expression instead of a branch
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -1360,7 +1415,8 @@ Pick a value with a conditional expression instead of a branch:
 
 Only the taken side runs. See :ref:`topics:workflows:graphs:control_flow`.
 
-Order placements without passing values:
+Order placements without passing values
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -1375,7 +1431,8 @@ Order placements without passing values:
 
 ``after=(first, second)`` waits for both. See :ref:`topics:workflows:graphs:ordering`.
 
-Pass a structured input bundle instead of flat arguments:
+Pass a structured input bundle instead of flat arguments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -1398,6 +1455,18 @@ Pass a structured input bundle instead of flat arguments:
         return add(x=first, y=settings.nested.count)
 
 Each field becomes its own stored node. See :ref:`topics:workflows:graphs:structured_inputs`.
+
+Bind shared inputs once with ``partial``:
+
+.. code:: python
+
+    @graph
+    def add_shifted(x: int, y: int, z: int) -> int:
+        add_y = partial(add, y=y)
+        first = add_y.alias('first')(x=x)
+        return add_y.alias('second')(x=first)
+
+``partial`` needs no import and binds nothing by itself; each call site places independently. See :ref:`topics:workflows:graphs:partial`.
 
 
 Known limitations

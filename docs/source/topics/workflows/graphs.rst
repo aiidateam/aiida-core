@@ -1201,6 +1201,7 @@ Multiply and add, the smallest complete graph:
     def multiply_add(x: int, y: int, z: int) -> int:
         product = multiply(x=x, y=y)
         return add(x=product, y=z)
+
 They build on the ``add`` and ``multiply`` tasks from the intro, plus these shared definitions:
 
 .. code:: python

@@ -26,6 +26,12 @@ Templates carrying expressions serialize as graph declaration version `0.3`, whi
 
 Graph and task ports annotated with Python containers of data nodes, such as `list[orm.Int]` or `dict[str, orm.Int]` (including the `typing.List`/`typing.Dict` spellings), now store as owned `orm.DataList`/`orm.DataDict` containers instead of JSON `List`/`Dict` nodes. Task bodies receive a plain Python `list`/`dict` holding the member nodes, while the provenance wire carries the owned container. Ports annotated directly with `orm.DataList`/`orm.DataDict` still receive the node itself, and plain `list[int]`/`dict[str, int]` still store as JSON nodes. Only direct members of one `DataNode` subclass are mapped. Previously an ORM-valued container annotation stored as JSON; relaunch affected graphs so their wires use the owned representation.
 
+#### Function tasks require input type annotations
+
+`@task` now raises `GraphTypeCheckError` at decoration time if any function parameter lacks a type annotation, even if it has a default.
+Previously, unannotated parameters silently became generic `DataNode` ports.
+Annotate each parameter with its intended type, or with `DataNode` if it intentionally accepts any data node.
+
 #### Graph runtime failures finish with exit status 401
 
 `GraphRuntimeError` (including `GraphMaxIterationsError`) raised during graph scheduling or output validation now finishes the stored graph node as failed with exit status `401` (`ERROR_GRAPH_RUNTIME`) and the runtime diagnostic in its exit message, rather than excepting the node without an exit status. Callers of `run_get_node` should inspect the node's failure status instead of catching these runtime errors. Build-time language/type errors and launch-time validation errors still raise exceptions; direct `GraphRun.step()` calls also continue to raise runtime errors. Child task failures retain exit status `400` (`ERROR_TASK_FAILED`).

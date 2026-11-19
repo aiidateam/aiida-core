@@ -581,6 +581,12 @@ def test_dunder_main_task_round_trips_through_pickle() -> None:
     ('target', 'exception', 'message'),
     [
         pytest.param(tasks.unannotated_function, GraphTypeCheckError, 'return annotation', id='unannotated'),
+        pytest.param(
+            tasks.unannotated_inputs,
+            GraphTypeCheckError,
+            r'unannotated_inputs.*input annotations.*`a`, `b`',
+            id='unannotated-inputs',
+        ),
         pytest.param(tasks.kwargs_function, GraphTypeCheckError, 'fixed inputs', id='kwargs'),
         pytest.param(tasks.args_function, GraphTypeCheckError, 'fixed inputs', id='args'),
         pytest.param(DummyProcess, GraphTypeCheckError, 'a `CalcJob` subclass', id='process-class'),

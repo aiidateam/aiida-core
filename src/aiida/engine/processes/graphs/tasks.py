@@ -664,6 +664,14 @@ def _check_task_contract(
     if 'after' in signature.parameters:
         msg = '`after` is reserved for source graph ordering dependencies.'
         raise GraphTypeCheckError(msg)
+    missing = [
+        f'`{name}`'
+        for name, parameter in signature.parameters.items()
+        if parameter.annotation is inspect.Parameter.empty
+    ]
+    if missing:
+        msg = f'task `{function.__name__}` is missing input annotations for {", ".join(missing)}.'
+        raise GraphTypeCheckError(msg)
     hints = t.get_type_hints(function, include_extras=True)
     returned = hints.get('return', inspect.Signature.empty)
     annotation, _ = _result_contract(returned)

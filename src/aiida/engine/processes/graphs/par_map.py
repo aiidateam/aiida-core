@@ -23,7 +23,7 @@ from collections.abc import Callable
 
 from aiida.common.exceptions import GraphLanguageError
 from aiida.engine.processes.functions import calcfunction
-from aiida.orm import DataDict, DataList
+from aiida.orm import DataDict, DataList, Node
 from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
@@ -34,6 +34,14 @@ __all__ = (
 
 T = t.TypeVar('T')
 R = t.TypeVar('R')
+_InputNode = t.TypeVar('_InputNode', bound=Node)
+_OutputNode = t.TypeVar('_OutputNode', bound=Node)
+
+
+@t.overload
+def par_map(
+    func: Callable[[_InputNode], _OutputNode], values: DataList[_InputNode], *, after: t.Any = None
+) -> DataList[_OutputNode]: ...
 
 
 @t.overload

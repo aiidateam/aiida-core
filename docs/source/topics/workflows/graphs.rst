@@ -328,7 +328,7 @@ Collection literals inside these expressions must have one declared element type
 The graph filters and scales its inputs inline, then the consumer task stores the scientific result.
 A comprehension over a task-produced list reads the packing task's element hint without re-annotation, so ``[item * scale for item in packed]`` types its members from a ``pack`` task returning ``list[int]``.
 Comprehensions over owned members keep the owned contract when they forward the members themselves, so ``[item for item in values]`` over ``list[Int]`` validates against a downstream ``list[Int]`` consumer; unwrapped or computed members fall back to plain contracts, so ``[item.value + 1 for item in values]`` feeds a ``list[int]`` consumer instead.
-Generic ``DataList[T]`` annotations are not supported: prefer ``list[orm.Int]`` hints where indexing and comprehensions apply, or annotate the port explicitly as ``orm.DataList`` and pass it whole without inline indexing, since its element is absent.
+Inline indexing and comprehensions require Python container hints such as ``list[orm.Int]``. Pass ``orm.DataList`` and ``orm.DataList[T]`` wires whole instead.
 Task or method calls inside an expression, slices, set or generator comprehensions, private attribute reads, and nested boolean combinations or conditional expressions inside a comprehension all stay task concerns and fail the build.
 The engine semantics match scalar inline operations: expressions evaluate inside the graph process with no child processes, no ``CREATE`` links, and no provenance of their own; their values checkpoint with the scope while only task outputs are stored.
 A root graph never returns a newly computed collection or scalar; route the value through a task and return the task output instead.

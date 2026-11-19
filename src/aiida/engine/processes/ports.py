@@ -476,6 +476,8 @@ def _has_conversion(annotation: type) -> bool:
 
 def _origin_storable(origin: t.Any, annotation: t.Any) -> bool:
     """Return whether a generic alias stores through its origin or its members."""
+    if origin is DataList:
+        return True
     if origin in (list, dict, t.Union, UnionType):
         return all(_is_storable(argument) for argument in t.get_args(annotation))
     return False
@@ -554,7 +556,7 @@ def _infer_runtime_types(annotation: t.Any) -> tuple[t.Any, ...]:
     origin = t.get_origin(annotation)
     inferred: tuple[t.Any, ...] = ()
 
-    if _is_a_plain_class(annotation) or origin in (list, dict):
+    if _is_a_plain_class(annotation) or origin in (list, dict, DataList):
         inferred = (_runtime_type(annotation),)
     elif origin is t.Union or origin is UnionType:
         inferred = tuple(_runtime_type(item) for item in t.get_args(annotation))
@@ -609,8 +611,11 @@ def _runtime_type(annotation: t.Any) -> t.Any | None:
     """Return the runtime type for one annotation, or None when it declares none."""
     if annotation is t.Any:
         return None
-    if t.get_origin(annotation) in (list, dict):
-        return _owned_container_type(annotation) or t.get_origin(annotation)
+    origin = t.get_origin(annotation)
+    if origin in (list, dict):
+        return _owned_container_type(annotation) or origin
+    if origin is DataList:
+        return origin
     if _is_a_plain_class(annotation):
         return annotation
     return None

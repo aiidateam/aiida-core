@@ -444,3 +444,64 @@ def test_evaluate_const_rejects_nodes_nonfinite_and_extra_ports() -> None:
         evaluate_operation('const', {})
     with pytest.raises(GraphRuntimeError, match='takes no operand'):
         evaluate_operation('const', {'value': 1, 'operand': 2})
+
+
+def _failing_graph(operation: str, left: type, right: type) -> GraphIR:
+    """Return a single-operation graph routing two inputs through one inline placement."""
+    return GraphIR(
+        tasks=(_operation(operation, left, right),),
+        input_shape=NamespaceShape(fields=(('x', LeafShape(types=(left,))), ('y', LeafShape(types=(right,))))),
+        dependencies=(),
+        inputs={'x': (Route('op', 'left'),), 'y': (Route('op', 'right'),)},
+        outputs={'result': Endpoint(port='result', task='op')},
+    )
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'operation, left, right, x, y',
+    [
+        pytest.param('floordiv', Int, Int, 1, 0, id='floordiv'),
+        pytest.param('mod', Float, Float, 1.0, 0.0, id='mod'),
+    ],
+)
+def test_inline_division_by_zero_fails_graph(operation, left, right, x, y) -> None:
+    """An inline division by zero fails the graph instead of excepting it."""
+    from aiida.engine import run_get_node
+    from aiida.engine.processes.graphs.process import GraphProcess
+
+    _, node = run_get_node(
+        GraphProcess, **GraphProcess._launch_inputs(_failing_graph(operation, left, right), {'x': x, 'y': y})
+    )
+    assert node.is_failed and not node.is_excepted
+    assert node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+    assert 'divided by zero' in (node.exit_message or '')
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'operation, x, y',
+    [
+        pytest.param('mul', 1e308, 10.0, id='overflow'),
+        pytest.param('add', 1e308, 1e308, id='overflow-add'),
+    ],
+)
+def test_inline_nonfinite_result_fails_graph(operation, x, y) -> None:
+    """An inline result Python rounds to infinity fails the graph instead of excepting it."""
+    from dataclasses import replace
+
+    from aiida.engine import run_get_node
+    from aiida.engine.processes.graphs.process import GraphProcess
+
+    # Bind primitives directly: ORM attribute storage normalizes integral floats to integers.
+    graph = GraphIR(
+        tasks=(replace(_operation(operation, float, float), inputs={'left': x, 'right': y}),),
+        input_shape=NamespaceShape(fields=()),
+        dependencies=(),
+        inputs={},
+        outputs={'result': Endpoint(port='result', task='op')},
+    )
+    _, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(graph, {}))
+    assert node.is_failed and not node.is_excepted
+    assert node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+    assert 'non-finite' in (node.exit_message or '')

@@ -166,8 +166,10 @@ def test_graph_outputs_reject_computed_scalars_but_allow_existing_data() -> None
     state = run_mod.GraphRun(computed, given={'x': 2, 'y': 3})
     state.step()
     assert state.outputs() == {'result': 5}
-    with pytest.raises(GraphRuntimeError, match=r'@task'):
-        run_get_node(GraphProcess, **GraphProcess._launch_inputs(computed, {'x': 2, 'y': 3}))
+    _, failed_node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(computed, {'x': 2, 'y': 3}))
+    assert failed_node.is_failed and not failed_node.is_excepted
+    assert failed_node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+    assert '@task' in (failed_node.exit_message or '')
 
     passthrough = _graph(
         [],
@@ -234,8 +236,10 @@ def test_computed_primitive_cannot_escape_through_nested_scopes() -> None:
     assert orm_probe.outputs() == {'result': 5}
     assert orm_probe.scopes['root/nested']['given'] == {'value': 5}
     assert not isinstance(orm_probe.scopes['root/nested']['given']['value'], Node)
-    with pytest.raises(GraphRuntimeError, match=r'@task'):
-        run_get_node(GraphProcess, **GraphProcess._launch_inputs(laundered, {'x': 2, 'y': 3}))
+    _, failed_node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(laundered, {'x': 2, 'y': 3}))
+    assert failed_node.is_failed and not failed_node.is_excepted
+    assert failed_node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+    assert '@task' in (failed_node.exit_message or '')
 
     taken_body = _graph(
         [],
@@ -280,9 +284,11 @@ def test_computed_primitive_cannot_escape_through_nested_scopes() -> None:
         orm_child = orm_probe.scopes['root']['frames']['choose'][0]
         assert orm_probe.scopes[orm_child]['given'] == {'value': 5}
         assert not isinstance(orm_probe.scopes[orm_child]['given']['value'], Node)
-        with pytest.raises(GraphRuntimeError, match=r'@task'):
-            launch = GraphProcess._launch_inputs(branched, {'x': 2, 'y': 3, 'condition': condition})
-            run_get_node(GraphProcess, **launch)
+        launch = GraphProcess._launch_inputs(branched, {'x': 2, 'y': 3, 'condition': condition})
+        _, failed_node = run_get_node(GraphProcess, **launch)
+        assert failed_node.is_failed and not failed_node.is_excepted
+        assert failed_node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+        assert '@task' in (failed_node.exit_message or '')
 
     materialized = _graph(
         [op_add, _process('first', program_tasks.add)],
@@ -537,6 +543,34 @@ def test_loop_max_iterations_counts_inline_only_progress() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_loop_max_iterations_exhaustion_fails_graph() -> None:
+    """An inline loop that never terminates fails the graph instead of excepting it."""
+    from aiida.engine.processes.graphs.process import GraphProcess
+
+    tick = _inline('tick', 'add', {'left': (int,), 'right': (int,)}, literals={'right': 1})
+    body = _graph(
+        [tick],
+        {'value': (int,), 'condition': (bool,)},
+        [],
+        {'value': [Route('tick', 'left')]},
+        {'value': Endpoint(task='tick', port='result'), 'condition': Endpoint(task=None, port='condition')},
+        identifier='inline-loop-always',
+    )
+    loop = LoopControl(name='iterate', inputs={}, body=body, condition_port='condition', max_iterations=2)
+    graph = _graph(
+        [loop],
+        {'value': (int,), 'condition': (bool,)},
+        [],
+        {'value': [Route('iterate', 'value')], 'condition': [Route('iterate', 'condition')]},
+        {'result': Endpoint(task='iterate', port='value')},
+    )
+    _, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(graph, {'value': 0, 'condition': True}))
+    assert node.is_failed and not node.is_excepted
+    assert node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+    assert 'exceeded 2 iterations' in (node.exit_message or '')
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_nested_namespace_outputs_return_existing_nodes() -> None:
     """Nested namespaces regroup existing input and task nodes without creating data."""
     from aiida.engine.processes.graphs.process import GraphProcess
@@ -596,8 +630,11 @@ def test_nested_inline_primitive_leaf_rejected_with_nested_path() -> None:
     resolved = probe.outputs()
     assert resolved['outer']['bad'] == 5
     assert isinstance(resolved['outer']['good'], Node)
-    with pytest.raises(GraphRuntimeError, match=r'outer\.bad.*@task'):
-        run_get_node(GraphProcess, **GraphProcess._launch_inputs(graph, {'x': 2, 'y': 3, 'z': 4}))
+    _, failed_node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(graph, {'x': 2, 'y': 3, 'z': 4}))
+    assert failed_node.is_failed and not failed_node.is_excepted
+    assert failed_node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+    assert 'outer.bad' in (failed_node.exit_message or '')
+    assert '@task' in (failed_node.exit_message or '')
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

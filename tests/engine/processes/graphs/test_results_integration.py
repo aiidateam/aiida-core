@@ -30,13 +30,15 @@ import json
 import pytest
 
 from aiida.common.exceptions import GraphLanguageError
-from aiida.engine import graph, par_map, task
+from aiida.engine import ProcessState, catch_error, graph, par_map, task
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.exit_code import ExitCodeEnum
 from aiida.engine.processes.graphs.ir import GraphIR
 from aiida.engine.processes.graphs.lowering import compile_graph
 from aiida.engine.processes.graphs.results import Err, Ok, Result
-from aiida.orm import DataList
+from aiida.engine.processes.graphs.run import GraphRun
+from aiida.orm import CalcFunctionNode, DataList, Int
+from tests.engine.processes.graphs.programs import results
 
 pytestmark = pytest.mark.presto
 
@@ -60,8 +62,8 @@ def flaky_increment(x: int) -> Result[int, FlakyErrors]:
 
 @graph
 def nested_flaky(x: int) -> int:
-    """Wrap one fallible task in a nested scope, exposing absence on failure."""
-    value, _ = flaky_increment(x=x)
+    """Wrap one fallible task in a nested scope, propagating failures."""
+    value = flaky_increment(x=x)
     return value
 
 
@@ -80,8 +82,8 @@ def mark_present(value: int) -> bool:
 @graph
 def branch_on_nested_error(x: int) -> bool:
     """Branch outside the nested scope on the absent success arm."""
-    value = nested_flaky(x=x)
-    if value is None:
+    value, error = catch_error(nested_flaky(x=x))
+    if error is not None:
         selected = mark_absent()
     else:
         selected = mark_present(value=value)
@@ -105,11 +107,11 @@ def ensure_value(value: int | None, error: FlakyErrors | None) -> int:
 @graph
 def retry_until_even(x: int) -> int:
     """Retry a declared `ODD` failure with an inline counter and a named predicate."""
-    value, error = flaky_increment(x=x)
+    value, error = catch_error(flaky_increment(x=x))
     retry = should_retry(error=error, attempt=x)
     while retry:
         x = x + 1
-        value, error = flaky_increment(x=x)
+        value, error = catch_error(flaky_increment(x=x))
         retry = should_retry(error=error, attempt=x)
     return ensure_value(value=value, error=error)
 
@@ -135,7 +137,7 @@ def label_ok(value: int) -> str:
 @graph
 def branch_on_member(x: int) -> str:
     """Distinguish one declared member from every other outcome."""
-    value, error = flaky_increment(x=x)
+    value, error = catch_error(flaky_increment(x=x))
     if error is FlakyErrors.ODD:
         selected = label_odd()
     elif error is not None:
@@ -153,7 +155,7 @@ def map_fallible(values: DataList) -> DataList:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_branch_on_nested_error_arm():
-    """A nested declared failure completes and the outer branch sees `value is None`."""
+    """A nested declared failure completes and the outer branch sees the error arm."""
     _, node = run_get_node(branch_on_nested_error, x=1)
     assert node.is_finished_ok, f'graph failed: {node.exit_message}'
     assert node.outputs.result.value is True
@@ -207,3 +209,348 @@ def test_fallible_task_cannot_map_directly():
     """A fallible task exposes two arms, so the single-output map shape rejects it."""
     with pytest.raises(GraphLanguageError, match='single output'):
         map_fallible.build()
+
+
+@graph
+def propagate_through_nested(x: int) -> bool:
+    """The success consumer must not run after propagation."""
+    value = nested_flaky(x=x)
+    return mark_present(value=value)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_bare_failure_preserves_exit_code_and_blocks_consumers():
+    assert propagate_through_nested.build() is None
+    outputs, node = run_get_node(propagate_through_nested, x=1)
+    assert node.is_failed
+    assert (node.exit_status, node.exit_message) == FlakyErrors.ODD.value[:2]
+    assert not outputs
+    assert [called.process_label for called in node.called] == ['flaky_increment']
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_bare_success_returns_original_node():
+    outputs, node = run_get_node(nested_flaky, x=2)
+    (child,) = node.called
+    assert node.is_finished_ok
+    assert outputs['result'].pk == child.outputs.value.pk
+
+
+@graph
+def propagate_formatted(x: float) -> float:
+    """Forward the formatted exit message through the graph boundary."""
+    return results.divide_reported(numerator=x, denominator=2.0)
+
+
+@graph
+def outer_formatted(x: float) -> float:
+    return propagate_formatted(x=x)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_formatted_error_survives_nested_propagation():
+    _, node = run_get_node(outer_formatted, x=-4.0)
+    (child,) = node.called
+    assert node.exit_status == child.exit_status == 411
+    assert node.exit_message == child.exit_message == 'Negative numerator: -4.0'
+
+
+@task
+def also_410() -> Result[float, results.AliasErrors]:
+    return Err(results.AliasErrors.ALSO_ZERO)
+
+
+@graph
+def choose_error(first: bool, x: float) -> float:
+    if first:
+        value = results.divide(numerator=x, denominator=0.0)
+    else:
+        value = also_410()
+    return value
+
+
+@graph
+def capture_aliased_scope(first: bool, x: float) -> float:
+    _, error = catch_error(choose_error.alias('chosen')(first=first, x=x))
+    if error is results.AliasErrors.ALSO_ZERO:
+        selected = x
+    else:
+        selected = results.recover_zero(error=error)
+    return selected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(('first', 'expected'), [(True, 0.0), (False, 3.0)])
+def test_nested_capture_distinguishes_equal_statuses(first, expected):
+    template = compile_graph(capture_aliased_scope)
+    assert not template.declared_errors
+    assert len(template.task('chosen').body.declared_errors) == 2
+    outputs, node = run_get_node(capture_aliased_scope, first=first, x=3.0)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+    assert all(not child.is_finished_ok or child.process_label == 'recover_zero' for child in node.called)
+
+
+@graph
+def capture_with_uncaught_sibling(x: int) -> bool:
+    value, error = catch_error(nested_flaky.alias('captured')(x=x))
+    also = nested_flaky.alias('uncaught')(x=x)
+    if error is not None:
+        selected = mark_present(value=also)
+    else:
+        selected = mark_present(value=value)
+    return selected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_captured_invocation_does_not_handle_siblings():
+    _, node = run_get_node(capture_with_uncaught_sibling, x=1)
+    assert node.exit_status == FlakyErrors.ODD.value.status
+    assert not node.is_excepted
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_capture_survives_checkpoint_before_and_after_failure():
+    template = GraphIR.from_dict(json.loads(json.dumps(compile_graph(branch_on_nested_error).to_dict())))
+    state = GraphRun(template, given={'x': Int(1)})
+    (start,) = state.step().starts
+    _, child = run_get_node(flaky_increment, x=1)
+    state.started(start.instance, child.pk)
+    pending = GraphRun.from_dict(template, state.given, state.to_dict())
+    pending.completed(start.instance, child.pk)
+    restored = GraphRun.from_dict(template, pending.given, pending.to_dict())
+    assert restored.propagated_exit_code is None
+    (recovery,) = restored.step().starts
+    assert recovery.task.name == 'mark_absent'
+
+
+@graph
+def concurrent_failures(first: int, second: int) -> int:
+    value = flaky_increment.alias('first_call')(x=first)
+    _other = flaky_increment.alias('second_call')(x=second)
+    return value
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_first_observed_failure_stays_latched_after_resume():
+    template = compile_graph(concurrent_failures)
+    state = GraphRun(template, given={'first': Int(1), 'second': Int(11)})
+    first, second = state.step().starts
+    assert (first.instance, second.instance) == ('first_call', 'second_call')
+    _, first_child = run_get_node(flaky_increment, x=1)
+    _, second_child = run_get_node(flaky_increment, x=11)
+    state.started(first.instance, first_child.pk)
+    state.started(second.instance, second_child.pk)
+    state.completed(second.instance, second_child.pk)
+
+    restored = GraphRun.from_dict(template, state.given, state.to_dict())
+    restored.completed(first.instance, first_child.pk)
+    assert not restored.step().starts
+    assert restored.propagated_exit_code == FlakyErrors.TOO_BIG.value
+
+
+@graph
+def capture_value(x: int) -> int:
+    value = flaky_increment(x=x)
+    result, _ = catch_error(value)
+    return result
+
+
+@graph
+def capture_expression(x: int) -> int:
+    result, _ = catch_error(x + 1)
+    return result
+
+
+@graph
+def capture_infallible(x: int) -> bool:
+    result, _ = catch_error(mark_present(value=x))
+    return result
+
+
+@graph
+def capture_without_unpack(x: int) -> int:
+    result = catch_error(flaky_increment(x=x))
+    return result
+
+
+@graph
+def legacy_unpack(x: float) -> float:
+    value, _ = results.divide_quotient(numerator=x, denominator=1.0)
+    return value.ratio
+
+
+@graph
+def compare_undeclared_member(x: float) -> float:
+    value, error = catch_error(results.divide(numerator=x, denominator=0.0))
+    if error is results.AliasErrors.ALSO_ZERO:
+        selected = x
+    else:
+        selected = value
+    return selected
+
+
+@pytest.mark.parametrize(
+    ('declaration', 'message'),
+    [
+        (capture_value, 'one direct fallible'),
+        (capture_expression, 'one direct fallible'),
+        (capture_infallible, 'with declared failures'),
+        (capture_without_unpack, 'tuple assignment'),
+        (legacy_unpack, 'bare Result calls expose only success'),
+        (compare_undeclared_member, 'enum is not declared'),
+    ],
+)
+def test_invalid_capture_forms(declaration, message):
+    with pytest.raises(GraphLanguageError, match=rf'test_results_integration.py:\d+:\d+:[^\n]+{message}'):
+        declaration.build()
+
+
+@graph
+def bare_structured(x: float) -> float:
+    value = results.divide_tuple(numerator=x, denominator=2.0)
+    return value.ratio
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_bare_structured_success_binds_its_fields():
+    assert bare_structured.build() is None
+    outputs, node = run_get_node(bare_structured, x=3.0)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 1.5
+
+
+@task
+def maybe_value(x: int) -> Result[int | None, FlakyErrors]:
+    if x < 0:
+        return Err(FlakyErrors.ODD)
+    return Ok(x or None)
+
+
+@task
+def describe_capture(value: int | None, error: FlakyErrors | None) -> str:
+    if error is not None:
+        assert value is None
+        return error.name
+    return str(value)
+
+
+@graph
+def capture_nullable(x: int) -> str:
+    value, error = catch_error(maybe_value(x=x))
+    return describe_capture(value=value, error=error)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(('x', 'expected'), [(-1, 'ODD'), (0, 'None'), (1, '1')])
+def test_nullable_capture_uses_error_as_discriminator(x, expected):
+    outputs, node = run_get_node(capture_nullable, x=x)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@graph
+def loop_propagates(x: int) -> int:
+    while x < 4:
+        x = flaky_increment(x=x)
+    return x
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_uncaught_failure_stops_loop_on_second_iteration():
+    assert compile_graph(loop_propagates).declared_errors == compile_graph(nested_flaky).declared_errors
+    _, node = run_get_node(loop_propagates, x=2)
+    assert node.exit_status == FlakyErrors.ODD.value.status
+    assert sorted(child.exit_status for child in node.called) == [0, FlakyErrors.ODD.value.status]
+
+
+@graph
+def recovery_can_fail(x: int) -> int:
+    value, error = catch_error(flaky_increment(x=x))
+    if error is not None:
+        result = flaky_increment(x=11)
+    else:
+        result = value
+    return result
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_uncaught_recovery_failure_propagates():
+    assert compile_graph(recovery_can_fail).declared_errors == compile_graph(nested_flaky).declared_errors
+    _, node = run_get_node(recovery_can_fail, x=1)
+    assert node.exit_status == FlakyErrors.TOO_BIG.value.status
+
+
+@task
+def unexpected_failure(x: int) -> Result[int, FlakyErrors]:
+    if x == 0:
+        return Err(FlakyErrors.ODD)
+    if x == 1:
+        return Err(FlakyErrors.ODD.value._replace(status=777))
+    if x == 2:
+        raise RuntimeError('task exception')
+    return Ok('not an int')  # type: ignore[arg-type]
+
+
+@graph
+def capture_unexpected(x: int) -> str:
+    value, error = catch_error(unexpected_failure(x=x))
+    return describe_capture(value=value, error=error)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('x', [1, 2, 3], ids=['undeclared', 'exception', 'invalid-output'])
+def test_unexpected_failures_do_not_release_capture(x):
+    outputs, node = run_get_node(capture_unexpected, x=x)
+    expected = capture_unexpected.process_class.exit_codes.ERROR_TASK_FAILED.format(task='unexpected_failure')
+    assert (node.exit_status, node.exit_message) == expected[:2]
+    assert not outputs
+    (child,) = node.called
+    assert child.process_label == 'unexpected_failure'
+    assert child.is_excepted
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_capture_does_not_handle_killed_child():
+    state = GraphRun(compile_graph(capture_unexpected), given={'x': Int(0)})
+    (start,) = state.step().starts
+    child = CalcFunctionNode().store()
+    child.set_process_state(ProcessState.KILLED)
+    state.started(start.instance, child.pk)
+    state.completed(start.instance, child.pk)
+    assert not state.step().starts
+    assert state.failed == [start.instance]
+    assert state.propagated_exit_code is None
+
+
+@task
+def maybe_quotient(x: float) -> Result[results.Quotient | None, results.DivisionErrors]:
+    if x < 0:
+        return Err(results.DivisionErrors.ZERO_DENOMINATOR)
+    return Ok(results.Quotient(ratio=x) if x else None)
+
+
+@graph
+def nested_nullable_structure(x: float) -> results.Quotient | None:
+    return maybe_quotient(x=x)
+
+
+@graph
+def capture_nullable_structure(x: float) -> float:
+    value, error = catch_error(nested_nullable_structure(x=x))
+    if error is not None:
+        selected = results.recover_zero(error=error)
+    elif value is None:
+        selected = x
+    else:
+        selected = value.ratio
+    return selected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('x, expected', [(-1.0, 0.0), (0.0, 0.0), (2.0, 2.0)])
+def test_nested_capture_preserves_optional_structured_success(x, expected):
+    assert capture_nullable_structure.build() is None
+    outputs, node = run_get_node(capture_nullable_structure, x=x)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected

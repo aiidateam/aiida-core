@@ -93,9 +93,7 @@ class PlacementHandle(t.Generic[P, R]):
         _validate_alias_name(self.placement_name)
 
     @t.overload
-    def __call__(
-        self: PlacementHandle[P, Result[_V, _E]], *args: P.args, **kwargs: P.kwargs
-    ) -> tuple[_V, _E | None]: ...
+    def __call__(self: PlacementHandle[P, Result[_V, _E]], *args: P.args, **kwargs: P.kwargs) -> _V: ...
 
     @t.overload
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
@@ -241,7 +239,7 @@ class TaskProcess(FunctionProcessBase):
             assert code.message is not None
             spec.exit_code(code.status, label, code.message, invalidates_cache=code.invalidates_cache)
         if t.get_origin(return_annotation) is Result:
-            success = _as_port_model(annotation)
+            success = _result_model(annotation)
             if _is_structured(success):
                 spec.outputs_from(t.cast(type, success), prefix='value.')
                 spec.outputs['value'].required = False
@@ -288,13 +286,13 @@ class TaskProcess(FunctionProcessBase):
             msg = 'Ok must contain task outputs, not an exit code or another Result.'
             raise GraphValidationError(msg)
         success = t.get_args(annotation)[0]
-        if result.value is None and success is not type(None) and type(None) not in t.get_args(success):
+        if result.value is None and not _admits_none(success):
             msg = 'the successful Result type does not allow None.'
             raise GraphValidationError(msg)
         if result.value is None:
             # No value arm is stored; dependents read the absent arm as `None`.
             return ExitCode()
-        if _is_structured(_as_port_model(success)):
+        if _is_structured(_result_model(success)):
             self._store_value(self.spec().outputs['value'], result.value, 'value')
             return ExitCode()
         self._store_leaf(self.spec().outputs['value'], result.value, 'value')
@@ -406,6 +404,22 @@ class TaskProcess(FunctionProcessBase):
         super()._out_result(stored)
 
 
+def _admits_none(annotation: object) -> bool:
+    """Return whether the success annotation explicitly admits an absent value."""
+    return annotation in (None, type(None)) or (
+        t.get_origin(annotation) in (t.Union, UnionType) and type(None) in t.get_args(annotation)
+    )
+
+
+def _result_model(annotation: object) -> object:
+    """Allow an optional structured success under the optional value namespace."""
+    if t.get_origin(annotation) in (t.Union, UnionType):
+        present = [kind for kind in t.get_args(annotation) if kind is not type(None)]
+        if len(present) == 1:
+            annotation = present[0]
+    return _as_port_model(annotation)
+
+
 class FunctionTaskHandle(t.Generic[P, R]):
     """A callable process function carrying its graph declaration."""
 
@@ -420,16 +434,23 @@ class FunctionTaskHandle(t.Generic[P, R]):
         exit_codes: Mapping[str, ExitCode] | None = None,
     ) -> None:
         self._function: ProcessFunctionType[P, R, CalcFunctionNode] = function
+        annotation = t.get_type_hints(function, include_extras=True).get('return')
+        result = t.get_args(annotation) if t.get_origin(annotation) is Result else ()
         self._task_spec: TaskIR = TaskIR.from_process(
-            function, typevar_inputs=typevar_inputs, typevar_output=typevar_output, exit_codes=exit_codes
+            function,
+            typevar_inputs=typevar_inputs,
+            typevar_output=typevar_output,
+            exit_codes=exit_codes,
+            result_errors=tuple(get_object_loader().identify_object(kind) for kind in _error_types(result[1]))
+            if result
+            else (),
+            result_nullable=bool(result) and _admits_none(result[0]),
         )
         # Copy name and docstring, not the function state: the handle owns its task spec.
         functools.update_wrapper(self, function, updated=())
 
     @t.overload
-    def __call__(
-        self: FunctionTaskHandle[P, Result[_V, _E]], *args: P.args, **kwargs: P.kwargs
-    ) -> tuple[_V, _E | None]: ...
+    def __call__(self: FunctionTaskHandle[P, Result[_V, _E]], *args: P.args, **kwargs: P.kwargs) -> _V: ...
 
     @t.overload
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...

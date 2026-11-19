@@ -13,7 +13,7 @@ for provenance-bearing calculations.
 """
 
 from aiida.engine.processes.graphs.lowering import Forward, GraphHandle, graph, par_map, task
-from aiida.engine.processes.graphs.results import Err, Ok, RestartErrors, Result
+from aiida.engine.processes.graphs.results import Err, Ok, RestartErrors, Result, catch_error
 
 __all__ = (
     'Err',
@@ -22,6 +22,7 @@ __all__ = (
     'Ok',
     'RestartErrors',
     'Result',
+    'catch_error',
     'graph',
     'par_map',
     'task',

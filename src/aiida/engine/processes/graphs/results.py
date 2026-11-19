@@ -14,10 +14,10 @@ import typing as t
 from dataclasses import dataclass
 from types import UnionType
 
-from aiida.common.exceptions import GraphTypeCheckError
+from aiida.common.exceptions import GraphLanguageError, GraphTypeCheckError
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 
-__all__ = ('Err', 'Ok', 'RestartErrors', 'Result')
+__all__ = ('Err', 'Ok', 'RestartErrors', 'Result', 'catch_error')
 
 T = t.TypeVar('T')
 E = t.TypeVar('E')
@@ -26,8 +26,8 @@ E = t.TypeVar('E')
 class Result(t.Generic[T, E]):
     """A task result annotated with its success type and its error enums.
 
-    Return `Ok` for successful outputs or `Err` for a declared failure. Graph calls unpack
-    into (`value`, `error`), with the absent arm reaching downstream inputs as `None`.
+    Return `Ok` for successful outputs or `Err` for a declared failure. Bare graph calls
+    expose the success value and propagate failures; use :func:`catch_error` to handle them.
     Error enums must have unique, positive exit codes.
     """
 
@@ -44,6 +44,20 @@ class Err(Result[T, E]):
     """A declared error enum member, or its optionally formatted exit code."""
 
     error: E | ExitCode
+
+
+def catch_error(invocation: object, /) -> tuple[t.Any, ExitCodeEnum | None]:
+    """Expose the optional success and error arms of a direct graph-language call.
+
+    :param invocation: A direct invocation of a fallible task or nested graph in a graph body.
+    :return: The success value or the declared error member, with the inactive arm absent.
+    :raises GraphLanguageError: If called as ordinary Python rather than lowered in a graph.
+
+    The success arm is typed as `Any`: ordinary Python checkers cannot infer a call's
+    declared error and success types from the enclosing intrinsic. Graph build validates both.
+    """
+    msg = '`catch_error` is only supported in graph bodies as `value, error = catch_error(call(...))`.'
+    raise GraphLanguageError(msg)
 
 
 class RestartErrors(ExitCodeEnum):

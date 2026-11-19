@@ -26,6 +26,16 @@ Templates carrying expressions serialize as graph declaration version `0.3`, whi
 
 Graph and task ports annotated with Python containers of data nodes, such as `list[orm.Int]` or `dict[str, orm.Int]` (including the `typing.List`/`typing.Dict` spellings), now store as owned `orm.DataList`/`orm.DataDict` containers instead of JSON `List`/`Dict` nodes. Task bodies receive a plain Python `list`/`dict` holding the member nodes, while the provenance wire carries the owned container. Ports annotated directly with `orm.DataList`/`orm.DataDict` still receive the node itself, and plain `list[int]`/`dict[str, int]` still store as JSON nodes. Only direct members of one `DataNode` subclass are mapped. Previously an ORM-valued container annotation stored as JSON; relaunch affected graphs so their wires use the owned representation.
 
+#### Fallible graph calls propagate by default
+
+In graph bodies, a bare function task call declared as `Result[T, E]` now exposes only its success value.
+Replace `value, error = step(...)` with `value, error = catch_error(step(...))` to handle a declared failure explicitly, importing the new intrinsic from `aiida.engine`.
+The intrinsic also works on nested graphs that can propagate declared failures.
+Uncaught declared failures fail the root with the original status and message.
+Process-class tasks using `errors=` still expose partial outputs and an error arm as before.
+Graph run checkpoints from before this change cannot resume; finish them before upgrading or relaunch them.
+Templates using the new result policies serialize as graph declaration version `0.4`; older templates remain readable with their original failure behavior.
+
 #### Function tasks require input type annotations
 
 `@task` now raises `GraphTypeCheckError` at decoration time if any function parameter lacks a type annotation, even if it has a default.

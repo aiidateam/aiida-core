@@ -70,6 +70,7 @@ __all__ = (
     'assign_',
     'await_processes',
     'calcfunction',
+    'catch_error',
     'construct_awaitable',
     'get_daemon_client',
     'get_object_loader',

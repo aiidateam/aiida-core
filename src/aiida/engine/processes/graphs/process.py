@@ -98,6 +98,7 @@ class GraphProcess(Process):
         spec.input_namespace(cls._RUNTIME_CONFIG, dynamic=True, required=False, non_db=True)
         spec.outputs.dynamic = True
         spec.exit_code(400, 'ERROR_TASK_FAILED', message='The task `{task}` did not finish successfully.')
+        spec.exit_code(401, 'ERROR_GRAPH_RUNTIME', message='The graph failed: {message}.')
 
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
         self._run: GraphRun | None = None
@@ -220,7 +221,10 @@ class GraphProcess(Process):
 
     def _do_step(self) -> t.Any:
         """Dispatch the ready tasks, then wait for them or finish the graph."""
-        step = self._run_state.step()
+        try:
+            step = self._run_state.step()
+        except GraphRuntimeError as exc:
+            return self.exit_codes.ERROR_GRAPH_RUNTIME.format(message=str(exc))
         for start in step.starts:
             self._submit(start)
 
@@ -287,7 +291,7 @@ class GraphProcess(Process):
             self.resume()
 
     def _finish(self) -> ExitCode | None:
-        """Return the task failure exit code, or expose the graph outputs."""
+        """Return a task or runtime failure exit code, or expose the graph outputs."""
         state = self._run_state
         if failures := state.failures():
             failure = failures[0]
@@ -299,9 +303,12 @@ class GraphProcess(Process):
             for message in failure.mistyped:
                 self.report(f'task `{failure.label}` {message}')
             return self.exit_codes.ERROR_TASK_FAILED.format(task=failure.label)
-        for name, value in state.outputs().items():
-            self._validate_output(name, value)
-            self.out(name, value)
+        try:
+            for name, value in state.outputs().items():
+                self._validate_output(name, value)
+                self.out(name, value)
+        except GraphRuntimeError as exc:
+            return self.exit_codes.ERROR_GRAPH_RUNTIME.format(message=str(exc))
         return None
 
     def _validate_output(self, path: str, value: t.Any) -> None:

@@ -236,8 +236,9 @@ def test_computed_scalar_cannot_launder_through_selection() -> None:
         collection_expressions.laundered_scalar.build()
     except (GraphLanguageError, GraphTypeCheckError):
         return
-    with pytest.raises(GraphRuntimeError, match=r'(?i)task'):
-        run_get_node(collection_expressions.laundered_scalar, values=[Int(1)])
+    _, node = run_get_node(collection_expressions.laundered_scalar, values=[Int(1)])
+    assert node.exit_status == 401
+    assert node.exit_message is not None and 'task' in node.exit_message.lower()
 
 
 @pytest.mark.parametrize(

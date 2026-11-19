@@ -27,10 +27,11 @@ from aiida.common.exceptions import (
 from aiida.common.links import LinkType
 from aiida.engine import Forward, task
 from aiida.engine.launch import run_get_node
-from aiida.engine.processes.graphs.ir import GraphIR
+from aiida.engine.processes.graphs.ir import Endpoint, GraphIR, InlineOperation, LoopControl, Route
 from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.run import GraphRun
+from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
 from aiida.engine.processes.graphs.tasks import FunctionTaskHandle
 from aiida.orm.nodes.data.bool import Bool
 from aiida.orm.nodes.data.dict import Dict
@@ -43,6 +44,7 @@ from tests.engine.processes.graphs.programs import (
     assignments,
     branches,
     calcjobs,
+    constants,
     loops,
     parameters,
     ports,
@@ -1599,3 +1601,107 @@ def test_nested_dynamic_namespace_closes_parent() -> None:
     assert not closed['sub'].dynamic
     assert not closed['sub']['members'].dynamic
     assert 'a' in closed['sub']['members']
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_branch_non_bool_condition_fails_graph() -> None:
+    """A branch on a runtime non-boolean fails the graph instead of excepting it.
+
+    The bound `None` passes launch validation as orchestration state, then the
+    scheduler rejects it where the `GraphRun.step()` probe raises.
+    """
+    _, node = run_get_node(constants.none_condition, value=2)
+    assert node.is_failed and not node.is_excepted
+    assert node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+    assert 'must be a `bool` or `Bool`' in (node.exit_message or '')
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_loop_non_bool_condition_fails_graph() -> None:
+    """A loop whose updated condition is not a boolean fails the graph instead of excepting it."""
+    tick = InlineOperation(
+        name='tick',
+        inputs={'right': 1},
+        operation='add',
+        input_shape=NamespaceShape(
+            fields=(
+                ('left', LeafShape(types=(int,))),
+                ('right', LeafShape(types=(int,))),
+            )
+        ),
+        result_shape=LeafShape(types=(int,)),
+    )
+    body = GraphIR(
+        tasks=(tick,),
+        input_shape=NamespaceShape(
+            fields=(
+                ('value', LeafShape(types=(int,))),
+                ('condition', LeafShape(types=(bool,))),
+            )
+        ),
+        dependencies=(),
+        inputs={'value': (Route('tick', 'left'),), 'condition': ()},
+        outputs={
+            'value': Endpoint(task='tick', port='result'),
+            'condition': Endpoint(task='tick', port='result'),
+        },
+        identifier='non-bool-loop-body',
+    )
+    loop = LoopControl(name='iterate', inputs={}, body=body, condition_port='condition', max_iterations=5)
+    graph = GraphIR(
+        tasks=(loop,),
+        input_shape=NamespaceShape(
+            fields=(
+                ('value', LeafShape(types=(int,))),
+                ('condition', LeafShape(types=(bool,))),
+            )
+        ),
+        dependencies=(),
+        inputs={
+            'value': (Route('iterate', 'value'),),
+            'condition': (Route('iterate', 'condition'),),
+        },
+        outputs={'result': Endpoint(task='iterate', port='value')},
+        identifier='non-bool-loop',
+    )
+    _, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(graph, {'value': 0, 'condition': True}))
+    assert node.is_failed and not node.is_excepted
+    assert node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+    assert 'must be a `bool` or `Bool`' in (node.exit_message or '')
+
+
+def test_loop_missing_condition_rejected_before_execution() -> None:
+    """Missing loop condition state is a build-time error, not a runtime failure."""
+    body = GraphIR(
+        tasks=(),
+        input_shape=NamespaceShape(fields=(('value', LeafShape(types=(int,))),)),
+        dependencies=(),
+        inputs={'value': ()},
+        outputs={'value': Endpoint(task=None, port='value')},
+        identifier='missing-condition-body',
+    )
+    loop = LoopControl(name='loop_1', inputs={}, body=body, condition_port='condition', max_iterations=5)
+    with pytest.raises(GraphTypeCheckError, match='must take its condition as state and return it updated'):
+        GraphIR(
+            tasks=(loop,),
+            input_shape=NamespaceShape(fields=(('value', LeafShape(types=(int,))),)),
+            dependencies=(),
+            inputs={'value': (Route('loop_1', 'value'),)},
+            outputs={'result': Endpoint(task='loop_1', port='value')},
+            identifier='missing-condition',
+        )
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_loop_max_iterations_exhaustion_fails_graph() -> None:
+    """A loop that never clears its condition fails the graph instead of excepting it."""
+    import dataclasses
+
+    spec = compile_graph(loops.countdown)
+    loop = spec.tasks[0]
+    assert isinstance(loop, LoopControl)
+    capped = dataclasses.replace(spec, tasks=(dataclasses.replace(loop, max_iterations=2),))
+    _, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(capped, {'value': 3, 'condition': True}))
+    assert node.is_failed and not node.is_excepted
+    assert node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
+    assert 'exceeded 2 iterations' in (node.exit_message or '')

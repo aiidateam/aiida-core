@@ -46,7 +46,12 @@ def prepare_inputs(inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> d
     :raises ValueError: If both ``kwargs`` and ``inputs`` are defined.
     :returns: The dictionary of inputs for the process.
     """
-    if inputs is not None and 'runtime_config' in kwargs:
+    if inputs is not None and kwargs.keys() & {
+        'runtime_config',
+        'execution_environment',
+        'execution_policy',
+        'prepared_run',
+    }:
         return {'inputs': inputs, **kwargs}
 
     if inputs is not None and kwargs:

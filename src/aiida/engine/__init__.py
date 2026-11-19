@@ -14,6 +14,7 @@
 
 from aiida.engine.daemon import *
 from aiida.engine.exceptions import *
+from aiida.engine.execution import *
 from aiida.engine.launch import *
 from aiida.engine.persistence import *
 from aiida.engine.processes import *
@@ -34,12 +35,14 @@ __all__ = (
     'CalcJobProcessSpec',
     'DaemonClient',
     'Err',
+    'ExecutionEnvironment',
     'ExitCode',
     'ExitCodeEnum',
     'ExitCodesNamespace',
     'Forward',
     'FunctionProcess',
     'GraphHandle',
+    'IncreaseMemory',
     'InputPort',
     'InterruptableFuture',
     'JobManager',
@@ -52,6 +55,7 @@ __all__ = (
     'PortField',
     'PortModel',
     'PortNamespace',
+    'PreparedRun',
     'Process',
     'ProcessBuilder',
     'ProcessBuilderNamespace',
@@ -61,7 +65,9 @@ __all__ = (
     'ProcessState',
     'RestartErrors',
     'Result',
+    'RetryPolicy',
     'Runner',
+    'SchedulerFailure',
     'ToContext',
     'WithNonDb',
     'WithSerialize',

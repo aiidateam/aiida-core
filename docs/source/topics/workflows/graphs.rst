@@ -648,6 +648,64 @@ Changing caller-owned mappings after launch does not change the snapshot.
 Static optional inputs, such as a restart folder, need no declaration: wire `None` and the input stays out of the launch; wire a node and it arrives.
 Unwired optional inputs were already left out; `None` now means the same.
 
+Execution environments and memory recovery
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use an :class:`~aiida.engine.ExecutionEnvironment` to select a graph's execution configuration and recovery policy at launch.
+It keeps resource requests and recovery out of the scientific graph definition.
+
+.. code-block:: python
+
+    from aiida.engine import ExecutionEnvironment, IncreaseMemory, RetryPolicy, SchedulerFailure, submit
+
+    environment = ExecutionEnvironment(
+        runtime_config={
+            'solver': {
+                'code': code,
+                'metadata': {
+                    'options': {
+                        'resources': {'num_machines': 1},
+                        'max_memory_kb': 8_000_000,
+                    },
+                },
+            },
+        },
+        execution_policy={
+            'solver': RetryPolicy(
+                max_attempts=3,
+                on={SchedulerFailure.OUT_OF_MEMORY: IncreaseMemory(factor=2, maximum_kb=32_000_000)},
+            ),
+        },
+    )
+    node = submit(workflow, inputs={'structure': structure}, execution_environment=environment)
+
+Alternatively, pass the two mappings directly as ``runtime_config=`` and ``execution_policy=``.
+Do not combine either direct channel with ``execution_environment=``.
+Policies use the same static placement addresses as runtime configuration and cannot replace graph-wired inputs.
+
+Initially, recovery applies only to scheduler-backed ``CalcJob`` placements, not function tasks or jobs hidden inside WorkChains.
+Built-in recovery uses confirmed Slurm accounting records; scheduler stderr alone and a matching numeric exit status do not trigger it.
+Set an explicit ``metadata.options.max_memory_kb`` in runtime configuration and a ``maximum_kb`` no higher than the chosen queue's limit.
+AiiDA does not discover queue limits from Slurm; site integrations can impose additional limits via `Scheduler.get_effective_memory_request`.
+The next request grows by the factor, rounded up to a whole kB and clamped to the ceiling.
+If it is invalid or does not increase the effective scheduler request (for example due to Slurm's MiB rounding), the placement stops.
+Each loop iteration or mapped item starts with a fresh budget, and the original attempt counts toward ``max_attempts``.
+
+Each attempt has its own calculation node, stored inputs and outputs, and call label of the form ``graph_attempt_2__solver``.
+Inspect ``node.execution_attempts`` for the child UUID, effective settings, classification, and decision for each attempt.
+The graph exposes only the terminal attempt to downstream placements, with the same output and error contract it uses without a policy.
+Completing an attempt does not rerun upstream work or roll back external side effects.
+The resolved runtime configuration and policy are stored separately from scientific inputs, and checkpoint restoration reattaches dispatched attempts.
+
+Scientific protocol preparation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A plugin-owned protocol resolver can return a :class:`~aiida.engine.PreparedRun` containing explicit scientific ``inputs``, an ``execution_environment``, a protocol identifier and version, and JSON-compatible ``overrides``.
+Launch with ``submit(workflow, prepared_run=prepared)`` instead of passing the inputs and environment separately.
+The graph node records the protocol metadata; the resolved scientific inputs still appear as ordinary graph inputs.
+The resolver owns the mapping from semantic roles to placement names and should use provenance-producing processes for scientific transformations where needed.
+
+
 .. _topics:workflows:graphs:dynamic_namespaces:
 
 Dynamic namespaces

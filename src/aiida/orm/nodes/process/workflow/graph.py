@@ -10,7 +10,7 @@
 
 import typing as t
 
-from aiida.common.lang import override
+from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.orm.nodes.data.dict import Dict
 from aiida.orm.nodes.process.workflow.workflow import WorkflowNode
@@ -31,6 +31,18 @@ class GraphNode(WorkflowNode):
 
     GRAPH_DEFINITION_KEY = 'graph_definition'
     RUNTIME_CONFIG_KEY = 'graph_runtime_config_v1'
+    EXECUTION_POLICY_KEY = 'graph_execution_policy_v1'
+    PROTOCOL_KEY = 'graph_protocol_v1'
+    ATTEMPTS_KEY = 'graph_attempts_v1'
+
+    @classproperty
+    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
+        return super()._updatable_attributes + (cls.ATTEMPTS_KEY,)
+
+    @property
+    def execution_attempts(self) -> dict[str, list[dict[str, t.Any]]]:
+        """Return the recorded attempts and recovery decisions keyed by logical task instance."""
+        return self.base.attributes.get(self.ATTEMPTS_KEY, {})
 
     @property
     @override
@@ -57,6 +69,12 @@ class GraphNode(WorkflowNode):
             from aiida.orm.utils.serialize import deserialize_unsafe
 
             builder['runtime_config'] = deserialize_unsafe(self.base.attributes.get(self.RUNTIME_CONFIG_KEY))
+        for key, channel in (
+            (self.EXECUTION_POLICY_KEY, 'execution_policy'),
+            (self.PROTOCOL_KEY, 'protocol_record'),
+        ):
+            if key in self.base.attributes:
+                builder[channel] = self.base.attributes.get(key)
         for name, value in (self.get_metadata_inputs() or {}).items():
             builder[name] = value
         return builder

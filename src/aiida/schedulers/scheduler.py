@@ -14,12 +14,21 @@ import abc
 import typing as t
 
 from aiida.common import exceptions, log, warnings
-from aiida.common.datastructures import CodeRunMode, JobInfo, JobResource, JobTemplate, JobTemplateCodeInfo
+from aiida.common.datastructures import (
+    CodeRunMode,
+    JobInfo,
+    JobResource,
+    JobTemplate,
+    JobTemplateCodeInfo,
+    SchedulerFailure,
+)
 from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import classproperty
 from aiida.engine.processes.exit_code import ExitCode
 
 if t.TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from aiida.transports import Transport
 
 __all__ = ('Scheduler', 'SchedulerError', 'SchedulerParsingError')
@@ -394,6 +403,27 @@ class Scheduler(metaclass=abc.ABCMeta):
         This class assumes that the transport is open and active.
         """
         self._transport = transport
+
+    def classify_failure(self, detailed_job_info: dict[str, str | int] | None) -> SchedulerFailure | None:
+        """Normalize a failure from trusted scheduler records, not user output or a process exit status.
+
+        :param detailed_job_info: The scheduler's accounting result, when available.
+        :return: A confirmed failure classification, or None for unknown failures.
+        """
+        return None
+
+    def get_effective_memory_request(self, options: Mapping[str, t.Any]) -> int:
+        """Validate a memory request for automatic recovery and return its effective value in kB.
+
+        Implement this only when the scheduler also supports normalized OOM classification. The implementation
+        should account for scheduler units, unsupported options, and known limits for the selected queue.
+
+        :param options: CalcJob execution options, including an explicit max_memory_kb.
+        :return: Effective positive per-node memory request in kB.
+        :raises ValueError: If the options cannot safely be used for memory recovery.
+        """
+        msg = f'{self.__class__.__name__} does not support memory recovery.'
+        raise ValueError(msg)
 
     def parse_output(
         self,

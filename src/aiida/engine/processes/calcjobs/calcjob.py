@@ -827,6 +827,14 @@ class CalcJob(Process):
         if existing_exit_code is not None:
             return existing_exit_code
 
+        # Only classify a terminal scheduler failure. A calculation parser or monitor
+        # can choose a different outcome, and its numeric exit status is not a classifier.
+        if exit_code_scheduler and exit_code_scheduler.status > 0 and exit_code == exit_code_scheduler:
+            if computer := self.node.computer:
+                failure = computer.get_scheduler().classify_failure(self.node.get_detailed_job_info())
+                if failure is not None:
+                    self.node.base.attributes.set(orm.CalcJobNode.SCHEDULER_FAILURE_KEY, failure.value)
+
         return exit_code or ExitCode(0)
 
     @staticmethod

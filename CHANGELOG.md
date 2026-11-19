@@ -26,6 +26,10 @@ Templates carrying expressions serialize as graph declaration version `0.3`, whi
 
 Graph and task ports annotated with Python containers of data nodes, such as `list[orm.Int]` or `dict[str, orm.Int]` (including the `typing.List`/`typing.Dict` spellings), now store as owned `orm.DataList`/`orm.DataDict` containers instead of JSON `List`/`Dict` nodes. Task bodies receive a plain Python `list`/`dict` holding the member nodes, while the provenance wire carries the owned container. Ports annotated directly with `orm.DataList`/`orm.DataDict` still receive the node itself, and plain `list[int]`/`dict[str, int]` still store as JSON nodes. Only direct members of one `DataNode` subclass are mapped. Previously an ORM-valued container annotation stored as JSON; relaunch affected graphs so their wires use the owned representation.
 
+#### Graph execution environments and placement recovery
+
+Graphs accept `execution_environment` or the separate `runtime_config` and `execution_policy` channels at launch. An opt-in memory policy retries only a supported CalcJob placement with confirmed scheduler OOM, preserving each attempt node and exposing only the final attempt to the workflow. Slurm accounting is the first built-in integration. `PreparedRun` packages plugin-resolved scientific inputs, the environment, and versioned protocol provenance. The launch keywords `execution_environment`, `execution_policy`, and `prepared_run` are reserved at the graph launch boundary; pass scientific arguments with those names inside the explicit `inputs` mapping alongside a launch channel. The `graph_attempt_` call-label prefix is reserved; ordinary task labels starting with it are escaped. Existing checkpoints and stored graph nodes require no migration.
+
 #### Fallible graph calls propagate by default
 
 In graph bodies, a bare function task call declared as `Result[T, E]` now exposes only its success value.

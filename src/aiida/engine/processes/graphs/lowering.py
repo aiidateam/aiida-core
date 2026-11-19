@@ -30,6 +30,7 @@ from types import ModuleType, UnionType
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
 from aiida.common.loaders import get_object_loader
+from aiida.engine.execution import ExecutionEnvironment, PreparedRun
 from aiida.engine.processes.calcjobs import CalcJob
 from aiida.engine.processes.exit_code import ExitCodeEnum
 from aiida.engine.processes.graphs.expressions import compile_expression, infer_expression_shape
@@ -210,9 +211,41 @@ class GraphHandle(t.Generic[P, R]):
                 "put task metadata under the placement's `metadata` key."
             )
             raise GraphValidationError(msg)
-        runtime_config = inputs.pop('runtime_config', {})
         metadata = inputs.pop('metadata', None)
-        if 'inputs' in inputs and 'inputs' not in inspect.signature(self.function).parameters:
+        protocol_record = None
+        if 'prepared_run' in inputs:
+            prepared = inputs.pop('prepared_run')
+            if inputs or not isinstance(prepared, PreparedRun):
+                msg = 'pass a PreparedRun without additional scientific inputs or execution channels.'
+                raise GraphValidationError(msg)
+            inputs = dict(prepared.inputs)
+            environment = prepared.execution_environment
+            runtime_config, execution_policy = environment.runtime_config, environment.execution_policy
+            protocol_record = {
+                'protocol': prepared.protocol,
+                'version': prepared.version,
+                'overrides': prepared.overrides,
+            }
+            explicit_channels = False
+        else:
+            explicit_channels = bool(inputs.keys() & {'execution_environment', 'runtime_config', 'execution_policy'})
+            if 'execution_environment' in inputs:
+                environment = inputs.pop('execution_environment')
+                if inputs.keys() & {'runtime_config', 'execution_policy'}:
+                    msg = 'execution_environment cannot be combined with runtime_config or execution_policy.'
+                    raise GraphValidationError(msg)
+                if not isinstance(environment, ExecutionEnvironment):
+                    msg = 'execution_environment must be an ExecutionEnvironment.'
+                    raise GraphValidationError(msg)
+                runtime_config, execution_policy = environment.runtime_config, environment.execution_policy
+            else:
+                runtime_config = inputs.pop('runtime_config', {})
+                execution_policy = inputs.pop('execution_policy', {})
+        if (
+            protocol_record is None
+            and 'inputs' in inputs
+            and (explicit_channels or 'inputs' not in inspect.signature(self.function).parameters)
+        ):
             scientific = inputs.pop('inputs')
             if not isinstance(scientific, Mapping):
                 msg = '`inputs` must be a mapping of workflow arguments.'
@@ -240,7 +273,7 @@ class GraphHandle(t.Generic[P, R]):
         ]
         bound = inspect.Signature(parameters).bind_partial(**inputs)
         launch_inputs = GraphProcess._launch_inputs(
-            compile_graph(self), dict(bound.arguments), runtime_config=runtime_config
+            compile_graph(self), dict(bound.arguments), runtime_config, execution_policy, protocol_record
         )
         if metadata is not None:
             launch_inputs['metadata'] = metadata

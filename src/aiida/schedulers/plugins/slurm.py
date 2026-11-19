@@ -20,13 +20,15 @@ import typing as t
 
 from typing_extensions import override
 
-from aiida.common.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
+from aiida.common.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource, SchedulerFailure
 from aiida.common.exceptions import FeatureNotAvailable
 from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from aiida.common import AttributeDict
     from aiida.engine.processes.exit_code import ExitCode
 
@@ -700,6 +702,34 @@ stderr='{stderr.strip()}'"""
             self.logger.warning(f'in _parse_kill_output{transport_string}: there was some text in stdout: {stdout}')
 
         return True
+
+    @override
+    def classify_failure(self, detailed_job_info: dict[str, str | int] | None) -> SchedulerFailure | None:
+        """Confirm OOM using the allocation record from Slurm accounting."""
+        if not detailed_job_info or detailed_job_info.get('retval') != 0:
+            return None
+        stdout = detailed_job_info.get('stdout')
+        if not isinstance(stdout, str) or not stdout.strip():
+            return None
+        fields, *records = stdout.splitlines()
+        if not records:
+            return None
+        columns, values = fields.split('|'), records[0].split('|')
+        if len(columns) == len(values) and dict(zip(columns, values)).get('State') == 'OUT_OF_MEMORY':
+            return SchedulerFailure.OUT_OF_MEMORY
+        return None
+
+    @override
+    def get_effective_memory_request(self, options: Mapping[str, t.Any]) -> int:
+        """Validate an explicit per-node request, accounting for Slurm's MiB granularity."""
+        memory = options.get('max_memory_kb')
+        if type(memory) is not int or memory < 1024:
+            msg = 'Slurm memory recovery requires max_memory_kb of at least 1024 kB (1 MiB).'
+            raise ValueError(msg)
+        if options.get('custom_scheduler_commands'):
+            msg = 'Slurm memory recovery cannot validate custom_scheduler_commands, which can override memory.'
+            raise ValueError(msg)
+        return memory // 1024 * 1024
 
     def parse_output(
         self,

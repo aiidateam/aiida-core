@@ -474,6 +474,8 @@ class GraphRun:
         Scope prefixes already separate ordinary placements; the suffix only guards
         pathological placement names containing the `__` scope separator.
         """
+        if base.startswith('graph_attempt_'):
+            base = f'task__{base}'
         used = self._used_labels()
         candidate = base
         count = 2

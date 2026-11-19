@@ -265,6 +265,11 @@ def unannotated_function(x: int):  # rejected at decoration
     return x
 
 
+def unannotated_inputs(a, b=0) -> float:  # rejected at decoration
+    """Reject missing input annotations even for parameters with defaults."""
+    return float(a) + b
+
+
 def kwargs_function(**kwargs: t.Any) -> int:  # rejected at decoration
     """Reject undecorated functions with kwargs at decoration."""
     return 1

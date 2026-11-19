@@ -485,6 +485,8 @@ Graphs can be launched like any other process, with a loaded AiiDA profile:
 * A graph is a workflow, so it returns existing data nodes -- the recipe's ``summarize`` report, for example; only tasks create new data (see :ref:`topics:provenance:concepts`).
 
 Tasks can be run independently: ``run_get_node(add, x=1, y=2)`` launches a single task.
+Function-based tasks require a type annotation for every parameter, including those with defaults, and for the return value.
+Missing annotations raise ``GraphTypeCheckError`` when ``@task`` is applied, before graph build.
 Calling ``add(x=1, y=2)`` directly raises a :py:class:`~aiida.common.exceptions.GraphError`, as for graphs.
 
 .. _topics:workflows:graphs:where_to_define:

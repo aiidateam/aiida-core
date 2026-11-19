@@ -19,7 +19,7 @@ Graph bodies now accept inline collection expressions over typed `list[T]`/`dict
 Previously each of these forms failed at build time with a diagnostic telling authors to pass whole collections or write out one call per value; each form now lowers to an `expression` inline placement that evaluates inside the graph process.
 The engine semantics match scalar inline operations: no child processes, no `CREATE` links, checkpointed scope values, and only task outputs entering the provenance.
 A root graph cannot return a newly computed collection or scalar, and returning an existing owned member itself still fails at launch under the unchanged owned-container contract.
-Still rejected at build time are task or method calls inside an expression, slices, set/generator comprehensions, private attribute reads, missing element annotations, and `DataList[T]` generics (prefer `list[orm.Int]` hints, or an explicit `orm.DataList` passed whole without inline indexing).
+Still rejected at build time are task or method calls inside an expression, slices, set/generator comprehensions, private attribute reads, missing element annotations, and inline collection expressions on `DataList[T]` wires (use `list[orm.Int]` hints for inline expressions, or pass `orm.DataList` wires whole).
 Templates carrying expressions serialize as graph declaration version `0.3`, while existing scalar-only `0.2` and no-op `0.1` declarations remain readable; stored declarations and checkpoints that avoid the new forms need no migration.
 
 #### Python ORM containers in graphs store as owned containers

@@ -16,8 +16,29 @@ task-produced collections, downstream chaining, and invalid declarations.
 import typing as t
 
 from aiida.engine import WorkChain, graph, par_map, task
-from aiida.orm import DataDict, DataList
+from aiida.orm import DataDict, DataList, StructureData
 from aiida.orm.nodes.data.int import Int
+
+
+@task
+def expand_structure(structure: StructureData) -> StructureData:
+    """Double the cell vectors without changing the input."""
+    expanded = structure.clone()
+    expanded.set_cell([[2 * component for component in vector] for vector in structure.cell])
+    return expanded
+
+
+@task
+def keep_structures(structures: DataList[StructureData]) -> DataList[StructureData]:
+    """Exercise typed container input and output ports."""
+    return structures.clone()
+
+
+@graph
+def map_typed_structures(structures: DataList[StructureData]) -> DataList[StructureData]:
+    """Map structures, preserving annotations at the graph and task boundaries."""
+    expanded = par_map(expand_structure, structures)
+    return keep_structures(structures=expanded)
 
 
 @task

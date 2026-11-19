@@ -72,6 +72,8 @@ import io
 import typing as t
 from collections.abc import Iterator, Mapping
 
+from typing_extensions import TypeVar
+
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.orm.nodes.caching import NodeCaching
@@ -87,6 +89,8 @@ __all__ = ('Container', 'DataDict', 'DataList')
 #: Nodes eligible as owned container children: leaf data or nested containers.
 #: Containers share node identity but not ``Data`` semantics (see :class:`Container`).
 OwnableNode = t.Union['Data', 'Container']
+
+_Element = TypeVar('_Element', bound=Node, default=Node)
 
 
 def is_container_node(node: t.Any) -> bool:
@@ -990,13 +994,16 @@ _ContainerBase = Container
 
 
 @t.final
-class DataList(Container):
+class DataList(Container, t.Generic[_Element]):
     """Ordered container of data nodes (entry point ``core.data_list`` of the ``aiida.container`` group).
 
     Elements are independent, exclusively owned copies of ownable nodes (leaf data or nested containers) sharing
     one exact concrete node type (see the module contract). Sequence scaffolding exposes length, integer indexing and
     iteration in persisted position order; slicing is not supported. Positions are persisted explicitly. Equality
     and hashing are UUID identity based: independent copies are unequal even when their content matches.
+
+    ``DataList[StructureData]`` annotates the element type for static type checkers. The parameter is erased at runtime:
+    storage and ports still use ``DataList``, and the existing concrete-type homogeneity rules remain unchanged.
     """
 
     @property
@@ -1005,7 +1012,7 @@ class DataList(Container):
         """Return the membership kind of this container (``'list'``)."""
         return 'list'
 
-    def __init__(self, value: t.Iterable[Node] | None = None, **kwargs: t.Any) -> None:
+    def __init__(self, value: t.Iterable[_Element] | None = None, **kwargs: t.Any) -> None:
         """Initialize the node, copying each element of ``value`` as an owned child."""
         super().__init__(**kwargs)
         if value is not None:
@@ -1040,9 +1047,9 @@ class DataList(Container):
         self._ensure_materialized()
         return len(self._container_entries)
 
-    def __iter__(self) -> Iterator[Node]:
+    def __iter__(self) -> Iterator[_Element]:
         self._ensure_materialized()
-        return iter(list(self._container_entries))
+        return iter(t.cast('list[_Element]', list(self._container_entries)))
 
     def _normalize_index(self, index: int) -> int:
         """Normalize ``index`` (including negative values) or raise ``IndexError``/``TypeError``."""
@@ -1055,13 +1062,13 @@ class DataList(Container):
             raise IndexError('list index out of range')
         return normalized
 
-    def __getitem__(self, index: int | slice) -> Node:
+    def __getitem__(self, index: int | slice) -> _Element:
         if isinstance(index, slice):
             msg = 'slicing DataList is not supported'
             raise TypeError(msg)
-        return self._container_entries[self._normalize_index(index)]
+        return t.cast('_Element', self._container_entries[self._normalize_index(index)])
 
-    def __setitem__(self, index: int | slice, source: Node) -> None:
+    def __setitem__(self, index: int | slice, source: _Element) -> None:
         """Replace the element at ``index`` with an independent copy of ``source`` (position preserved)."""
         if isinstance(index, slice):
             msg = 'slicing DataList is not supported'
@@ -1082,12 +1089,12 @@ class DataList(Container):
         removed = self._container_entries.pop(position)
         self._finalize_remove(removed)
 
-    def append(self, source: Node) -> None:
+    def append(self, source: _Element) -> None:
         """Append an independent copy of ``source`` as a new owned element."""
         self._require_mutable()
         self._attach_owned(self._clone_for_insert(source))
 
-    def insert(self, index: int, source: Node) -> None:
+    def insert(self, index: int, source: _Element) -> None:
         """Insert an independent copy of ``source`` before ``index`` (clamped like :meth:`list.insert`)."""
         if isinstance(index, bool) or not isinstance(index, int):
             msg = f'list indices must be integers, got {type(index).__name__}'
@@ -1098,11 +1105,11 @@ class DataList(Container):
         position = max(0, min(index + size if index < 0 else index, size))
         self._container_entries.insert(position, child)
 
-    def pop(self, index: int = -1) -> Node:
+    def pop(self, index: int = -1) -> _Element:
         """Remove the element at ``index`` and return it detached (standalone, unstored, editable)."""
         self._require_mutable()
         removed = self._container_entries.pop(self._normalize_index(index))
-        return self._finalize_remove(removed)
+        return t.cast('_Element', self._finalize_remove(removed))
 
     def move(self, index: int, new_index: int) -> None:
         """Move the element at ``index`` to ``new_index``, shifting the elements in between."""

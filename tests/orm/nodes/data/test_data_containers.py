@@ -20,6 +20,27 @@ from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import DataDict, DataList, Dict, Int, List, Str, load_node
 
 
+def test_typed_list():
+    """Generic lists preserve normal copy, mutation, and storage behavior."""
+    from typing_extensions import assert_type
+
+    container = DataList[Int]([Int(1)])
+    assert type(container) is DataList
+    assert_type(container[0], Int)
+    assert_type(next(iter(container)), Int)
+    container.append(Int(2))
+    container.insert(0, Int(3))
+    container[1] = Int(4)
+    removed = container.pop()
+    assert_type(removed, Int)
+    assert removed.value == 2
+    assert [member.value for member in container] == [3, 4]
+    container.store()
+    reloaded = load_node(container.pk)
+    assert type(reloaded) is DataList
+    assert [member.value for member in reloaded] == [3, 4]
+
+
 def test_entry_points():
     """The new types are registered without changing existing ``List``/``Dict`` behavior."""
     from aiida.plugins import entry_point

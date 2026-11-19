@@ -27,7 +27,7 @@ from aiida.engine.processes.graphs.ir import GraphIR
 from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.run import GraphRun
-from aiida.orm import DataDict, DataList
+from aiida.orm import DataDict, DataList, StructureData
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.process.process import ProcessNode
 from tests.engine.processes.graphs.programs import par_maps
@@ -43,6 +43,22 @@ def _launch(
         spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(declaration).to_dict())))
         return run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, inputs))
     return run_get_node(declaration, **inputs)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])
+def test_map_typed_structures_executes(serialized: bool) -> None:
+    """Typed DataLists work through mapping, task ports, and serialized graph IR."""
+    assert par_maps.map_typed_structures.build() is None
+    original = DataList[StructureData](
+        [StructureData(cell=[[side, 0, 0], [0, side, 0], [0, 0, side]]) for side in (2.0, 3.0)]
+    )
+    outputs, node = _launch(par_maps.map_typed_structures, {'structures': original}, serialized)
+    assert node.is_finished_ok
+    result = outputs['result']
+    assert type(result) is DataList
+    assert [member.get_cell_volume() for member in result] == pytest.approx([64.0, 216.0])
+    assert [member.get_cell_volume() for member in original] == pytest.approx([8.0, 27.0])
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

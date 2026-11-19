@@ -526,24 +526,6 @@ def test_legacy_task_ir_without_exit_codes() -> None:
             None,
             id='negated-ok',
         ),
-        pytest.param(
-            results.matched_distinct_enum,
-            {'numerator': 1.0, 'denominator': 0.0},
-            0.0,
-            410,
-            'error',
-            'recover_zero',
-            id='distinct-zero-denominator',
-        ),
-        pytest.param(
-            results.matched_distinct_enum,
-            {'numerator': 1.0, 'denominator': 2.0},
-            0.5,
-            0,
-            'value',
-            None,
-            id='distinct-ok',
-        ),
     ],
 )
 def test_declared_failure_branches(
@@ -652,7 +634,7 @@ def test_engine_exit_code_conflicts(declaration: t.Any, match: str) -> None:
         pytest.param({'numerator': 1.0, 'denominator': 0.0}, 0.0, 410, 'recover_zero', id='selected-zero-denominator'),
     ],
 )
-def test_single_name_binding_selects_arms(
+def test_capture_supports_whole_structured_success(
     inputs: dict[str, t.Any], expected: float, task_status: int, handler: str
 ) -> None:
     """A bound whole result selects arms and fields through dotted paths."""

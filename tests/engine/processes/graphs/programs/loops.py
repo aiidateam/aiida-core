@@ -15,7 +15,7 @@ The remaining declarations are task-based regression fixtures.
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph, task
-from aiida.engine.processes.graphs.results import Err, Ok, Result
+from aiida.engine.processes.graphs.results import Err, Ok, Result, catch_error
 from tests.engine.processes.graphs.programs import tasks as task_module
 from tests.engine.processes.graphs.programs.port_models import Settings
 from tests.engine.processes.graphs.programs.ports import nullable_return
@@ -74,11 +74,11 @@ def retry_until_present(start: int, limit: int, attempt: int = 0) -> int | None:
     :param attempt: the zero-based attempt the first run steps from.
     :return: the first present step output; the guard fails if none succeeded.
     """
-    value, error = try_step(x=start, attempt=attempt)
+    value, error = catch_error(try_step(x=start, attempt=attempt))
     retry = error is TryErrors.RETRYABLE and attempt < limit
     while retry:
         attempt = attempt + 1
-        value, error = try_step(x=start, attempt=attempt)
+        value, error = catch_error(try_step(x=start, attempt=attempt))
         retry = error is TryErrors.RETRYABLE and attempt < limit
     checked = check_present(value=value)  # noqa: F841 - the guard validates without feeding the return
     return value

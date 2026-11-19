@@ -20,12 +20,13 @@ from __future__ import annotations
 
 import typing as t
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from functools import cached_property
 
 from aiida.common.exceptions import GraphMaxIterationsError, GraphRuntimeError, GraphValidationError
 from aiida.common.links import LinkType
 from aiida.common.loaders import get_object_loader
-from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.expressions import evaluate_expression
 from aiida.engine.processes.graphs.inputs import _at, _drops_none_value, _place, _prepare_graph_inputs
@@ -46,13 +47,14 @@ from aiida.engine.processes.graphs.ir import (
 )
 from aiida.engine.processes.graphs.operations import evaluate_operation
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
+from aiida.engine.processes.ports import PortNamespace
 from aiida.manage import get_manager
 from aiida.orm import DataDict, DataList, EnumData, Node, from_aiida_type, load_node, to_aiida_type
 from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
 
-_STATE_VERSION = '0.2'
+_STATE_VERSION = '0.3'
 _ROOT_SCOPE: t.Final = 'root'
 
 
@@ -143,6 +145,24 @@ def _mistyped_declared_outputs(declared: NamespaceShape, node: Node) -> list[str
         expected: str = ', '.join(kind.__name__ for kind in shape.types)
         messages.append(f'returned `{type(value).__name__}` for port `{name}`, expected `{expected}`')
     return messages
+
+
+def _result_output_problems(shape: LeafShape | NamespaceShape, value: t.Any, path: str) -> tuple[list[str], list[str]]:
+    """Validate the active success arm, whose process port must also allow omission on failure."""
+    if value is None:
+        return ([path] if shape.required else []), []
+    if isinstance(shape, LeafShape):
+        if shape.types and not isinstance(value, shape.types):
+            expected = ', '.join(kind.__name__ for kind in shape.types)
+            return [], [f'returned `{type(value).__name__}` for port `{path}`, expected `{expected}`']
+        return [], []
+    missing: list[str] = []
+    mistyped: list[str] = []
+    for name, child in shape.fields:
+        absent, invalid = _result_output_problems(child, value.get(name), f'{path}.{name}')
+        missing.extend(absent)
+        mistyped.extend(invalid)
+    return missing, mistyped
 
 
 def _at_or_none(container: t.Any, path: str) -> t.Any:
@@ -260,6 +280,7 @@ class _ScopeState(t.TypedDict, total=False):
     collectors: dict[str, str]
     passed: dict[str, dict[str, t.Any]]
     values: dict[str, t.Any]
+    failure: str  # Originating task label; its node holds the exact member, status and message.
 
 
 class _GraphRunState(t.TypedDict, total=False):
@@ -343,6 +364,52 @@ class GraphRun:
     def pending(self) -> dict[str, int]:
         """Return the dispatched task runs that have not completed yet."""
         return {label: pk for label, pk in self.dispatched.items() if label not in self.done}
+
+    @property
+    def propagated_exit_code(self) -> ExitCode | None:
+        """Return the original exit code if a declared failure reached the root."""
+        if (label := self.scopes[_ROOT_SCOPE].get('failure')) is None:
+            return None
+        node = self._node(self.done[label])
+        member = node.outputs['error'].get_member()
+        return ExitCode(node.exit_status, node.exit_message, member.value.invalidates_cache)
+
+    @cached_property
+    def _propagating_instances(self) -> dict[str, tuple[str, TaskIR]]:
+        """Index in-flight propagating calls, including those restored from a checkpoint."""
+        return {
+            label: (key, task.spec)
+            for key, scope in self.scopes.items()
+            for task in self._template_of(key).tasks
+            if isinstance(task, ProcessTask) and task.spec.result_errors and not task.capture_error
+            for label in scope.get('instances', {}).get(task.name, ())
+            if label not in self.done
+        }
+
+    def _scope_stopped(self, key: str) -> bool:
+        """Return whether this scope or an ancestor has already propagated a failure."""
+        current: str | None = key
+        while current is not None:
+            scope = self.scopes[current]
+            if 'failure' in scope:
+                return True
+            current = scope['parent']
+        return False
+
+    def _propagate_failure(self, key: str, label: str) -> None:
+        """Unwind internal regions, stopping at the nearest explicit invocation capture."""
+        if self._scope_stopped(key):
+            return
+        current: str | None = key
+        while current is not None:
+            scope = self.scopes[current]
+            scope['failure'] = label
+            parent = scope['parent']
+            if parent is not None and scope['kind'] == 'subgraph':
+                task = self._template_of(parent).task(scope['placement'])
+                if isinstance(task, SubgraphTask) and task.capture_error:
+                    break
+            current = parent
 
     def _scope_given(self, key: str) -> dict[str, t.Any]:
         """Return the input values one scope was entered with."""
@@ -514,13 +581,18 @@ class GraphRun:
             error = node.outputs['error']
             if not isinstance(error, EnumData):
                 return False
-            value: ExitCode = error.get_member().value
-            return value in spec.exit_codes.values() and value.status == node.exit_status
-        return bool(spec.error_enums) and node.exit_status in {code.status for code in spec.exit_codes.values()}
-
-    def _label_completed(self, spec: t.Any, label: str) -> bool:
-        """Return whether a run finished ok or with a declared failure."""
-        return self._label_ok(label) or self._has_declared_result(spec, label)
+            member: ExitCodeEnum = error.get_member()
+            if spec.result_errors and get_object_loader().identify_object(type(member)) not in spec.result_errors:
+                return False
+            value = member.value
+            return (
+                isinstance(value, ExitCode) and value in spec.exit_codes.values() and value.status == node.exit_status
+            )
+        return (
+            not spec.result_errors
+            and bool(spec.error_enums)
+            and node.exit_status in {code.status for code in spec.exit_codes.values()}
+        )
 
     def _is_mapped_failure(self, spec: TaskIR, label: str) -> bool:
         """Return whether a run failed with a declared error mapping.
@@ -543,12 +615,23 @@ class GraphRun:
         if label in self._memo_problems:
             return self._memo_problems[label]
         declared: NamespaceShape | None = spec.declared_outputs if isinstance(spec, TaskIR) else None
-        if label not in self.done or declared is None or not declared.fields:
+        if label not in self.done or declared is None or not (declared.fields or spec.result_errors):
             return [], []
         if self._is_mapped_failure(spec, label):
             return [], []
         node = self._node(self.done[label])
-        problems = (_missing_declared_outputs(declared, node), _mistyped_declared_outputs(declared, node))
+        if spec.result_errors and self._label_ok(label):
+            arms = spec.result_shape
+            assert isinstance(arms, NamespaceShape)
+            success = replace(arms.select('value'), required=not spec.result_nullable)
+            stored = node.base.links.get_outgoing(link_type=LinkType.CREATE).nested()
+            value = stored.get('value')
+            if value is None and success.required and isinstance(success, NamespaceShape):
+                # A successful namespace with only optional fields can have no stored links.
+                value = {}
+            problems = _result_output_problems(success, value, 'value')
+        else:
+            problems = (_missing_declared_outputs(declared, node), _mistyped_declared_outputs(declared, node))
         self._memo_problems[label] = problems
         return problems
 
@@ -589,7 +672,14 @@ class GraphRun:
             labels = scope.get('instances', {}).get(name, [])
             return (
                 bool(labels)
-                and all(self._label_completed(task.spec, label) for label in labels)
+                and all(
+                    self._label_ok(label)
+                    or (
+                        (not task.spec.result_errors or task.capture_error)
+                        and self._has_declared_result(task.spec, label)
+                    )
+                    for label in labels
+                )
                 and all(not any(self._label_problems(task.spec, label)) for label in labels)
             )
         if isinstance(task, MapControl):
@@ -616,7 +706,10 @@ class GraphRun:
             )
         if isinstance(task, (SubgraphTask, BranchControl)):
             children = scope.get('frames', {}).get(name, [])
-            return len(children) == 1 and self._scope_complete(children[0]) and self._scope_ok(children[0])
+            return len(children) == 1 and (
+                (isinstance(task, SubgraphTask) and task.capture_error and 'failure' in self.scopes[children[0]])
+                or self._scope_ok(children[0])
+            )
         if isinstance(task, LoopControl):
             if name in scope.get('passed', {}):
                 return True
@@ -693,6 +786,8 @@ class GraphRun:
 
     def _scope_complete(self, key: str) -> bool:
         """Return whether a scope has nothing left to run, successfully or not."""
+        if self._scope_stopped(key):
+            return True
         scope = self.scopes[key]
         begun = (
             set(scope.get('instances', {}))
@@ -704,35 +799,9 @@ class GraphRun:
 
     def _scope_ok(self, key: str) -> bool:
         """Return whether a scope finished successfully with nothing left to run."""
-        if not self._scope_complete(key):
-            return False
-        template = self._template_of(key)
-        scope = self.scopes[key]
-        for task in template.tasks:
-            if isinstance(task, InlineOperation):
-                if task.name not in scope.get('values', {}):
-                    return False
-            elif isinstance(task, ProcessTask):
-                for label in scope.get('instances', {}).get(task.name, []):
-                    if not self._label_completed(task.spec, label) or any(self._label_problems(task.spec, label)):
-                        return False
-            elif isinstance(task, MapControl):
-                if not self._placement_ok(key, task.name):
-                    return False
-            elif isinstance(task, (SubgraphTask, BranchControl)):
-                children = scope.get('frames', {}).get(task.name, [])
-                if len(children) != 1 or not self._scope_ok(children[0]):
-                    return False
-            elif isinstance(task, LoopControl):
-                if task.name in scope.get('passed', {}):
-                    continue
-                children = scope.get('frames', {}).get(task.name, [])
-                if not children or not self._scope_ok(children[-1]):
-                    return False
-            else:
-                msg = f'unsupported task `{task.name}`.'
-                raise GraphRuntimeError(msg)
-        return True
+        return not self._scope_stopped(key) and all(
+            self._placement_ok(key, name) for name in self._template_of(key).task_names
+        )
 
     def _placement_outputs(self, scope_key: str, name: str) -> t.Any:
         """Return the output mapping produced by one successfully completed placement."""
@@ -762,11 +831,25 @@ class GraphRun:
                 }
                 stored['error'] = _error_member(task.spec, label, node)
                 return stored
+            if (
+                task.spec.result_errors
+                and not task.spec.result_nullable
+                and self._label_ok(label)
+                and 'value' not in node.outputs
+                and isinstance(task.spec.outputs['value'], PortNamespace)
+            ):
+                return {'value': {}}
             return node.outputs
         if isinstance(task, MapControl):
             return self._node(self.done[scope['collectors'][name]]).outputs
         if isinstance(task, (SubgraphTask, BranchControl)):
-            return self._scope_outputs(scope['frames'][name][-1])
+            child = scope['frames'][name][-1]
+            if isinstance(task, SubgraphTask) and task.capture_error:
+                if (origin := self.scopes[child].get('failure')) is not None:
+                    return {'error': self._node(self.done[origin]).outputs['error']}
+                outputs = self._scope_outputs(child)
+                return {'value': outputs.get(task.body.result_port) if task.body.result_port else outputs}
+            return self._scope_outputs(child)
         if isinstance(task, LoopControl):
             if name in scope.get('passed', {}):
                 return scope['passed'][name]
@@ -822,7 +905,11 @@ class GraphRun:
                     else:
                         children = scope.get('frames', {}).get(task.name, [])
                         failed_children = tuple(
-                            child for child in children if self._scope_complete(child) and not self._scope_ok(child)
+                            child
+                            for child in children
+                            if not self._scope_stopped(child)
+                            and self._scope_complete(child)
+                            and not self._scope_ok(child)
                         )
                         collect = scope.get('collectors', {}).get(task.name)
                         collector_failed = collect is not None and collect in self.done and not self._label_ok(collect)
@@ -864,6 +951,8 @@ class GraphRun:
                 self._invalidate()
                 before = self._progress(len(result.starts))
                 for key in list(self.scopes):
+                    if self._scope_stopped(key):
+                        continue
                     scope = self.scopes[key]
                     template = self._template_of(key)
                     for task in template.tasks:
@@ -885,6 +974,8 @@ class GraphRun:
 
     def _ready(self, scope_key: str) -> list[str]:
         """Return the undispatched placements of one scope whose predecessors all succeeded."""
+        if self._scope_stopped(scope_key):
+            return []
         template = self._template_of(scope_key)
         scope = self.scopes[scope_key]
         begun = (
@@ -902,7 +993,15 @@ class GraphRun:
 
     def completed(self, instance: str, pk: int) -> None:
         """Record the node produced by one task label."""
+        if instance in self.done:
+            return
+        # Build the index before marking this instance done when resuming.
+        origin = self._propagating_instances.pop(instance, None)
         self.done[instance] = pk
+        if origin is not None:
+            key, spec = origin
+            if self._has_declared_result(spec, instance):
+                self._propagate_failure(key, instance)
 
     def outputs(self) -> dict[str, t.Any]:
         """Collect the graph outputs from passthrough inputs and task results."""
@@ -941,6 +1040,7 @@ class GraphRun:
                     'selector': scope.get('selector', ''),
                     'prefix': scope.get('prefix', ''),
                     **({'given': scope['given']} if 'given' in scope else {}),
+                    **({'failure': scope['failure']} if 'failure' in scope else {}),
                     'instances': {name: list(labels) for name, labels in scope.get('instances', {}).items()},
                     'frames': {name: list(keys) for name, keys in scope.get('frames', {}).items()},
                     'collectors': dict(scope.get('collectors', {})),
@@ -968,6 +1068,8 @@ class GraphRun:
             )
             if 'given' in saved:
                 state['given'] = dict(saved['given'])
+            if 'failure' in saved:
+                state['failure'] = saved['failure']
             state['instances'] = {name: list(labels) for name, labels in saved.get('instances', {}).items()}
             state['frames'] = {name: list(keys) for name, keys in saved.get('frames', {}).items()}
             state['collectors'] = dict(saved.get('collectors', {}))
@@ -1004,6 +1106,8 @@ class GraphRun:
         else:
             label = self._claim(scope['prefix'] + name)
             scope.setdefault('instances', {}).setdefault(name, []).append(label)
+            if isinstance(task, ProcessTask) and task.spec.result_errors and not task.capture_error:
+                self._propagating_instances[label] = (scope_key, task.spec)
             step.begin(label, task, inputs, (*self._config_prefix(scope_key), task.name))
         self._invalidate()
 

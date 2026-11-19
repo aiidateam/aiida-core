@@ -256,7 +256,7 @@ The graph body supports:
 * inline arithmetic, comparisons, and unary operators (:ref:`topics:workflows:graphs:inline`);
 * collection expressions over typed lists and mappings: integer indexing with negatives, string-key lookup with runtime keys, public annotated item reads such as ``item.value``, and filtered, nested list and dict comprehensions with ``mapping.items()`` pair iteration (:ref:`topics:workflows:graphs:inline_collections`);
 * a single final ``return`` of a name, a field, or a call, or of a ``dict`` of those with literal string keys; a graph with no outputs ends with an explicit ``return {}``;
-* field and namespace selection (``.key``, ``['key']``, ``.result``; ``.result`` on a single-output call is optional) and multi-output unpacking (``value, error = step(...)``);
+* field and namespace selection (``.key``, ``['key']``, ``.result``; ``.result`` on a single-output call is optional) and multi-output unpacking (``first, second = step(...)``);
 * module-qualified calls (``my_module.add(...)``) and explicitly aliased placements (``decl.alias('name')(...)``), required whenever one task or graph is placed twice in the same body;
 * namespace ``dict`` literals (``nodes={'text': text}``) and ``**bundle`` spreading (:ref:`topics:workflows:graphs:spreading`);
 * ``after=`` ordering: ``add(x=x, y=1, after=prepared)`` waits for the ``prepared`` placement without using its outputs; ``after=(first, second)`` waits for both; ``after`` is reserved and cannot be a task parameter;
@@ -861,7 +861,7 @@ The body returns ``Ok`` with the outputs, or ``Err`` with the declared member:
 
 .. code:: python
 
-    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, PortModel, Result, graph, task
+    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, PortModel, Result, catch_error, graph, task
 
     class DivisionErrors(ExitCodeEnum):
         ZERO_DENOMINATOR = ExitCode(410, 'The denominator is zero.')
@@ -887,7 +887,7 @@ The body returns ``Ok`` with the outputs, or ``Err`` with the declared member:
 
     @graph
     def ratio_signed(numerator: float, denominator: float) -> float:
-        value, error = divide_signed(numerator=numerator, denominator=denominator)
+        value, error = catch_error(divide_signed(numerator=numerator, denominator=denominator))
         if error is None:
             selected = value
         elif error is DivisionErrors.ZERO_DENOMINATOR:
@@ -896,9 +896,16 @@ The body returns ``Ok`` with the outputs, or ``Err`` with the declared member:
             selected = recover_negative(numerator=numerator, error=error)
         return selected
 
-The call unpacks into ``(value, error)``; exactly one arm is present.
-The success arm passes the value through, and each declared member routes to its own handler task.
-Only the present arm creates data nodes; the absent arm reaches downstream inputs as ``None``.
+A bare call such as ``value = divide_signed(...)`` binds only the success value and propagates declared failures, retaining the child's original status and formatted message.
+Use ``value, error = catch_error(divide_signed(...))`` to handle a failure instead.
+On success, ``error`` is ``None``; on declared failure, ``value`` is ``None`` and ``error`` is the declared member.
+For a nullable success type, check ``error`` to distinguish a successful ``None`` from failure.
+``catch_error`` also accepts a direct nested graph call if that graph can propagate declared failures.
+A graph return annotation describes its successful value, not whether it can fail.
+
+Standard Python type checkers see the bare call's success type but cannot infer the context-sensitive capture types.
+The intrinsic's Python signature uses ``Any`` for the captured success arm and ``ExitCodeEnum | None`` for the captured error arm.
+Use a checker suppression where needed; ``build()`` remains authoritative for graph wiring.
 The success type may be structured: a ``PortModel``, a pydantic model, or a named tuple declares a ``value`` namespace, stored field by field, and consuming tasks take the model as their input type:
 
 .. code:: python
@@ -919,10 +926,11 @@ The success type may be structured: a ``PortModel``, a pydantic model, or a name
 Only static namespaces are supported; dynamic outputs stay out of graph tasks.
 Error inputs arrive as the enum member itself, typed by the annotation, so handlers match on members directly.
 Branches test the arms with ``is None`` and ``is not None``, or match one declared member with ``is`` and ``is not``, such as ``if error is DivisionErrors.ZERO_DENOMINATOR``.
-An unknown compared name fails when the graph is built.
+An unknown member or a member outside the captured invocation's error contract fails when the graph is built.
 A branch nests inside an error arm, so each declared member routes to its own handler task with the dispatch visible in the body.
 
-A declared failure sets the child's exit status but counts as completed, so dependents still run; its absent success arms read as ``None`` downstream.
+A captured declared failure sets the child's exit status but counts as completed, so downstream error handling can run.
+An uncaught declared failure stops further scheduling within the affected invocation and does not release consumers of its success value.
 Undeclared failures, exceptions, and outputs missing from a completed task keep the previous behavior: dependents never start and the graph exits with ``ERROR_TASK_FAILED``.
 A task without ``Result`` keeps its behavior too: returning an ``ExitCode`` exits the child with that status.
 ``Err`` accepts a member or its ``ExitCode`` value, formatted to fill a message template; anything else fails the task itself, as do bare returns from a ``Result`` task.
@@ -974,11 +982,11 @@ Only declared arms the run did not store read as ``None`` downstream, like the m
 Retrying declared failures
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A ``while`` loop retries a fallible task: its body unpacks the ``Result`` on every iteration, and the condition reads the latest error arm.
+A ``while`` loop retries a fallible task: its body uses ``catch_error`` on every iteration, and the condition reads the latest error arm.
 
 .. code:: python
 
-    from aiida.engine import RestartErrors
+    from aiida.engine import RestartErrors, catch_error
     from aiida.orm import StructureData
 
     class StepErrors(ExitCodeEnum):
@@ -997,11 +1005,11 @@ A ``while`` loop retries a fallible task: its body unpacks the ``Result`` on eve
 
     @graph
     def restartable(structure: StructureData, max_attempts: int, attempt: int = 0) -> float:
-        value, error = run_step(structure=structure, attempt=attempt)
+        value, error = catch_error(run_step(structure=structure, attempt=attempt))
         retry = error is not None and attempt < max_attempts
         while retry:
             attempt = attempt + 1
-            value, error = run_step(structure=structure, attempt=attempt)
+            value, error = catch_error(run_step(structure=structure, attempt=attempt))
             retry = error is not None and attempt < max_attempts
         checked = ensure(value=value)  # noqa: F841 - the guard validates without feeding the return
         return value
@@ -1035,11 +1043,11 @@ Only the error member differs from the budget example above:
 
     @graph
     def restart_on_walltime(structure: StructureData, max_attempts: int, attempt: int = 0) -> float:
-        value, error = run_scf(structure=structure, attempt=attempt)
+        value, error = catch_error(run_scf(structure=structure, attempt=attempt))
         retry = error is StepErrors.OUT_OF_WALLTIME and attempt < max_attempts
         while retry:
             attempt = attempt + 1
-            value, error = run_scf(structure=structure, attempt=attempt)
+            value, error = catch_error(run_scf(structure=structure, attempt=attempt))
             retry = error is StepErrors.OUT_OF_WALLTIME and attempt < max_attempts
         checked = ensure(value=value)
         return value
@@ -1251,10 +1259,10 @@ Retry a declared failure with a budget
 
     @graph
     def restartable(x: int, max_retries: int, attempt: int = 0) -> int:
-        value, error = run_step(x=x, attempt=attempt)
+        value, error = catch_error(run_step(x=x, attempt=attempt))
         while error is not None and attempt < max_retries:
             attempt = attempt + 1
-            value, error = run_step(x=x, attempt=attempt)
+            value, error = catch_error(run_step(x=x, attempt=attempt))
         checked = ensure(value=value)
         return value
 
@@ -1303,7 +1311,7 @@ Handle a declared error without retrying
 
 .. code:: python
 
-    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result
+    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result, catch_error
 
     class DivisionErrors(ExitCodeEnum):
         ZERO_DENOMINATOR = ExitCode(410, 'The denominator is zero.')
@@ -1320,7 +1328,7 @@ Handle a declared error without retrying
 
     @graph
     def ratio_or_zero(numerator: float, denominator: float) -> float:
-        value, error = divide(numerator=numerator, denominator=denominator)
+        value, error = catch_error(divide(numerator=numerator, denominator=denominator))
         if error is None:
             selected = value
         else:

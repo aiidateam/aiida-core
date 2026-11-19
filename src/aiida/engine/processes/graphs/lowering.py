@@ -62,6 +62,7 @@ from aiida.engine.processes.graphs.operations import (
 )
 from aiida.engine.processes.graphs.par_map import par_map
 from aiida.engine.processes.graphs.process import GraphProcess
+from aiida.engine.processes.graphs.results import catch_error
 from aiida.engine.processes.graphs.shapes import (
     Forward,
     LeafShape,
@@ -82,7 +83,7 @@ from aiida.engine.processes.graphs.tasks import (
 )
 from aiida.engine.processes.ports import _node_type
 from aiida.engine.processes.workchains.workchain import WorkChain
-from aiida.orm import Bool, DataDict, DataList
+from aiida.orm import Bool, DataDict, DataList, EnumData
 
 __all__ = ('Forward', 'GraphHandle', 'graph', 'par_map', 'task')
 
@@ -538,11 +539,11 @@ def graph(function: Callable[..., t.Any] | None = None) -> t.Any:
 
         @graph
         def retrying(x: int, limit: int, attempt: int = 0) -> int:
-            value, error = step(x=x, attempt=attempt)
+            value, error = catch_error(step(x=x, attempt=attempt))
             retry = error is MyErrors.RETRYABLE and attempt < limit
             while retry:
                 attempt = attempt + 1
-                value, error = step(x=x, attempt=attempt)
+                value, error = catch_error(step(x=x, attempt=attempt))
                 retry = error is MyErrors.RETRYABLE and attempt < limit
             checked = ensure(value=value)
             return value
@@ -780,7 +781,9 @@ def _lower_outputs(
     hints = state.definition.hints
     references = _lower_return(state, expression=result)
     returned = shape_for_annotation(hints.get('return'))
-    outputs: dict[str, OutputTree] = {name: _endpoint_tree(reference) for name, reference in references.items()}
+    outputs: dict[str, OutputTree] = {
+        name: _endpoint_tree(reference, preserve_optional_namespaces=True) for name, reference in references.items()
+    }
     if len(outputs) == 1 and not isinstance(result, ast.Dict):
         outputs = {'result': next(iter(outputs.values()))}
     typehints: dict[str, tuple[type, ...]] = (
@@ -795,15 +798,21 @@ def _lower_outputs(
     return outputs, typehints
 
 
-def _endpoint_tree(reference: _ReferenceTree) -> OutputTree:
+def _endpoint_tree(reference: _ReferenceTree, *, preserve_optional_namespaces: bool = False) -> OutputTree:
     """Expand a leaf or namespace reference to endpoints regrouping existing nodes.
 
     Namespaces regroup their existing leaves instead of creating data; every leaf
     keeps its stored node, so workflows return but never create data.
     """
     if isinstance(reference, dict):
-        return {name: _endpoint_tree(item) for name, item in reference.items()}
+        return {
+            name: _endpoint_tree(item, preserve_optional_namespaces=preserve_optional_namespaces)
+            for name, item in reference.items()
+        }
     if isinstance(reference.shape, NamespaceShape):
+        if preserve_optional_namespaces and not reference.shape.required and reference.task and reference.port:
+            # A missing whole arm must not turn into an empty mapping at an invocation boundary.
+            return Endpoint(task=reference.task, port=reference.port)
         return {name: _endpoint_tree(field) for name, field in _fields(reference).items()}
     return Endpoint(task=reference.task, port=reference.port)
 
@@ -1016,7 +1025,15 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool 
             + 'call a task or graph with one output per name instead'
         )
         _reject(state, node=statement.value, reason=msg)
-    ref: _Reference = _lower_call(state, expression=statement.value)
+    call = statement.value
+    capture = _is_catch_error(state, call)
+    if capture:
+        if len(statement.targets) != 1 or len(names) != 2 or (names[0] == names[1] and names[0] != '_'):
+            _reject(state, node=target, reason='`catch_error` must unpack into exactly two names')
+        if len(call.args) != 1 or call.keywords or not isinstance(call.args[0], ast.Call):
+            _reject(state, node=call, reason='`catch_error` requires one direct fallible task or graph invocation')
+        call = call.args[0]
+    ref = _lower_call(state, expression=call, capture=capture, unpack=True)
     if not isinstance(ref.shape, NamespaceShape):
         if len(names) == 1:
             state.names[names[0]] = ref
@@ -1033,7 +1050,8 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool 
     for name, (field_name, field_shape) in zip(names, fields):
         # `_` discards its arm: it never becomes a wire, so regions never route it.
         if name != '_':
-            state.names[name] = _Reference(ref.task, port=field_name, shape=field_shape)
+            port = f'{ref.port}.{field_name}' if ref.port else field_name
+            state.names[name] = _Reference(ref.task, port=port, shape=field_shape)
 
 
 def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
@@ -1292,6 +1310,9 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
         test, condition_test = none_test
     elif (matched := _match_member_test(state, test)) is not None:
         test, condition_test, condition_member = matched
+        shape = _probe_shape(state, test)
+        if isinstance(shape, LeafShape) and shape.error_enums and condition_member[0] not in shape.error_enums:
+            _reject(state, node=statement.test, reason='this enum is not declared by the captured invocation')
     elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp)):
         # Numeric inline operations bind to a fresh boolean wire; `is`/`is not`
         # presence and member tests above must win over this numeric path.
@@ -2487,7 +2508,13 @@ def _check_partial_overlap(
 
 
 def _lower_partial_call(
-    state: _LoweringState, binding: _PartialBinding, expression: ast.Call, explicit_override: str | None
+    state: _LoweringState,
+    binding: _PartialBinding,
+    expression: ast.Call,
+    explicit_override: str | None,
+    *,
+    capture: bool,
+    unpack: bool,
 ) -> _Reference:
     """Place one partial use, merging fixed and call-time inputs into one ordinary placement."""
     inputs = _partial_target_shape(binding.target, state)
@@ -2575,10 +2602,10 @@ def _lower_partial_call(
             + f'partial of `{binding.call_name}` is missing required inputs: {missing}; pass them at the call'
         )
         _reject(state, node=expression, reason=msg)
-    state.tasks.append(task)
+    reference = _place_invocation(state, expression, task, result_port, result_shape, capture=capture, unpack=unpack)
     if after is not None:
         _wire_after(state, instance=instance, keyword=after)
-    return _Reference(instance, port=result_port, shape=result_shape)
+    return reference
 
 
 def _claim_placement(state: _LoweringState, name: str, node: ast.AST, *, is_map: bool = False) -> str:
@@ -3218,15 +3245,71 @@ def _lower_operation(state: _LoweringState, node: ast.BinOp | ast.Compare | ast.
     return _place_operation(state, operation=operation, operands=lowered, node=node)
 
 
-def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
-    """Place a task, graph, or partial use with wired graph inputs."""
+def _is_catch_error(state: _LoweringState, expression: ast.Call) -> bool:
+    """Recognize the intrinsic by identity, including imported aliases."""
+    try:
+        target, _ = _resolve_base(state, expression.func)
+    except GraphLanguageError:
+        return False
+    return target is catch_error
+
+
+def _place_invocation(
+    state: _LoweringState,
+    expression: ast.Call,
+    task: ProcessTask | SubgraphTask,
+    result_port: str,
+    result_shape: Shape,
+    *,
+    capture: bool,
+    unpack: bool,
+) -> _Reference:
+    """Select the invocation's success shape or its explicitly captured pair."""
+    errors = task.spec.result_errors if isinstance(task, ProcessTask) else task.body.declared_errors
+    if capture:
+        if not errors:
+            _reject(state, node=expression, reason='`catch_error` requires an invocation with declared failures')
+        task = replace(task, capture_error=True)
+        if isinstance(task, ProcessTask):
+            assert isinstance(result_shape, NamespaceShape)
+            result_shape = result_shape.select('value')
+        result_port = ''
+        result_shape = NamespaceShape(
+            fields=(
+                ('value', replace(result_shape, required=False)),
+                ('error', LeafShape(types=(EnumData,), required=False, error_enums=frozenset(errors))),
+            )
+        )
+    elif isinstance(task, ProcessTask) and errors:
+        if unpack:
+            _reject(
+                state,
+                node=expression,
+                reason='bare Result calls expose only success; use `value, error = catch_error(call(...))` '
+                'to unpack or bind the success to one name and select its fields',
+            )
+        assert isinstance(result_shape, NamespaceShape)
+        result_shape = replace(result_shape.select('value'), required=not task.spec.result_nullable)
+        result_port = 'value'
+    state.tasks.append(task)
+    return _Reference(task.name, port=result_port, shape=result_shape)
+
+
+def _lower_call(
+    state: _LoweringState, expression: ast.expr, *, capture: bool = False, unpack: bool = False
+) -> _Reference:
+    """Place a task or graph call with wired graph inputs."""
     assert isinstance(expression, ast.Call)
+    if _is_catch_error(state, expression):
+        _reject(state, node=expression, reason='use `value, error = catch_error(call(...))` in a tuple assignment')
     partial_use = _partial_call_parts(state, expression.func)
     if partial_use is not None:
         binding, explicit_override = partial_use
-        return _lower_partial_call(state, binding, expression, explicit_override)
+        return _lower_partial_call(state, binding, expression, explicit_override, capture=capture, unpack=unpack)
     target, name, explicit = _resolve_callable(state, expression.func)
     if target is par_map:
+        if capture:
+            _reject(state, node=expression, reason='`catch_error` captures only direct task or graph invocations')
         return _lower_par_map(state, expression)
     assert isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle))
     if explicit is not None:
@@ -3272,8 +3355,7 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
             + f'task {name!r} is missing required inputs: {missing}; pass them as call arguments'
         )
         _reject(state, node=expression, reason=msg)
-    state.tasks.append(task)
-    return _Reference(instance, port=result_port, shape=result_shape)
+    return _place_invocation(state, expression, task, result_port, result_shape, capture=capture, unpack=unpack)
 
 
 def _bind_positional(

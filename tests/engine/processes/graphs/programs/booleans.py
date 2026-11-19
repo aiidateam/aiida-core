@@ -17,7 +17,7 @@ selections. Rejected programs name the operand forms that stay task concerns.
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph, task
-from aiida.engine.processes.graphs.results import Err, Ok, Result
+from aiida.engine.processes.graphs.results import Err, Ok, Result, catch_error
 from tests.engine.processes.graphs.programs.operations import pick
 from tests.engine.processes.graphs.programs.tasks import add, is_positive
 
@@ -141,7 +141,7 @@ def guarded_task_loop(value: int, flag: bool) -> int:
 @graph
 def member_guarded(value: int, fallback: int) -> int:
     """Guard on a declared error member before the bound; the member test stays a branch test."""
-    _, error = check_even(value=value)
+    _, error = catch_error(check_even(value=value))
     if error is ParityErrors.ODD and fallback > 0:
         chosen = add(x=fallback, y=1)
     else:
@@ -215,7 +215,7 @@ def negated_rhs(value: int | None, flag: bool) -> int:
 @graph
 def member_value(value: int, fallback: int) -> int:
     """Bind `is` against a declared member as a named boolean wire."""
-    _, error = check_even(value=value)
+    _, error = catch_error(check_even(value=value))
     failed = error is ParityErrors.ODD
     if failed and fallback > 0:
         chosen = add(x=fallback, y=1)
@@ -227,7 +227,7 @@ def member_value(value: int, fallback: int) -> int:
 @graph
 def member_not_value(value: int, fallback: int) -> int:
     """Bind `is not` against a declared member as a named boolean wire."""
-    _, error = check_even(value=value)
+    _, error = catch_error(check_even(value=value))
     ok = error is not ParityErrors.ODD
     if ok or fallback > 0:
         chosen = add(x=fallback, y=1)
@@ -239,7 +239,7 @@ def member_not_value(value: int, fallback: int) -> int:
 @graph
 def negated_member_rhs(value: int, fallback: int) -> int:
     """Join a comparison with a negated member test on the right side."""
-    _, error = check_even(value=value)
+    _, error = catch_error(check_even(value=value))
     if fallback > 0 and not (error is ParityErrors.ODD):  # noqa: E714 - the negation is the regression
         chosen = add(x=fallback, y=1)
     else:
@@ -285,11 +285,11 @@ def conditional_joined_present(value: int | None, flag: bool) -> int:
 def while_present(value: int) -> int:
     """Re-evaluate a direct presence test before every iteration."""
     total = 0
-    current, _ = check_even(value=value)
+    current, _ = catch_error(check_even(value=value))
     while current is not None:
         total = add(x=total, y=1)
         value = add.alias('add_2')(x=value, y=1)
-        current, _ = check_even(value=value)
+        current, _ = catch_error(check_even(value=value))
     return add(x=total, y=0)
 
 
@@ -297,12 +297,12 @@ def while_present(value: int) -> int:
 def while_named_present(value: int) -> int:
     """Recompute a named presence wire before every iteration."""
     total = 0
-    current, _ = check_even(value=value)
+    current, _ = catch_error(check_even(value=value))
     present = current is not None
     while present:
         total = add(x=total, y=1)
         value = add.alias('add_2')(x=value, y=1)
-        current, _ = check_even(value=value)
+        current, _ = catch_error(check_even(value=value))
         present = current is not None
     return add(x=total, y=0)
 

@@ -72,6 +72,7 @@ __all__ = (
 )
 
 _GRAPH_IR_EXPRESSION_VERSION: t.Final = '0.3'
+_GRAPH_IR_RESULT_VERSION: t.Final = '0.4'
 _GRAPH_IR_VERSION: t.Final = '0.2'
 _GRAPH_IR_LEGACY_VERSION: t.Final = '0.1'
 _TASK_IR_VERSION: t.Final = '0.1'
@@ -436,6 +437,8 @@ class TaskIR:
     typevar_output: t.Any = field(default=None, compare=False)
     exit_codes: dict[str, ExitCode] = field(default_factory=dict)
     error_enums: tuple[str, ...] = field(default_factory=tuple)
+    result_errors: tuple[str, ...] = ()
+    result_nullable: bool = False
     version: str = _TASK_IR_VERSION
 
     def __post_init__(self) -> None:
@@ -454,6 +457,8 @@ class TaskIR:
         typevar_output: t.Any | None = None,
         exit_codes: Mapping[str, ExitCode] | None = None,
         error_enums: tuple[str, ...] | None = None,
+        result_errors: tuple[str, ...] = (),
+        result_nullable: bool = False,
     ) -> TaskIR:
         """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass.
 
@@ -496,6 +501,8 @@ class TaskIR:
             typevar_output=typevar_output,
             exit_codes=dict(exit_codes or {}),
             error_enums=tuple(error_enums or ()),
+            result_errors=result_errors,
+            result_nullable=result_nullable,
         )
 
     @cached_property
@@ -590,6 +597,9 @@ class TaskIR:
             data['exit_codes'] = {label: code._asdict() for label, code in self.exit_codes.items()}
         if self.error_enums:
             data['error_enums'] = list(self.error_enums)
+        if self.result_errors:
+            data['result_errors'] = list(self.result_errors)
+            data['result_nullable'] = self.result_nullable
         return {**data, 'version': self.version}
 
     @classmethod
@@ -602,6 +612,8 @@ class TaskIR:
             declared_outputs=_load_declared(data.get('declared_outputs')),
             exit_codes={label: ExitCode(**code) for label, code in data.get('exit_codes', {}).items()},
             error_enums=tuple(data.get('error_enums', ())),
+            result_errors=tuple(data.get('result_errors', ())),
+            result_nullable=data.get('result_nullable', False),
             version=_require_version(data.get('version'), _TASK_IR_VERSION, 'task'),
         )
 
@@ -642,6 +654,17 @@ def _output_required(origin: InputPort | OutputPort) -> bool:
     if isinstance(types, type):
         return types is not type(None)
     return type(None) not in types
+
+
+def _output_namespace_from_origin(name: str, origin: PortNamespace, *, required: bool) -> PortNamespace:
+    """Copy a task namespace's output contract without flattening away its optionality."""
+    result = PortNamespace(name, required=required)
+    for key, child in origin.items():
+        if isinstance(child, PortNamespace):
+            result[key] = _output_namespace_from_origin(key, child, required=child.required)
+        else:
+            result[key] = OutputPort(key, valid_type=child.valid_type, required=_output_required(child))
+    return result
 
 
 def _with_error_arm(ports: PortNamespace) -> PortNamespace:
@@ -805,13 +828,15 @@ class GraphTask(abc.ABC):
             common = {'name': data['name'], 'inputs': data.get('inputs', {})}
             kind = data.get('kind')
             if kind == 'process':
-                return ProcessTask(spec=TaskIR.from_dict(data['spec']), **common)
+                return ProcessTask(
+                    spec=TaskIR.from_dict(data['spec']), capture_error=data.get('capture_error', False), **common
+                )
             body = GraphIR.from_dict(data['body']) if kind in ('graph', 'branch', 'loop') else None
             if kind == 'graph':
                 if body is None:
                     msg = 'malformed graph task declaration; missing body.'
                     raise GraphTypeCheckError(msg)
-                return SubgraphTask(body=body, **common)
+                return SubgraphTask(body=body, capture_error=data.get('capture_error', False), **common)
             if kind == 'branch':
                 if body is None:
                     msg = 'malformed graph task declaration; missing body.'
@@ -888,9 +913,28 @@ class BodyTask(GraphTask):
 
 @dataclass(frozen=True, kw_only=True)
 class SubgraphTask(BodyTask):
-    """A nested graph dispatched once as a child process."""
+    """An inlined graph with its own invocation boundary."""
 
     KIND: t.ClassVar[_TaskKind] = 'graph'
+    capture_error: bool = False
+
+    @override
+    def output_ports(self) -> PortNamespace:
+        ports = super().output_ports()
+        if not self.capture_error:
+            return ports
+        success = copy(ports[self.body.result_port] if self.body.result_port else ports)
+        success.required = False
+        arms = PortNamespace('outputs')
+        arms['value'] = success
+        return _with_error_arm(arms)
+
+    @override
+    def to_dict(self) -> dict[str, t.Any]:
+        data = super().to_dict()
+        if self.capture_error:
+            data['capture_error'] = True
+        return data
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -1085,6 +1129,7 @@ class ProcessTask(GraphTask):
 
     KIND: t.ClassVar[_TaskKind] = 'process'
     spec: TaskIR
+    capture_error: bool = False
 
     @override
     def input_ports(self) -> tuple[PortNamespace, ...]:
@@ -1094,12 +1139,21 @@ class ProcessTask(GraphTask):
     @override
     def output_ports(self) -> PortNamespace:
         """Return the static outputs of the task process."""
-        return self.spec.outputs
+        ports = self.spec.outputs
+        if self.spec.result_errors and not self.capture_error:
+            success = copy(ports['value'])
+            success.required = not self.spec.result_nullable
+            ports = PortNamespace('outputs')
+            ports['value'] = success
+        return ports
 
     @override
     def to_dict(self) -> dict[str, t.Any]:
         """Return the placement with its task declaration."""
-        return {**super().to_dict(), 'spec': self.spec.to_dict()}
+        data = {**super().to_dict(), 'spec': self.spec.to_dict()}
+        if self.capture_error:
+            data['capture_error'] = True
+        return data
 
 
 OutputTree: t.TypeAlias = 'Endpoint | dict[str, OutputTree]'
@@ -1360,12 +1414,43 @@ class GraphIR:
         from aiida.engine.processes.graphs.validate import validate_graph
 
         validate_graph(self)
-        if _graph_contains_operation(self, expression_only=True):
+        if self._uses_result_policy:
+            version = _GRAPH_IR_RESULT_VERSION
+        elif _graph_contains_operation(self, expression_only=True):
             version = _GRAPH_IR_EXPRESSION_VERSION
         else:
             version = _GRAPH_IR_VERSION if _graph_contains_operation(self) else _GRAPH_IR_LEGACY_VERSION
         if self.version != version:
             object.__setattr__(self, 'version', version)
+
+    @cached_property
+    def _uses_result_policy(self) -> bool:
+        """Version this template if it requires the new invocation semantics."""
+        for task in self.tasks:
+            if isinstance(task, ProcessTask) and task.spec.result_errors:
+                return True
+            if isinstance(task, SubgraphTask) and task.capture_error:
+                return True
+            if isinstance(task, BranchControl) and task.otherwise._uses_result_policy:
+                return True
+            if isinstance(task, (BodyTask, MapControl)) and task.body is not None and task.body._uses_result_policy:
+                return True
+        return False
+
+    @cached_property
+    def declared_errors(self) -> frozenset[str]:
+        """Infer errors that can escape this template without being captured."""
+        errors: set[str] = set()
+        for task in self.tasks:
+            if isinstance(task, ProcessTask) and not task.capture_error:
+                errors.update(task.spec.result_errors)
+            elif isinstance(task, BranchControl):
+                errors.update(task.body.declared_errors, task.otherwise.declared_errors)
+            elif isinstance(task, LoopControl) or (isinstance(task, SubgraphTask) and not task.capture_error):
+                errors.update(task.body.declared_errors)
+            elif isinstance(task, MapControl) and task.body is not None:
+                errors.update(task.body.declared_errors)
+        return frozenset(errors)
 
     @property
     def task_names(self) -> tuple[str, ...]:
@@ -1486,8 +1571,12 @@ class GraphIR:
                 raise GraphTypeCheckError(msg) from exception
             ports = task.output_ports()
         origin = _port_at(ports, source.port)
+        if isinstance(origin, PortNamespace) and source.task is not None:
+            return _output_namespace_from_origin(
+                name, origin, required=origin.required and _ancestry_required(ports, source.port)
+            )
         if origin is None or isinstance(origin, PortNamespace):
-            msg = f'graph output `{path}` must reference a declared leaf.'
+            msg = f'graph output `{path}` must reference a declared leaf or task namespace.'
             raise GraphTypeCheckError(msg)
         top = path.split('.', maxsplit=1)[0]
         valid_type = self._output_types(top, origin) or (DataNode,)
@@ -1531,11 +1620,14 @@ class GraphIR:
     def from_dict(cls, data: Mapping[str, t.Any]) -> GraphIR:
         """Rebuild a graph template from its serialized form."""
         version = data.get('version')
-        if version not in (_GRAPH_IR_EXPRESSION_VERSION, _GRAPH_IR_VERSION, _GRAPH_IR_LEGACY_VERSION):
-            msg = (
-                f'cannot read a graph declaration of version `{version}`; supported versions are '
-                f'`{_GRAPH_IR_LEGACY_VERSION}`, `{_GRAPH_IR_VERSION}`, and `{_GRAPH_IR_EXPRESSION_VERSION}`.'
-            )
+        supported = (
+            _GRAPH_IR_LEGACY_VERSION,
+            _GRAPH_IR_VERSION,
+            _GRAPH_IR_EXPRESSION_VERSION,
+            _GRAPH_IR_RESULT_VERSION,
+        )
+        if version not in supported:
+            msg = f'cannot read a graph declaration of version `{version}`; supported versions are {supported}.'
             raise GraphTypeCheckError(msg)
         try:
             boundary = load_shape(data['input_namespace'])

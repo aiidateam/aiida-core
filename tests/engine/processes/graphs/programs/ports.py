@@ -10,7 +10,10 @@
 
 import typing as t
 
+from typing_extensions import NotRequired, TypedDict
+
 from aiida.engine.processes.graphs.lowering import graph
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.programs.port_models import (
     Configuration,
@@ -21,6 +24,7 @@ from tests.engine.processes.graphs.programs.port_models import (
 )
 from tests.engine.processes.graphs.programs.tasks import (
     ArithmeticPair,
+    SummaryStats,
     add,
     arithmetic_pair,
     read_answer,
@@ -31,6 +35,33 @@ from tests.engine.processes.graphs.programs.tasks import (
     read_point_count,
     statistics,
 )
+
+
+class OnlyOutput(t.TypedDict):
+    """One named graph output."""
+
+    only: int
+
+
+class PairOutputs(TypedDict):
+    """The sum and product of a pair under the names `total` and `product`."""
+
+    total: int
+    product: int
+
+
+class TextPairOutputs(TypedDict):
+    """A `total` declared as text, which a stored integer cannot fill."""
+
+    total: str
+    product: int
+
+
+class OptionalProductOutputs(TypedDict):
+    """A `total` with a `product` that the return may leave out."""
+
+    total: int
+    product: NotRequired[int]
 
 
 @graph
@@ -47,8 +78,8 @@ def named(x: int, y: int) -> dict[str, int]:
 
 
 @graph
-def single_named_scalar(value: int) -> int:
-    """Return one named output with a scalar-style hint."""
+def single_named_scalar(value: int) -> OnlyOutput:
+    """Return one named output declared by a `TypedDict`."""
     out = add(x=value, y=0)
     return {'only': out}
 
@@ -123,7 +154,7 @@ def nested_passthrough(config: Configuration) -> int:
 
 
 @graph
-def summarize(values: list[float]):
+def summarize(values: list[float]) -> SummaryStats:
     """Expose summary statistics computed by plain Python, selected by key."""
     stats = statistics(values=values)
     return {'mean': stats['mean'], 'stdev': stats['stdev']}
@@ -167,7 +198,7 @@ def nullable_chain(value: int | None = None) -> int | None:
 
 
 @graph
-def unrestricted_return(value: t.Any) -> t.Any:
+def unrestricted_return(value: t.Any) -> Data:
     """Return an unrestricted required input; a `None` value emits no output."""
     return value
 
@@ -225,6 +256,69 @@ def make_config(x: int) -> Configuration:
     """Build a namespace from task data; wrap construction in a task instead."""
     total = add(x=x, y=1)
     return Configuration(settings=Settings(count=total, nullable=None), label='test')
+
+
+# rejected at lowering: graph outputs are checked against the return annotation.
+@graph
+def unannotated_return(value: int):
+    """Leave out the return annotation; every graph declares one."""
+    return add(x=value, y=1)
+
+
+# rejected at lowering: `Any` declares no outputs to check the return against.
+@graph
+def any_return(value: int) -> t.Any:
+    """Annotate the return with `Any`; graphs declare checkable outputs."""
+    return add(x=value, y=1)
+
+
+# rejected at lowering: the return must produce every declared output.
+@graph
+def missing_declared_output(x: int, y: int) -> PairOutputs:
+    """Omit the declared `product` output."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum}
+
+
+# rejected at lowering: the return produces only declared outputs.
+@graph
+def undeclared_output(x: int, y: int) -> PairOutputs:
+    """Return an `extra` output the annotation does not declare."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum, 'product': pair.product, 'extra': pair.sum}
+
+
+# rejected at lowering: a single-value annotation requires one returned value.
+@graph
+def mapping_for_single_value(x: int, y: int) -> int:
+    """Return a mapping under a single-value annotation."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum, 'product': pair.product}
+
+
+# rejected at lowering: every early return agrees with the annotation too.
+@graph
+def early_return_missing_output(x: int, y: int, flag: bool) -> PairOutputs:
+    """Omit a declared output on the early return only."""
+    pair = arithmetic_pair(x=x, y=y)
+    if flag:
+        return {'total': pair.sum}
+    return {'total': pair.sum, 'product': pair.product}
+
+
+# rejected at validation: declared field types fit the stored outputs.
+@graph
+def mistyped_declared_output(x: int, y: int) -> TextPairOutputs:
+    """Declare `total` as text while returning an integer."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum, 'product': pair.product}
+
+
+@graph
+def optional_output_absent(x: int, y: int) -> OptionalProductOutputs:
+    """Leave out an output the annotation marks `NotRequired`."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum}
 
 
 # rejected at lowering: values must be finite JSON.

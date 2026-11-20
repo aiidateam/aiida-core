@@ -12,6 +12,8 @@ Authoring examples illustrate the recommended shapes, including the inline retry
 regression fixtures preserve historical edge-case behavior.
 """
 
+from typing_extensions import NotRequired, TypedDict
+
 from aiida.engine import WorkChain, calcfunction, expose, task
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph
@@ -61,6 +63,13 @@ class OptionalInputWorkChain(WorkChain):
 
 
 optional_input_chain = task(OptionalInputWorkChain)
+
+
+class OptionalBundle(TypedDict):
+    """The inputs of `OptionalInputWorkChain` returned as one namespace."""
+
+    x: int
+    y: NotRequired[int]
 
 
 @graph
@@ -129,7 +138,7 @@ def forward_declared(x: Int, y: Int) -> int:
 
 
 @graph
-def forward_optional_namespace(bundle: expose(optional_input_chain)):
+def forward_optional_namespace(bundle: expose(optional_input_chain)) -> OptionalBundle:
     """Return a forwarded namespace; an omitted optional field stays out of it."""
     return bundle
 

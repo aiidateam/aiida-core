@@ -240,6 +240,16 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(ports.make_config, "unregistered call 'Configuration'", id='make-config'),
         pytest.param(ports.missing_final_return, 'end the graph with a return', id='missing-return'),
         pytest.param(ports.nonfinite_dict_value, 'finite JSON', id='nonfinite-dict'),
+        pytest.param(ports.unannotated_return, 'annotate the return', id='unannotated-return'),
+        pytest.param(ports.any_return, '`Any` declares no outputs', id='any-return'),
+        pytest.param(ports.missing_declared_output, 'the return omits `product`', id='missing-declared-output'),
+        pytest.param(ports.undeclared_output, '`extra` is not declared', id='undeclared-output'),
+        pytest.param(
+            ports.mapping_for_single_value,
+            'the return produces `total`, `product`',
+            id='mapping-for-single-value',
+        ),
+        pytest.param(ports.early_return_missing_output, 'the return omits `product`', id='early-return-output'),
         pytest.param(statements.nested_definition, 'move it into a task', id='nested-def'),
         pytest.param(statements.with_block, 'move it into a task', id='with'),
         pytest.param(statements.try_block, 'move it into a task', id='try'),
@@ -384,6 +394,11 @@ def test_namespace_alias_arms_build() -> None:
             branches.forward_extra_field,
             'dependency `arithmetic_pair` to `read_sum` has unexpected field `product`.',
             id='namespace-extra-field',
+        ),
+        pytest.param(
+            ports.mistyped_declared_output,
+            'graph output `total` has incompatible types: `Int` cannot feed `Str`.',
+            id='mistyped-declared-output',
         ),
     ],
 )

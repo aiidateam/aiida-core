@@ -874,12 +874,16 @@ Task outputs are fixed by the return annotation:
         sum: int
         product: int
 
+    class Statistics(TypedDict):
+        total: int
+        product: int
+
     @task
     def arithmetic(x: int, y: int) -> Pair:
         return {'sum': x + y, 'product': x * y}
 
     @graph
-    def statistics(x: int, y: int):
+    def statistics(x: int, y: int) -> Statistics:
         pair = arithmetic(x=x, y=y)
         return {'total': pair.sum, 'product': pair.product}
 
@@ -911,14 +915,29 @@ A graph returning one value declares one output named ``result``, and a graph re
 A nested ``dict`` declares nested outputs, and returning a whole namespace regroups its existing leaves under one output without creating data.
 A leaf without a node, such as a ``None`` value for a nullable field, stays out of the emitted outputs.
 
+Every graph declares a return annotation, and the final return and every early return must agree with it when the graph is built:
+
+* A single-value annotation, such as ``-> int``, requires one returned value.
+* A ``TypedDict`` or ``PortModel`` annotation requires the returned mapping, or the returned namespace, to produce exactly its fields, also when nested.
+* Fields marked ``NotRequired``, fields with defaults, and ``X | None`` annotations may be absent from the return.
+* In a returned mapping, the annotated types of top-level fields are checked against the stored types of the returned values.
+* ``-> dict[str, T]`` declares no fields, so the returned keys are free.
+* ``-> typing.Any`` fails the build, since it declares no outputs to check.
+
 Use ``forward_outputs`` in the final return mapping to forward a static output namespace without listing every field:
 
 .. code-block:: python
 
     from aiida.engine import forward_outputs, graph
 
+    class Sum(TypedDict):
+        sum: int
+
+    class Summary(TypedDict):
+        arithmetic: Sum
+
     @graph
-    def summarize(x: int, y: int):
+    def summarize(x: int, y: int) -> Summary:
         pair = arithmetic(x=x, y=y)
         return {'arithmetic': forward_outputs(pair, exclude=('product',))}
 

@@ -11,6 +11,7 @@
 import json
 
 import pytest
+from typing_extensions import NotRequired, TypedDict
 
 from aiida.common.exceptions import GraphLanguageError
 from aiida.common.links import LinkType
@@ -54,6 +55,64 @@ class Errors(ExitCodeEnum):
     MISSING = (460, 'Report unavailable.')
 
 
+class Summary(PortModel):
+    """The `Report` fields left after excluding `report`."""
+
+    details: Details
+    score: float
+
+
+class ScoreReport(PortModel):
+    """The `Report` fields left after excluding `details`."""
+
+    score: float
+    report: str
+
+
+class Selected(TypedDict):
+    """A selection of `Report` under `summary`."""
+
+    summary: Summary
+
+
+class SelectedSubtree(TypedDict):
+    """A `Report` without `details` under `summary`."""
+
+    summary: ScoreReport
+
+
+class SelectedAll(TypedDict):
+    """A whole `Report` under `summary`."""
+
+    summary: Report
+
+
+class SelectedOptional(TypedDict):
+    """A selection of an optional `Report` next to its error arm."""
+
+    summary: NotRequired[Summary]
+    error: NotRequired[Errors]
+
+
+class Captured(TypedDict):
+    """Both arms of a captured `produce` call."""
+
+    value: NotRequired[Report]
+    error: NotRequired[Errors]
+
+
+class CapturedValue(TypedDict):
+    """The value arm of a captured `produce` call."""
+
+    value: NotRequired[Report]
+
+
+class SelectedChild(TypedDict):
+    """The value arm of `captured` under `summary`."""
+
+    summary: CapturedValue
+
+
 @task
 def produce(mode: int) -> Result[Report, Errors]:
     """Produce no report, a report without a note, or a complete report."""
@@ -63,56 +122,56 @@ def produce(mode: int) -> Result[Report, Errors]:
 
 
 @graph
-def select(mode: int):
+def select(mode: int) -> Selected:
     """Exclude an immediate leaf, keeping the nested fields."""
     result = produce(mode=mode)
     return {'summary': forward_outputs(result, exclude=('report',))}
 
 
 @graph
-def explicit(mode: int):
+def explicit(mode: int) -> Selected:
     """Spell out the same wiring without a selection."""
     result = produce(mode=mode)
     return {'summary': {'details': {'value': result.details.value, 'note': result.details.note}, 'score': result.score}}
 
 
 @graph
-def select_optional(mode: int):
+def select_optional(mode: int) -> SelectedOptional:
     """Filter an optional namespace from a captured result."""
     result, error = produce(mode=mode).catch()
     return {'summary': forward_outputs(result, exclude=('report',)), 'error': error}
 
 
 @graph
-def captured(mode: int):
+def captured(mode: int) -> Captured:
     """Expose both arms of the invocation as one namespace."""
     result, error = produce(mode=mode).catch()
     return {'value': result, 'error': error}
 
 
 @graph
-def select_with_optional_child(mode: int):
+def select_with_optional_child(mode: int) -> SelectedChild:
     """Keep an optional child inside a required output namespace."""
     result = captured(mode=mode)
     return {'summary': forward_outputs(result, exclude=('error',))}
 
 
 @graph
-def select_subtree(mode: int):
+def select_subtree(mode: int) -> SelectedSubtree:
     """Exclude an entire subtree in an Ok-wrapped output mapping."""
     result = produce(mode=mode)
     return Ok({'summary': forward_outputs(result, exclude=('details',))})
 
 
 @graph
-def select_all(mode: int):
+def select_all(mode: int) -> SelectedAll:
     """Keep every field."""
     result = produce(mode=mode)
     return {'summary': forward_outputs(result, exclude=())}
 
 
 @graph
-def whole(mode: int):
+def whole(mode: int) -> SelectedAll:
     """Forward the same namespace without using the intrinsic."""
     result = produce(mode=mode)
     return {'summary': result}
@@ -189,49 +248,49 @@ EXCLUDED = ('report',)
 
 
 @graph
-def unknown():
+def unknown() -> Selected:
     result = produce(mode=2)
     return {'summary': forward_outputs(result, exclude=('details.note',))}
 
 
 @graph
-def duplicate():
+def duplicate() -> Selected:
     result = produce(mode=2)
     return {'summary': forward_outputs(result, exclude=('report', 'report'))}
 
 
 @graph
-def nonliteral():
+def nonliteral() -> Selected:
     result = produce(mode=2)
     return {'summary': forward_outputs(result, exclude=EXCLUDED)}
 
 
 @graph
-def literal_list():
+def literal_list() -> Selected:
     result = produce(mode=2)
     return {'summary': forward_outputs(result, exclude=['report'])}  # type: ignore[arg-type]
 
 
 @graph
-def nonstring():
+def nonstring() -> Selected:
     result = produce(mode=2)
     return {'summary': forward_outputs(result, exclude=(1,))}  # type: ignore[arg-type]
 
 
 @graph
-def none_left():
+def none_left() -> Selected:
     result = produce(mode=2)
     return {'summary': forward_outputs(result, exclude=('details', 'score', 'report'))}
 
 
 @graph
-def scalar():
+def scalar() -> Selected:
     result = produce(mode=2)
     return {'summary': forward_outputs(result.score, exclude=())}
 
 
 @graph
-def assigned():
+def assigned() -> Selected:
     result = produce(mode=2)
     outputs = forward_outputs(result, exclude=('report',))
     return outputs

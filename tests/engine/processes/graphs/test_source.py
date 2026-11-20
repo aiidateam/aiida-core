@@ -400,6 +400,16 @@ def test_namespace_alias_arms_build() -> None:
             'graph output `total` has incompatible types: `Int` cannot feed `Str`.',
             id='mistyped-declared-output',
         ),
+        pytest.param(
+            ports.mistyped_nested_output,
+            'graph output `sum` has incompatible types: `Int` cannot feed `Str`.',
+            id='mistyped-nested-output',
+        ),
+        pytest.param(
+            ports.mistyped_nested_mapping,
+            'graph output `pair.sum` has incompatible types: `Int` cannot feed `Str`.',
+            id='mistyped-nested-mapping',
+        ),
     ],
 )
 def test_mismatched_contracts_fail_during_build(declaration: GraphHandle, message: str) -> None:

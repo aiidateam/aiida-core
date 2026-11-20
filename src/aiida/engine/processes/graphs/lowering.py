@@ -90,7 +90,8 @@ from aiida.engine.processes.graphs.tasks import (
     _build_task,
     _typevar_solution,
 )
-from aiida.engine.processes.ports import PortNamespace, _node_type
+from aiida.engine.processes.graphs.validate import _check_types
+from aiida.engine.processes.ports import OutputPort, PortNamespace, _node_type
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.orm import Bool, DataDict, DataList, EnumData
 
@@ -1002,6 +1003,11 @@ def _check_return_agreement(
                 + f'the return produces {produced}; return one value, or annotate those outputs with a `TypedDict`'
             )
             _reject(state, node=node, reason=msg)
+        if path:
+            # Single-value returns keep their existing diagnostics, which name the producing
+            # site (branch agreement, input wiring, declared-output type hints); only nested
+            # leaves lack coverage, so only they are checked here.
+            _check_return_leaf_types(state, tree, declared, path=path)
         return
     assert isinstance(declared, NamespaceShape)
     if isinstance(tree, Endpoint):
@@ -1032,6 +1038,18 @@ def _check_return_agreement(
                 + f'the return omits `{location}`; return `{location}`, or mark it `NotRequired`'
             )
             _reject(state, node=node, reason=msg)
+
+
+def _check_return_leaf_types(state: _LoweringState, tree: OutputTree, declared: LeafShape, *, path: str) -> None:
+    """Reject a returned leaf whose stored type disagrees with the return annotation."""
+    if not isinstance(tree, Endpoint) or tree.task is None:
+        return  # graph inputs replay their own annotation; dangling wires fail where they are wired
+    task = next((task for task in state.tasks if task.name == tree.task), None)
+    produced = _port_at(task.output_ports(), tree.port) if task is not None else None
+    if produced is None or isinstance(produced, PortNamespace):
+        return  # unknown and regrouped wires are reported where they are wired
+    context = f'graph output `{path}`' if path else 'graph output'
+    _check_types(produced, OutputPort('declared', valid_type=declared.types), context)
 
 
 def _is_namespace_endpoint(state: _LoweringState, endpoint: Endpoint) -> bool:

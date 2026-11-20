@@ -64,6 +64,19 @@ class OptionalProductOutputs(TypedDict):
     product: NotRequired[int]
 
 
+class TextSumPair(TypedDict):
+    """A `sum` declared as text, which a stored integer cannot fill."""
+
+    sum: str
+    product: int
+
+
+class NestedTextSumPair(TypedDict):
+    """A nested `pair` whose `sum` the annotation mistypes."""
+
+    pair: TextSumPair
+
+
 @graph
 def direct_result(value: int) -> int:
     """Select the single output port explicitly."""
@@ -312,6 +325,21 @@ def mistyped_declared_output(x: int, y: int) -> TextPairOutputs:
     """Declare `total` as text while returning an integer."""
     pair = arithmetic_pair(x=x, y=y)
     return {'total': pair.sum, 'product': pair.product}
+
+
+# rejected at lowering: nested field types agree with the annotation too.
+@graph
+def mistyped_nested_output(x: int, y: int) -> TextSumPair:
+    """Return a whole namespace whose `sum` field the annotation mistypes."""
+    return arithmetic_pair(x=x, y=y)
+
+
+# rejected at lowering: nested mapping fields agree with the annotation too.
+@graph
+def mistyped_nested_mapping(x: int, y: int) -> NestedTextSumPair:
+    """Return a nested mapping whose `pair.sum` field the annotation mistypes."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'pair': {'sum': pair.sum, 'product': pair.product}}
 
 
 @graph

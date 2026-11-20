@@ -147,6 +147,30 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         return aiida.storage.psql_dos.models.node.DbLink
 
     @property
+    def Membership(self):
+        import aiida.storage.psql_dos.models.node
+
+        return aiida.storage.psql_dos.models.node.DbMembership
+
+    @property
+    def Container(self):
+        import aiida.storage.psql_dos.models.node
+
+        return aiida.storage.psql_dos.models.node.DbContainer
+
+    @property
+    def ListContainer(self):
+        import aiida.storage.psql_dos.models.node
+
+        return aiida.storage.psql_dos.models.node.DbListContainer
+
+    @property
+    def DictContainer(self):
+        import aiida.storage.psql_dos.models.node
+
+        return aiida.storage.psql_dos.models.node.DbDictContainer
+
+    @property
     def Computer(self):
         import aiida.storage.psql_dos.models.computer
 

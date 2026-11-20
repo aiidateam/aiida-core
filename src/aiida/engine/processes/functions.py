@@ -34,7 +34,8 @@ from aiida.engine.processes.ports import (
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec, _declare_namespace, _mapping_of, _require_storable
 from aiida.manage import get_manager
-from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
+from aiida.orm import CalcFunctionNode, Node, ProcessNode, WorkFunctionNode, to_aiida_type
+from aiida.orm.nodes.data.datanode import DataNode
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 if t.TYPE_CHECKING:
@@ -580,7 +581,7 @@ class FunctionProcessBase(Process):
         :param result: the value returned by the wrapped function.
         :raises TypeError: if the value cannot be attached to an output port.
         """
-        if isinstance(result, Data):
+        if isinstance(result, DataNode):
             self.out(self.SINGLE_OUTPUT_LINKNAME, result)
         elif isinstance(result, collections.abc.Mapping):
             for name, value in result.items():
@@ -596,7 +597,7 @@ class FunctionProcessBase(Process):
 def _as_a_node_port(field: _Field) -> dict[str, t.Any]:
     """Declare legacy model leaves as ORM-valued inputs."""
     _require_storable(field)
-    declared = _infer_node_types(field.annotation) or (Data,)
+    declared = _infer_node_types(field.annotation) or (DataNode,)
     if field.default is None and type(None) not in declared:
         declared = (*declared, type(None))
     options: dict[str, t.Any] = {
@@ -607,7 +608,7 @@ def _as_a_node_port(field: _Field) -> dict[str, t.Any]:
     }
     if not field.required:
         default = field.default
-        if default is not None and not isinstance(default, Data) and not callable(default):
+        if default is not None and not isinstance(default, DataNode) and not callable(default):
             options['default'] = lambda: to_aiida_type(default)
         else:
             options['default'] = default
@@ -628,7 +629,7 @@ class FunctionProcess(FunctionProcessBase):
     ) -> None:
         """Declare one function parameter as a node-valued input port or namespace."""
         annotation = annotations.get(parameter.name)
-        valid_type = _infer_node_types(annotation) or (Data,)
+        valid_type = _infer_node_types(annotation) or (DataNode,)
         help_string = _port_help(annotation)
         if help_string is None:
             help_string = param_help_string.get(parameter.name, None)
@@ -639,14 +640,14 @@ class FunctionProcess(FunctionProcessBase):
         # done lazily using a lambda, just as any port defaults should not define node instances directly as is
         # also checked by the ``spec.input`` call.
         # Port defaults are lazy: values become callables producing fresh serialized nodes per launch.
-        def _to_aiida_type(value: t.Any = default) -> Data:
+        def _to_aiida_type(value: t.Any = default) -> Node:
             return to_aiida_type(value)
 
         indirect_default: t.Any
         if (
             default is not None
             and default is not UNSPECIFIED
-            and not isinstance(default, Data)
+            and not isinstance(default, DataNode)
             and not callable(default)
         ):
             indirect_default = _to_aiida_type
@@ -703,4 +704,4 @@ class FunctionProcess(FunctionProcessBase):
     def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
         # Without a declaration we do not know beforehand what outputs will be returned, so the namespace has
         # to be dynamic and accept `Data` nodes as well as a dictionary, since it can be nested.
-        spec.outputs.valid_type = (Data, dict)
+        spec.outputs.valid_type = (DataNode, dict)

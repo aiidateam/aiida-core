@@ -6,11 +6,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`WorkChain` tasks shared by the graph behavior suites."""
+"""`WorkChain` tasks shared by the graph behavior suites.
 
-import typing as t
+Authoring examples illustrate the recommended shapes, including the inline retry policy;
+regression fixtures preserve historical edge-case behavior.
+"""
 
-from aiida.engine import Forward, WorkChain, calcfunction, task
+from typing_extensions import NotRequired, TypedDict
+
+from aiida.engine import WorkChain, calcfunction, expose, task
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph
 from aiida.orm import Bool, Float, Int
@@ -61,8 +65,15 @@ class OptionalInputWorkChain(WorkChain):
 optional_input_chain = task(OptionalInputWorkChain)
 
 
+class OptionalBundle(TypedDict):
+    """The inputs of `OptionalInputWorkChain` returned as one namespace."""
+
+    x: int
+    y: NotRequired[int]
+
+
 @graph
-def forward_optional_field(bundle: t.Annotated[t.Any, Forward(optional_input_chain)]) -> int | None:
+def forward_optional_field(bundle: expose(optional_input_chain)) -> int | None:
     """Return an optional forwarded field without a default; an omitted one emits no output."""
     return bundle.y
 
@@ -115,7 +126,7 @@ def add_single(x: Int, y: Int) -> int:
 def add_twice(x: Int, y: Int) -> int:
     """Add two numbers through two chained `WorkChain` placements."""
     first = add_chain(x=x, y=y)
-    second = add_chain(x=first.result, y=y)
+    second = add_chain(x=first.result, y=y).alias('add_chain_2')
     return second.result
 
 
@@ -127,7 +138,7 @@ def forward_declared(x: Int, y: Int) -> int:
 
 
 @graph
-def forward_optional_namespace(bundle: t.Annotated[t.Any, Forward(optional_input_chain)]):
+def forward_optional_namespace(bundle: expose(optional_input_chain)) -> OptionalBundle:
     """Return a forwarded namespace; an omitted optional field stays out of it."""
     return bundle
 
@@ -162,6 +173,43 @@ class FlakyChain(WorkChain):
 
 
 flaky_chain = task(FlakyChain, outputs={'result': Float}, errors=ChainErrors)
+
+
+@task
+def check_chain_result(value: float | None) -> None:
+    """Validate the recovered chain result, leaving the returned node untouched."""
+    if value is None:
+        raise ValueError('the chain never succeeded.')
+
+
+@graph
+def retry_chain_allowed(error: ChainErrors | None, attempt: int, limit: int) -> bool:
+    """Factor an inline retry predicate without a child process or stored boolean."""
+    return error is ChainErrors.UNSTABLE and attempt < limit
+
+
+@graph
+def retry_chain_until_repaired(max_retries: int = 1, attempt: int = 0) -> float | None:
+    """Retry the flaky chain on its declared unstable failure, returning its own result node.
+
+    The nested graph helper combines the retryable member check with the budget.
+    The collaborator fails on attempt zero and runs repaired thereafter.
+    The trailing guard validates without replacing the chain's result node.
+
+    :param max_retries: the retry budget; `0` runs once and lets the guard fail.
+    :param attempt: the zero-based attempt the first run steps from.
+    :return: the first present chain result; the guard fails if none succeeded.
+    """
+    fail = attempt < 1
+    ran = flaky_chain(fail=fail)
+    retry = retry_chain_allowed(error=ran.error, attempt=attempt, limit=max_retries)
+    while retry:
+        attempt = attempt + 1
+        fail = attempt < 1
+        ran = flaky_chain(fail=fail)
+        retry = retry_chain_allowed(error=ran.error, attempt=attempt, limit=max_retries)
+    checked = check_chain_result(value=ran.result)  # noqa: F841 - the guard validates without feeding the return
+    return ran.result
 
 
 @task
@@ -252,3 +300,28 @@ def read_absent_static(fail: bool) -> str:
     """Read a static success arm unconditionally; absence arrives as `None`."""
     ran = flaky_static_chain(fail=fail)
     return ensure_result(value=ran.result, error=ran.error)
+
+
+class NestedDynamicChain(WorkChain):
+    """Declare a nested dynamic namespace for static specialization."""
+
+    @classmethod
+    def define(cls, spec) -> None:  # type: ignore[override]
+        super().define(spec)
+        spec.input_namespace('sub', dynamic=True)
+        spec.input_namespace('sub.members', valid_type=Int, dynamic=True)
+        spec.output('result', valid_type=Int)
+        spec.outline(cls.noop)
+
+    def noop(self):
+        """Declare the contract only; graphs build without running this."""
+
+
+nested_dynamic_chain = task(NestedDynamicChain, inputs={'sub': {'members': {'a': Int}}})
+
+
+@graph
+def static_nested(a: int) -> int:
+    """Wire a static name into a nested dynamic namespace."""
+    total = nested_dynamic_chain(sub={'members': {'a': a}})
+    return total.result

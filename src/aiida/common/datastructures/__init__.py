@@ -30,6 +30,7 @@ from aiida.common.datastructures._scheduler import (
     MachineInfo,
     NodeNumberJobResource,
     ParEnvJobResource,
+    SchedulerFailure,
 )
 from aiida.common.datastructures.orbital import Orbital, RealhydrogenOrbital
 
@@ -49,6 +50,7 @@ __all__ = (
     'Orbital',
     'ParEnvJobResource',
     'RealhydrogenOrbital',
+    'SchedulerFailure',
     'StashMode',
     'UnstashTargetMode',
 )

@@ -141,6 +141,14 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             )
             return instance
 
+        if data_class is orm.DataList:
+            instance = data_class([orm.Int(1), orm.Int(2)])
+            return instance
+
+        if data_class is orm.DataDict:
+            instance = data_class({'a': orm.Int(1)})
+            return instance
+
         if data_class is orm.ContainerizedCode:
             return orm.ContainerizedCode(
                 label='test_containerized_code',
@@ -181,6 +189,35 @@ def test_constructor():
     node = orm.Data(source=source)
     assert isinstance(node, orm.Data)
     assert node.source == source
+
+
+@pytest.mark.parametrize('stored', [False, True])
+@pytest.mark.parametrize('target_index', [0, 1, 2])
+@pytest.mark.parametrize('mutation', ['top_level', 'nested'])
+def test_clone_extras_independent(stored, target_index, mutation):
+    """Extras mutations must not propagate between a source and its unstored clones."""
+    source = orm.Data()
+    if stored:
+        source.store()
+    source.base.extras.reset({'value': 0, 'nested': {'values': [0]}})
+    nodes = [source, source.clone(), source.clone()]
+
+    target = nodes[target_index]
+    if mutation == 'top_level':
+        target.base.extras.set('value', 1)
+    else:
+        nested = target.base.extras.get('nested')
+        nested['values'].append(1)
+        target.base.extras.set('nested', nested)
+
+    for index, node in enumerate(nodes):
+        expected = {'value': 0, 'nested': {'values': [0]}}
+        if index == target_index:
+            if mutation == 'top_level':
+                expected['value'] = 1
+            else:
+                expected['nested']['values'].append(1)
+        assert node.base.extras.all == expected
 
 
 def test_data_exporters(data_plugin, generate_class_instance, tmp_path):

@@ -2,7 +2,152 @@
 
 ## Unreleased
 
+### Early returns in graphs
+
+Graphs can return from nested branches and loops, either with existing output nodes or a declared ``Err``.
+Taken returns exit the current graph invocation without starting its later placements.
+
+### Data container input fixes
+
+* Builder `_update` serializes mapping-valued static inputs, including `DataDict`, instead of treating them as namespaces. Existing namespace-update behavior is unchanged.
+* File staging can find owned files inside `DataDict` and `DataList` inputs before those containers are stored, without cloning or detaching their members.
+
+### Graph partial input bindings
+
+Graph bodies accept a general `partial(...)` input binding that needs no import: `configured = partial(add, y=y)` fixes some inputs of a task, `CalcJob`/`WorkChain` task, or graph once, and each use (`configured(x=x)`, `configured(x)`, inline `partial(add, y=y)(x=x)`, or composed `partial(configured, more=wire)`) merges the fixed values with its own arguments into one ordinary placement. Fixed values capture the declaration-time references, keep the target's placement naming (including `.alias(...)`), contracts, type checking, and config paths, and travel as ordinary wires with dependency edges. `par_map` over a partial is one consumer of the same mechanism, binding every input but one with each element wiring into the remaining input. `partial` is a reserved graph-language name and cannot name an input, wire, or binding. No runtime `functools` behavior is involved.
+
 ### Breaking changes
+
+#### Graph return annotations are required
+
+Every `@graph` now declares a return annotation, and its final return and every early return must agree with it when the graph is built.
+Previously the annotation was optional and only typed a single returned value, so a `TypedDict` annotation could name keys the return never produced.
+A single-value annotation requires one returned value; a `TypedDict` or `PortModel` annotation requires exactly its fields, with `NotRequired`, defaulted, and `X | None` fields allowed to be absent; `dict[str, T]` leaves the keys free, and `typing.Any` is rejected.
+Add the annotation to existing graphs; stored declarations and checkpoints need no migration.
+
+#### Inline collection expressions in source graphs
+
+Graph bodies now accept inline collection expressions over typed `list[T]`/`dict[str, T]` collections: integer indexing of lists with negatives, string-key lookup of mappings with runtime keys, public annotated item reads such as `item.value`, one-type list/dict literals within collection expressions, and filtered, nested list/dict comprehensions with `mapping.items()` pair iteration.
+Previously each of these forms failed at build time with a diagnostic telling authors to pass whole collections or write out one call per value; each form now lowers to an `expression` inline placement that evaluates inside the graph process.
+The engine semantics match scalar inline operations: no child processes, no `CREATE` links, checkpointed scope values, and only task outputs entering the provenance.
+A root graph cannot return a newly computed collection or scalar, and returning an existing owned member itself still fails at launch under the unchanged owned-container contract.
+Still rejected at build time are task or method calls inside an expression, slices, set/generator comprehensions, private attribute reads, missing element annotations, and inline collection expressions on `DataList[T]` wires (use `list[orm.Int]` hints for inline expressions, or pass `orm.DataList` wires whole).
+Templates carrying expressions serialize as graph declaration version `0.3`, while existing scalar-only `0.2` and no-op `0.1` declarations remain readable; stored declarations and checkpoints that avoid the new forms need no migration.
+
+#### Python ORM containers in graphs store as owned containers
+
+Graph and task ports annotated with Python containers of data nodes, such as `list[orm.Int]` or `dict[str, orm.Int]` (including the `typing.List`/`typing.Dict` spellings), now store as owned `orm.DataList`/`orm.DataDict` containers instead of JSON `List`/`Dict` nodes. Task bodies receive a plain Python `list`/`dict` holding the member nodes, while the provenance wire carries the owned container. Ports annotated directly with `orm.DataList`/`orm.DataDict` still receive the node itself, and plain `list[int]`/`dict[str, int]` still store as JSON nodes. Only direct members of one `DataNode` subclass are mapped. Previously an ORM-valued container annotation stored as JSON; relaunch affected graphs so their wires use the owned representation.
+
+#### Graph placements run in source order
+
+Newly compiled `@graph` bodies run one placement at a time in source order, even when placements do not share data. Later placements no longer start when an earlier placement fails unexpectedly. Remove `after=` ordering arguments from task, nested graph, and `par_map` calls; order now follows the body, and `after` can be an ordinary declared input. `par_map` still runs its items in parallel. Existing serialized graphs and checkpoints keep their original dependencies and need no migration.
+
+#### Graph execution environments and placement recovery
+
+Graphs accept `execution_environment` or the separate `runtime_config` and `execution_policy` channels at launch. An opt-in memory policy retries only a supported CalcJob placement with confirmed scheduler OOM, preserving each attempt node and exposing only the final attempt to the workflow. Slurm accounting is the first built-in integration. `PreparedRun` packages plugin-resolved scientific inputs, the environment, and versioned protocol provenance. The launch keywords `execution_environment`, `execution_policy`, and `prepared_run` are reserved at the graph launch boundary; pass scientific arguments with those names inside the explicit `inputs` mapping alongside a launch channel. The `graph_attempt_` call-label prefix is reserved; ordinary task labels starting with it are escaped. Existing checkpoints and stored graph nodes require no migration.
+
+#### Fallible graph calls propagate by default
+
+In graph bodies, a bare function task call declared as `Result[T, E]` now exposes only its success value.
+Use `value, error = step(...).catch()` to handle a declared failure explicitly, replacing either `value, error = step(...)` or `value, error = catch_error(step(...))`.
+The `catch_error` import from `aiida.engine` is removed.
+The `.catch()` modifier also works on nested graphs that can propagate declared failures.
+Uncaught declared failures fail the root with the original status and message.
+Process-class tasks using `errors=` still expose partial outputs and an error arm as before.
+Graph run checkpoints from before this change cannot resume; finish them before upgrading or relaunch them.
+Templates using the new result policies serialize as graph declaration version `0.4`; older templates remain readable with their original failure behavior.
+
+#### Function tasks require input type annotations
+
+`@task` now raises `GraphTypeCheckError` at decoration time if any function parameter lacks a type annotation, even if it has a default.
+Previously, unannotated parameters silently became generic `DataNode` ports.
+Annotate each parameter with its intended type, or with `DataNode` if it intentionally accepts any data node.
+
+#### Graph runtime failures finish with exit status 401
+
+`GraphRuntimeError` (including `GraphMaxIterationsError`) raised during graph scheduling or output validation now finishes the stored graph node as failed with exit status `401` (`ERROR_GRAPH_RUNTIME`) and the runtime diagnostic in its exit message, rather than excepting the node without an exit status. Callers of `run_get_node` should inspect the node's failure status instead of catching these runtime errors. Build-time language/type errors and launch-time validation errors still raise exceptions; direct `GraphRun.step()` calls also continue to raise runtime errors. Child task failures retain exit status `400` (`ERROR_TASK_FAILED`).
+
+#### Local child completion no longer waits for database polling
+
+`Runner.call_on_process_finish` now notifies watchers directly when a child scheduled through the same runner's `submit` or `schedule` terminates, including unsuccessful exits, exceptions and kills. Local graphs and nested WorkChains consequently resume without waiting for `runner.poll.interval`, even without a broker. Callbacks still observe finalized terminal process state; execution tasks that fail or are cancelled before recording termination fall back to polling. Processes not tracked by the current runner, including children after checkpoint restoration, retain broadcast notifications and database polling. No configuration or database migration is required.
+
+#### Graph execution inputs use `runtime_config`
+
+Graph launch option `task_metadata` is replaced by `runtime_config`, keyed by static placement path and containing ordinary process input mappings. Move `task_metadata={'calc': {'options': options}}` to `runtime_config={'calc': {'metadata': {'options': options}}}`. Configuration now accepts unwired base `CalcJob`/`WorkChain` inputs, Code-only typed inputs (including Code subclasses), and execution inputs preserved through exposed namespaces. Explicit graph wiring remains supported and conflicts with configuration instead of being overridden. Nested graph placements introduce a mapping level; branches, loops and mapped graph bodies do not. Empty entries are no longer mandatory for CalcJobs. Root `metadata` still configures the graph itself, and `inputs={...}` carries workflow arguments separately.
+
+Configured node references are preserved outside `orm.Dict`, with ordinary child input provenance and a versioned immutable root configuration snapshot (`graph_runtime_config_v1`, replacing `graph_task_metadata`). `GraphNode.TASK_METADATA_KEY` is removed; `GraphNode.RUNTIME_CONFIG_KEY` identifies the new snapshot. Child call-link overrides, provenance suppression and dry runs are rejected. The old launch API, stored `task_metadata` restart envelopes and checkpoints are not supported; no legacy adapter or provenance rewrite is provided.
+
+#### Graph provenance links use declared argument names
+
+New `GraphProcess` runs store `INPUT_WORK` links as `x` or `settings__factor`, rather than `graph_inputs__x` or `graph_inputs__settings__factor`. The compiled declaration and per-placement launch metadata are recorded as immutable `GraphNode` attributes (`graph_definition` and optional `graph_task_metadata`), not scientific input links named `graph` and `task_metadata`. Consequently native provenance visualizations and low-level link queries now show only declared workflow arguments. `GraphNode.inputs` retains its flat user interface, including arguments named `graph`, `graph_inputs`, or `task_metadata`, and `get_builder_restart()` reconstructs the engine launch envelope. Existing nodes retain their original links; legacy input projection, restart builders, and checkpoints remain supported, so no database migration or rewriting of stored provenance is needed. Consumers of raw links on new nodes must use the declared labels instead of the engine prefix. The earlier `GraphNode.inputs` entry below describes the input view for legacy nodes.
+
+#### Graph calls resolve by declaration name; placement aliases follow the call
+
+Replace `decl.alias('name')(...)` with `decl(...).alias('name')`.
+The `par_map(decl.alias('name'), values)` form is unchanged.
+
+Graph calls resolve to an importable declaration under its own name: the plain `@task`/`@graph` name, a module-qualified target such as `tasks.add`, or a `task(CalcJob)`/`task(WorkChain)` factory variable under its assigned variable name. A module-global rebinding of a handle (`alias = add`, `alias = nested_graph`), a stored `alias = decl.alias('name')` handle, or a renamed import no longer resolves; each fails at build time pointing at the declared name with an inline `decl(...).alias('name')` placement instead. Enum members in member tests, module-qualified tasks, and `par_map` callables keep their existing resolution. Calling one task or graph twice in the same graph body no longer falls back to an automatic numeric name (`add_2`); each placement needs its own inline `decl(...).alias('name')` instead, and repeated default `par_map` placements need `par_map(task.alias('name'), values)`. Module-global scalars, nodes, mappings, and other values are not wires either; reading one fails at build time as a missing graph input (pass it as a graph input) rather than as a name to assign on an earlier line.
+
+#### Mapped process failures retain their stored outputs
+
+Graph placements declared with `task(ProcessClass, errors=...)` now expose outputs the failed child actually stored alongside the synthesized `error` arm. Previously all success outputs were hidden on a mapped failure. Branch on `error`, not on output presence, to distinguish failure from success; only outputs the child did not store read as `None`. Function tasks returning `Err` retain their existing absent-success-arm semantics.
+
+#### `GraphNode.inputs` exposes only the declared workflow arguments, flattened
+
+`GraphNode.inputs` no longer mirrors the stored engine layout (`graph` declaration `Dict`, `graph_inputs` namespace, optional `task_metadata`); it projects the `graph_inputs` contents to the top level, so `node.inputs.<arg>` reads the workflow argument directly with mapping lookup, iteration, membership, and tab completion. The synthetic `graph`/`graph_inputs`/`task_metadata` keys stay hidden unless the workflow itself declares an input with that name, in which case the user node shadows the bookkeeping link. Legacy nodes retain `INPUT_WORK` links named `graph`, `graph_inputs__...`, and `task_metadata`; low-level `base.links` queries on those nodes still expose that layout. New runs use the declared argument labels as described above. There is no public `.graph` accessor returning the compiled template, and `get_builder_restart` keeps round-tripping the stored nodes without exposing a `GraphIR` object. Previously `node.inputs.graph_inputs.x` (or `node.inputs.graph_inputs__...`) reached arguments; use `node.inputs.x` instead. `node.outputs` and the `inputs` of plain `WorkChain`/`CalcJob` nodes are unchanged.
+
+
+#### Graph templates are private to the implementation; `GraphHandle.build` validates only
+
+`GraphHandle.build()` no longer returns the compiled `GraphIR` template; it validates the declaration (raising the same lowering diagnostics as before) and returns `None`, caching the template for the launch. The template type and its accessors are private to the implementation: `GraphIR` is not re-exported through `aiida.engine`, `aiida.engine.processes`, or `aiida.engine.processes.graphs`, and no public handle property returns it. Internal callers (engine launch, `expose` shape resolution including nested graphs, IR tooling, and tests/benchmarks) compile through the core-only `aiida.engine.processes.graphs.lowering.compile_graph` helper, which is deliberately absent from those re-exports; it fabricates no `Data` nodes. `GraphHandle.get_launch_inputs` remains the `Launchable` adapter consumed by `run`/`submit` (it serializes the compiled template into the stored `graph` input), not an authoring or inspection API. Previously `handle.build()` returned the template and callers inspected `.tasks`/`.to_dict()`/`input_shape` off that return; migrate such callers to `compile_graph(handle)`, keeping bare `handle.build()` only where the test asserts a build diagnostic.
+
+
+#### Graphs run as a single process
+
+One `GraphProcess` now executes the whole graph: nested graphs, loop iterations, branch arms, and map elements run as checkpointable scopes of that process instead of child graph processes. Only task runs and map collectors remain child processes, dispatched with hierarchical call labels (for example `multiply_add__multiply` or `loop_1_iteration_0__decrement`). Provenance that previously contained intermediate `GraphNode` children now shows the task runs directly under the single graph node, and `GraphRun` checkpoints use a new `0.2` scope format; existing `0.1` checkpoints cannot be resumed after upgrading. The run state is checkpointed YAML-encoded (like the other process inputs), and nested scope inputs normalized from defaults are stored standalone so checkpoints can reference them; they carry no provenance links. Finish or terminate all active graph processes before upgrading.
+
+#### Conditional expressions in source graphs
+
+Graph bodies now accept conditional expressions such as `add(x=x, y=1) if flag else add(x=y, y=2)`.
+Previously every `x if condition else y` failed at build time with a diagnostic telling authors to write `if` and `else` instead; each selection now lowers to a branch holding both arms, so only the taken arm ever runs.
+Arms cover calls, scalar constants, references, and inline expressions, and the condition follows the same rules as an `if` test.
+Stored declarations and checkpoints need no migration: selections reuse the existing branch machinery and checkpoint in the existing scope state.
+
+#### Short-circuit boolean composition in source graphs
+
+Graph bodies now accept boolean `and`/`or` over boolean-valued inline expressions, references, and task calls.
+Previously every `and`/`or` failed at build time with a diagnostic claiming only tasks can compute booleans; each pair now lowers to a branch selecting the joined boolean, so the right side evaluates only when the left side selects it, with real short-circuit semantics.
+Task calls on the right never run when skipped, and guarded operations such as a remainder behind a non-zero check never evaluate when skipped.
+Every operand must statically read as a boolean: Python operand tricks such as `1 and 2` fail at build time, as do arbitrary `x is y` identities.
+Presence and member tests compose as branch conditions and as boolean values on either side of `and`/`or`.
+Stored declarations and checkpoints need no migration: combinations reuse the existing branch machinery and checkpoint in the existing scope state.
+
+#### Presence and member predicates as boolean values in source graphs
+
+Graph bodies now accept presence and member tests (`is None`, `is not None`, `is`/`is not` against a declared error member, optionally under `not`) wherever a boolean reads.
+Previously tests such as `flag and value is None` or `present = value is not None` failed at build time with a diagnostic claiming presence tests only select a side; each test now lowers to an ephemeral boolean control value reusing the branch machinery to select `True`/`False`, so the joined wire reads as a boolean without running any task.
+Named predicates, right-hand `and`/`or` operands, negations, `while` tests, selections, and declared-member values all compose, with real short-circuit semantics preserved: task calls on an unselected side never run.
+Only the already-supported `None`/member identity forms read as booleans; arbitrary `x is y` identities still fail at build time, and returning a computed boolean as a root output still fails at run time since only task outputs enter the provenance.
+Stored declarations and checkpoints need no migration: predicates reuse the existing branch machinery and checkpoint in the existing scope state.
+
+#### Iteration-local bindings in loop bodies
+
+Loop bodies now accept iteration-local bindings such as `step = trial(...)` without requiring an initial `step` before the loop.
+Previously every name assigned in a loop body had to be bound before the loop; now only names read before any write, the loop condition, and pre-bound names become carried state, while the rest are declared on their first write, stay fresh every pass, and never leak out of the loop.
+Reads before the first write, assignments on only one branch path, and post-loop reads of locals fail at build time.
+Stored declarations and checkpoints need no migration: locals live in the existing per-iteration scopes, and templates without locals keep their previous shape.
+
+#### Scalar literal bindings in source graphs
+
+Graph bodies now accept scalar literal bindings such as `attempts = 0`, `running = False`, or `mode = 'square'`.
+Previously every such line failed at build time with `GraphLanguageError`; it now lowers to a `const` inline operation holding the bound value as ephemeral orchestration state, wired into task arguments, branch joins, and carried loop state like any other operation result.
+Only finite numbers, strings, booleans, and `None` bind; other literals keep their previous rejections.
+Returning a bound literal as a root graph output fails at build time, since constants carry no provenance; nested graphs may still thread constants as control state for their caller.
+Stored declarations and checkpoints need no migration: templates without bindings keep their previous versions, and constant state checkpoints in the existing scope values.
+
+#### Inline operations in source graphs
+
+Graph bodies now support inline operations for orchestration state, evaluated by the engine without a child process (`aiida.engine.processes.graphs.operations`): numeric arithmetic `add sub mul floordiv mod` (`+ - * // %`), comparisons `lt le gt ge eq ne` (`< <= > >= == !=`), and unary `neg pos not` (unary `- + not`), with Python semantics including float promotion. Previously these forms were rejected at build time with `GraphLanguageError: operators compute a new value, which only a task can create and record; put this check in a task and use its result instead`; they now lower to ephemeral scheduler state instead of tasks. Operands are `int`/`float`/`bool` scalars (`bool` excluded from numeric operands, `not` reads `bool` only, `eq`/`ne` keep numbers apart from `bool`); division by zero and non-finite results fail the run. Inline results are checkpointed with the scope but never stored as data nodes and never linked: only task outputs enter the provenance. The root graph therefore cannot return a newly computed scalar (use an explicit task for a scientific result, or `return {}` for no outputs); a nested graph may return inline control state for its caller to consume. Explicit `@task` functions are never inlined and always run as child processes. Stored graph declarations carry a new declaration version and checkpoints a new scope format; declarations stored or checkpointed under a previous version cannot be resumed after upgrading, so finish or terminate all active graph processes before upgrading.
 
 `Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
 
@@ -33,6 +178,13 @@ Some fixtures have analogs in `aiida.tools.pytest_fixtures` that are drop-in rep
 `infer_valid_type_from_type_annotation` in `aiida.engine.processes.functions` is removed without replacement; it was internal machinery. Declare port types explicitly.
 `UNSPECIFIED` in `aiida.engine.processes.generic.ports` changed from an empty tuple to a dedicated sentinel object; compare by identity.
 
+#### Owned containers are decoupled from `Data`
+
+`aiida.orm.DataList` and `aiida.orm.DataDict` now derive from `aiida.orm.Container`, not `aiida.orm.Data`. Use their shared base `aiida.orm.DataNode` for type checks, process ports and queries that should accept both data and containers. Queries for `Data` now exclude containers.
+
+The `core.data_list` and `core.data_dict` entry points have moved from `aiida.data` to `aiida.container`. Use `aiida.plugins.ContainerFactory` instead of `DataFactory` to load them. The ORM import paths are unchanged.
+Archive export and import reject containers, including empty ones: ownership cannot round-trip through `.aiida` files yet.
+
 #### `Code`: the deprecated data plugin has been removed
 
 The `Code` class, deprecated since `aiida-core==2.1`, and its `core.code` entry point have been removed.
@@ -46,6 +198,16 @@ The migration invalidates the hashes of the migrated nodes, so run `verdi node r
 Loading a node whose storage has not been migrated now raises `IncompatibleStorageSchema` instead of silently falling back to the `Data` class.
 
 ### New features
+
+#### Explicit placement names in source graphs
+
+A task or graph call accepts an explicit placement name through `task(...).alias('scf')`, for function tasks, `CalcJob` and `WorkChain` tasks, nested graphs, generic tasks, and module-qualified targets. Maps take an explicit name through `par_map(task.alias('scf'), values)`. The alias names the compiled placement, the provenance call label, and the `task_metadata` entry, without mutating the task handle. It takes a non-empty string literal following the link-label contract; anything else fails at build time. Repeating a task, graph, or map placement in one graph body without a distinct alias fails at build time; branch arms, loop bodies, and nested graphs scope names independently, while generated branch, loop, and inline-operation names keep their automatic numbering.
+
+#### Parallel maps in source graphs
+
+`aiida.engine.par_map(task_or_graph, values)` maps a unary task or graph over an `orm.DataList` or the values of an `orm.DataDict` inside a `@graph` body.
+Items run independently, results preserve list order or dictionary keys, and a collector calculation creates the output container with full provenance.
+Empty containers, checkpoint restarts, and serialized graph declarations are supported.
 
 #### Processes defined in a notebook cell
 

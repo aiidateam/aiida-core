@@ -1,0 +1,19 @@
+{
+  "task_and_evaluator_identical": {
+    "task.md": true,
+    "collaborators.py": true,
+    "test_acceptance.py": true
+  },
+  "same_model_and_harness_settings": {
+    "provider": true,
+    "model": true,
+    "thinking": true,
+    "pi_version": true,
+    "paired_concurrent": true
+  },
+  "per_arm_prompts_identical": true,
+  "distinct_new_sessions": true,
+  "persisted_usage_matches_stream_usage": true,
+  "all_common_acceptance_passed": true,
+  "fixed_files_unchanged": true
+}

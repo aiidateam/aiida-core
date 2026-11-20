@@ -14,6 +14,7 @@ import functools
 import inspect
 import typing as t
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from types import UnionType
 
 from typing_extensions import is_typeddict
@@ -32,7 +33,7 @@ from aiida.engine.processes.graphs.shapes import (
     LeafShape,
     NamespaceShape,
     _expanded_annotation,
-    _forward_marker,
+    _exposed_inputs,
     _is_type_var,
 )
 from aiida.engine.processes.port_model import (
@@ -42,19 +43,18 @@ from aiida.engine.processes.port_model import (
     _namespace_value,
     _without_marks,
 )
-from aiida.engine.processes.ports import PortNamespace, _infer_node_types
+from aiida.engine.processes.ports import PortNamespace, _infer_node_types, _owned_container_type, _runtime_value
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.engine.utils import is_process_function
-from aiida.orm import CalcFunctionNode, CalcJobNode, Data, EnumData, WorkChainNode, to_aiida_type
-
-if t.TYPE_CHECKING:
-    from aiida.engine.processes.graphs.ir import ProcessTask
+from aiida.orm import CalcFunctionNode, CalcJobNode, Data, DataList, EnumData, WorkChainNode, to_aiida_type
+from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
     'CalcJobTaskHandle',
     'FunctionTaskHandle',
+    'PlacementHandle',
     'PortDeclaration',
     'TaskProcess',
     'WorkChainTaskHandle',
@@ -64,6 +64,43 @@ __all__ = (
 R = t.TypeVar('R')
 _V = t.TypeVar('_V')
 _E = t.TypeVar('_E')
+
+
+def _validate_alias_name(name: object) -> str:
+    """Return an explicit placement name, checked against the call link-label contract."""
+    if not isinstance(name, str):
+        msg = f'placement alias must be a quoted name, not `{name!r}`; pass one literal string instead.'
+        raise GraphTypeCheckError(msg)
+    try:
+        validate_link_label(name)
+    except ValueError as exception:
+        msg = (
+            f'placement alias `{name}` is invalid as a link label ({exception}); '
+            + 'use alphanumerics and underscores without leading or trailing underscores instead'
+        )
+        raise GraphTypeCheckError(msg) from exception
+    return name
+
+
+@dataclass(frozen=True, slots=True)
+class PlacementHandle(t.Generic[P, R]):
+    """A declaration paired with an explicit, immutable placement name for `par_map`."""
+
+    target: Callable[P, R]
+    placement_name: str
+
+    def __post_init__(self) -> None:
+        _validate_alias_name(self.placement_name)
+
+    @t.overload
+    def __call__(self: PlacementHandle[P, Result[_V, _E]], *args: P.args, **kwargs: P.kwargs) -> _V: ...
+
+    @t.overload
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
+
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        """Delegate direct calls without changing the declaration's execution contract."""
+        return self.target(*args, **kwargs)
 
 
 def _typevar_solution(
@@ -93,7 +130,7 @@ def _typevar_positions(function: Callable[..., t.Any]) -> tuple[TypevarPositions
     return inputs, output
 
 
-PortDeclaration: t.TypeAlias = Mapping[str, 'type[Data] | tuple[type[Data], ...] | PortDeclaration']
+PortDeclaration: t.TypeAlias = Mapping[str, 'type[DataNode] | tuple[type[DataNode], ...] | PortDeclaration']
 """Names and node types inside dynamic namespaces, nested like the namespaces they fill."""
 
 
@@ -110,9 +147,9 @@ def _declared_shape(declaration: PortDeclaration | None, *, leaves: bool = False
             continue
         # Callers outside type checking pass arbitrary objects, so check every entry at runtime.
         given: tuple[object, ...] = value if isinstance(value, tuple) else (value,)
-        types = tuple(kind for kind in given if inspect.isclass(kind) and issubclass(kind, Data))
+        types = tuple(kind for kind in given if inspect.isclass(kind) and issubclass(kind, DataNode))
         if not types or len(types) != len(given):
-            msg = f'declared port `{location}` takes `Data` subclasses, not `{value!r}`.'
+            msg = f'declared port `{location}` takes `DataNode` subclasses, not `{value!r}`.'
             raise GraphTypeCheckError(msg)
         fields.append((name, LeafShape(types=types)))
     return NamespaceShape(fields=tuple(fields))
@@ -129,8 +166,8 @@ def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
     """
     if return_annotation is None or return_annotation is type(None):
         return
-    if _forward_marker(return_annotation) is not None:
-        msg = 'forward declarations mirror inputs for graph inputs; return a task output instead.'
+    if _exposed_inputs(return_annotation) is not None:
+        msg = 'exposed inputs declare graph inputs, not task outputs; return a task output instead.'
         raise GraphTypeCheckError(msg)
     return_annotation = _expanded_annotation(return_annotation)
     if is_typeddict(return_annotation):
@@ -140,7 +177,7 @@ def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
             raise GraphTypeCheckError(msg)
         for key, raw in hints.items():
             hint = _expanded_annotation(raw)
-            spec.output(key, valid_type=_infer_node_types(hint) or (Data,))
+            spec.output(key, valid_type=_infer_node_types(hint) or (DataNode,))
         return
     if t.get_origin(return_annotation) is tuple or return_annotation is tuple:
         msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
@@ -148,13 +185,9 @@ def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
     if _is_structured(return_annotation):
         spec.outputs_from(return_annotation)
         return
-    if t.get_origin(return_annotation) in (list, dict):
-        origin = t.get_origin(return_annotation)
-    else:
-        origin = return_annotation
     spec.output(
         Process.SINGLE_OUTPUT_LINKNAME,
-        valid_type=_infer_node_types(origin) or (Data,),
+        valid_type=_infer_node_types(return_annotation) or (DataNode,),
     )
 
 
@@ -203,7 +236,7 @@ class TaskProcess(FunctionProcessBase):
             assert code.message is not None
             spec.exit_code(code.status, label, code.message, invalidates_cache=code.invalidates_cache)
         if t.get_origin(return_annotation) is Result:
-            success = _as_port_model(annotation)
+            success = _result_model(annotation)
             if _is_structured(success):
                 spec.outputs_from(t.cast(type, success), prefix='value.')
                 spec.outputs['value'].required = False
@@ -216,6 +249,17 @@ class TaskProcess(FunctionProcessBase):
         _declare_output_ports(return_annotation, spec)
         spec.outputs.dynamic = False
         cls._named_outputs = is_typeddict(return_annotation) or _is_structured(return_annotation)
+
+    @override
+    def _function_arguments(self) -> tuple[list[t.Any], dict[str, t.Any]]:
+        args, kwargs = super()._function_arguments()
+        bound = inspect.signature(self._func).bind(*args, **kwargs)
+        hints = t.get_type_hints(self._func, include_extras=True)
+        for name, value in bound.arguments.items():
+            kind = _owned_container_type(hints.get(name))
+            if kind is not None and isinstance(value, kind):
+                bound.arguments[name] = list(value) if kind is DataList else dict(value.items())
+        return list(bound.args), bound.kwargs
 
     @override
     def _prepare_result(self, result: t.Any) -> t.Any:
@@ -239,16 +283,16 @@ class TaskProcess(FunctionProcessBase):
             msg = 'Ok must contain task outputs, not an exit code or another Result.'
             raise GraphValidationError(msg)
         success = t.get_args(annotation)[0]
-        if result.value is None and success is not type(None) and type(None) not in t.get_args(success):
+        if result.value is None and not _admits_none(success):
             msg = 'the successful Result type does not allow None.'
             raise GraphValidationError(msg)
         if result.value is None:
             # No value arm is stored; dependents read the absent arm as `None`.
             return ExitCode()
-        if _is_structured(_as_port_model(success)):
+        if _is_structured(_result_model(success)):
             self._store_value(self.spec().outputs['value'], result.value, 'value')
             return ExitCode()
-        self.out('value', result.value if isinstance(result.value, Data) else to_aiida_type(result.value))
+        self._store_leaf(self.spec().outputs['value'], result.value, 'value')
         return ExitCode()
 
     def _store_value(self, port: Port | PortNamespace, value: t.Any, path: str) -> None:
@@ -283,7 +327,8 @@ class TaskProcess(FunctionProcessBase):
     def _store_leaf(self, port: Port, value: t.Any, path: str) -> None:
         """Store one leaf arm; `None` stores nothing, so only an optional port admitting it accepts it."""
         if value is not None:
-            self.out(path, value if isinstance(value, Data) else to_aiida_type(value))
+            stored = _runtime_value(port.valid_type, value)
+            self.out(path, stored if isinstance(stored, DataNode) else to_aiida_type(stored))
             return
         if port.required:
             msg = (
@@ -349,11 +394,27 @@ class TaskProcess(FunctionProcessBase):
         if len(values) != len(names):
             msg = f'task declares {len(names)} outputs {names} but returned {len(values)} values.'
             raise GraphValidationError(msg)
-        stored = {
-            name: value if isinstance(value, Data) else to_aiida_type(value)
-            for name, value in zip(names, values, strict=True)
-        }
+        stored: dict[str, DataNode] = {}
+        for name, value in zip(names, values, strict=True):
+            converted = _runtime_value(outputs[name].valid_type, value)
+            stored[name] = converted if isinstance(converted, DataNode) else to_aiida_type(converted)
         super()._out_result(stored)
+
+
+def _admits_none(annotation: object) -> bool:
+    """Return whether the success annotation explicitly admits an absent value."""
+    return annotation in (None, type(None)) or (
+        t.get_origin(annotation) in (t.Union, UnionType) and type(None) in t.get_args(annotation)
+    )
+
+
+def _result_model(annotation: object) -> object:
+    """Allow an optional structured success under the optional value namespace."""
+    if t.get_origin(annotation) in (t.Union, UnionType):
+        present = [kind for kind in t.get_args(annotation) if kind is not type(None)]
+        if len(present) == 1:
+            annotation = present[0]
+    return _as_port_model(annotation)
 
 
 class FunctionTaskHandle(t.Generic[P, R]):
@@ -370,28 +431,29 @@ class FunctionTaskHandle(t.Generic[P, R]):
         exit_codes: Mapping[str, ExitCode] | None = None,
     ) -> None:
         self._function: ProcessFunctionType[P, R, CalcFunctionNode] = function
+        annotation = t.get_type_hints(function, include_extras=True).get('return')
+        result = t.get_args(annotation) if t.get_origin(annotation) is Result else ()
         self._task_spec: TaskIR = TaskIR.from_process(
-            function, typevar_inputs=typevar_inputs, typevar_output=typevar_output, exit_codes=exit_codes
+            function,
+            typevar_inputs=typevar_inputs,
+            typevar_output=typevar_output,
+            exit_codes=exit_codes,
+            result_errors=tuple(get_object_loader().identify_object(kind) for kind in _error_types(result[1]))
+            if result
+            else (),
+            result_nullable=bool(result) and _admits_none(result[0]),
         )
         # Copy name and docstring, not the function state: the handle owns its task spec.
         functools.update_wrapper(self, function, updated=())
 
     @t.overload
-    def __call__(
-        self: FunctionTaskHandle[P, Result[_V, _E]], *args: P.args, **kwargs: P.kwargs
-    ) -> tuple[_V, _E | None]: ...
+    def __call__(self: FunctionTaskHandle[P, Result[_V, _E]], *args: P.args, **kwargs: P.kwargs) -> _V: ...
 
     @t.overload
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
-    @t.overload
-    def __call__(self: FunctionTaskHandle[P, R], *args: t.Any, after: t.Any = ..., **kwargs: t.Any) -> R: ...
-
-    def __call__(self, *args: t.Any, after: t.Any = None, **kwargs: t.Any) -> t.Any:
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         """Reject direct calls; tasks run as `@graph` placements or through `run` and `run_get_node`."""
-        if after is not None:
-            msg = '`after` orders placements in a `@graph` body; it is not a task input.'
-            raise GraphError(msg)
         name = getattr(self._function, '__name__', 'task')
         msg = (
             f'`{name}` declares a task for `@graph` bodies and never runs standalone; '
@@ -434,9 +496,13 @@ class FunctionTaskHandle(t.Generic[P, R]):
         """Rebuild the task from a checkpoint; the persistence layer calls this, not users."""
         return self._function.recreate_from(*args, **kwargs)
 
+    def alias(self, name: str) -> PlacementHandle[P, R]:
+        """Name a `par_map` placement of this task; direct calls use `task(...).alias(name)`."""
+        return PlacementHandle(self, name)
+
 
 class CalcJobTaskHandle:
-    """A `CalcJob` subclass carrying its graph declaration, launched with per-placement metadata."""
+    """A `CalcJob` subclass carrying its graph declaration and execution input contract."""
 
     is_process_function: t.ClassVar[bool] = False
 
@@ -460,11 +526,8 @@ class CalcJobTaskHandle:
         # Copy name and docstring, not the class state: the handle owns its task spec.
         functools.update_wrapper(self, process_class, updated=())
 
-    def __call__(self, *args: t.Any, after: t.Any = None, **kwargs: t.Any) -> t.Any:
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         """Execute the task and return its node."""
-        if after is not None:
-            msg = '`after` orders placements in a `@graph` body; it is not a task input.'
-            raise GraphError(msg)
         if args:
             msg = 'CalcJob tasks take named inputs only; pass each input by name instead.'
             raise GraphError(msg)
@@ -491,9 +554,13 @@ class CalcJobTaskHandle:
         """Return the process spec of the task process class."""
         return self._process_class.spec()
 
+    def alias(self, name: str) -> PlacementHandle[t.Any, t.Any]:
+        """Name a `par_map` placement of this task; direct calls use `task(...).alias(name)`."""
+        return PlacementHandle(self, name)
+
 
 class WorkChainTaskHandle:
-    """A `WorkChain` subclass carrying its graph declaration, wired on graph inputs only."""
+    """A `WorkChain` subclass carrying its graph declaration and execution input contract."""
 
     is_process_function: t.ClassVar[bool] = False
 
@@ -517,11 +584,8 @@ class WorkChainTaskHandle:
         # Copy name and docstring, not the class state: the handle owns its task spec.
         functools.update_wrapper(self, process_class, updated=())
 
-    def __call__(self, *args: t.Any, after: t.Any = None, **kwargs: t.Any) -> t.Any:
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         """Execute the task and return its node."""
-        if after is not None:
-            msg = '`after` orders placements in a `@graph` body; it is not a task input.'
-            raise GraphError(msg)
         if args:
             msg = 'WorkChain tasks take named inputs only; pass each input by name instead.'
             raise GraphError(msg)
@@ -548,35 +612,9 @@ class WorkChainTaskHandle:
         """Return the process spec of the task process class."""
         return self._process_class.spec()
 
-
-def _needs_metadata(task: t.Any) -> t.TypeGuard[ProcessTask]:
-    """Return whether a placement dispatches a `CalcJob` directly."""
-    from aiida.engine.processes.graphs.ir import ProcessTask
-
-    if not isinstance(task, ProcessTask):
-        return False
-    return issubclass(task.spec.process_class, CalcJob)
-
-
-def _merge_task_metadata(
-    task: ProcessTask, provided: Mapping[str, t.Any], inputs: dict[str, t.Any]
-) -> dict[str, t.Any]:
-    """Merge the stashed per-placement `CalcJob` metadata, failing loudly when absent."""
-    placement = task.name
-    try:
-        metadata = provided[placement]
-    except KeyError:
-        msg = (
-            f'task `{placement}` is a `CalcJob` and needs launch metadata; '
-            f"pass it keyed by placement name, e.g. `task_metadata={{'{placement}': {{...}}}}`."
-        )
-        raise GraphValidationError(msg) from None
-    if not isinstance(metadata, Mapping):
-        msg = f'task `{placement}` metadata must be a mapping of metadata inputs, not `{type(metadata)}`.'
-        raise GraphValidationError(msg)
-    # The stash wins: graph-wired inputs never carry `metadata` (it is excluded from the
-    # graph contract and popped at launch).
-    return {**inputs, 'metadata': dict(metadata)}
+    def alias(self, name: str) -> PlacementHandle[t.Any, t.Any]:
+        """Name a `par_map` placement of this task; direct calls use `task(...).alias(name)`."""
+        return PlacementHandle(self, name)
 
 
 def _error_codes(errors: type[ExitCodeEnum] | UnionType) -> tuple[dict[str, ExitCode], tuple[str, ...]]:
@@ -629,8 +667,13 @@ def _check_task_contract(
         msg = 'tasks accept functions, a `CalcJob` subclass, or a `WorkChain` subclass; not other process classes.'
         raise GraphTypeCheckError(msg)
     signature = inspect.signature(function)
-    if 'after' in signature.parameters:
-        msg = '`after` is reserved for source graph ordering dependencies.'
+    missing = [
+        f'`{name}`'
+        for name, parameter in signature.parameters.items()
+        if parameter.annotation is inspect.Parameter.empty
+    ]
+    if missing:
+        msg = f'task `{function.__name__}` is missing input annotations for {", ".join(missing)}.'
         raise GraphTypeCheckError(msg)
     hints = t.get_type_hints(function, include_extras=True)
     returned = hints.get('return', inspect.Signature.empty)

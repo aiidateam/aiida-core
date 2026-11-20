@@ -134,10 +134,31 @@ class SqliteNode(SqliteEntityOverride, nodes.SqlaNode):
     USER_CLASS = SqliteUser
     COMPUTER_CLASS = SqliteComputer
     LINK_CLASS = models.DbLink
+    MEMBERSHIP_CLASS = models.DbMembership
+
+
+class SqliteContainer(SqliteEntityOverride, nodes.SqlaContainer):
+    """SQLite backend entity for an owned data container (dedicated ``BackendContainer``)."""
+
+    MODEL_CLASS = models.DbNode
+    USER_CLASS = SqliteUser
+    COMPUTER_CLASS = SqliteComputer
+    LINK_CLASS = models.DbLink
+    MEMBERSHIP_CLASS = models.DbMembership
+
+    def store_container(self, *args, **kwargs):
+        backend = self._model._backend
+        if backend.read_only:
+            from aiida.storage.sqlite_zip.utils import ReadOnlyError
+
+            msg = f'Cannot store entity in read-only backend: {backend}'
+            raise ReadOnlyError(msg)
+        return nodes.SqlaContainer.store_container(self, *args, **kwargs)
 
 
 class SqliteNodeCollection(nodes.SqlaNodeCollection):
     ENTITY_CLASS = SqliteNode
+    CONTAINER_CLASS = SqliteContainer  # type: ignore[assignment]
 
 
 class SqliteQueryBuilder(SqlaQueryBuilder):
@@ -150,6 +171,22 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
     @property
     def Link(self):
         return models.DbLink
+
+    @property
+    def Membership(self):
+        return models.DbMembership
+
+    @property
+    def Container(self):
+        return models.DbContainer
+
+    @property
+    def ListContainer(self):
+        return models.DbListContainer
+
+    @property
+    def DictContainer(self):
+        return models.DbDictContainer
 
     @property
     def Computer(self):
@@ -403,6 +440,11 @@ def _(dbmodel, backend):
 
 @get_backend_entity.register(models.DbNode)  # type: ignore[call-overload]
 def _(dbmodel, backend):
+    from aiida.storage import ownership as ownership_contract
+
+    # Closed container set: the shared storage identifier mapping is the single source of truth.
+    if ownership_contract.is_container_node_type(getattr(dbmodel, 'node_type', None)):
+        return SqliteContainer.from_dbmodel(dbmodel, backend)
     return SqliteNode.from_dbmodel(dbmodel, backend)
 
 

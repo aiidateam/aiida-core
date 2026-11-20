@@ -631,8 +631,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """Copying a Node is not supported in general, but only for the Data sub class."""
         raise exceptions.InvalidOperation('copying a base Node is not supported')
 
-    def __deepcopy__(self, memo: t.Any) -> t.NoReturn:
-        """Deep copying a Node is not supported in general, but only for the Data sub class."""
+    def __deepcopy__(self, memo: t.Any) -> Self:
+        """Reject deep copying unless a subclass implements it."""
         raise exceptions.InvalidOperation('deep copying a base Node is not supported')
 
     def _validate(self) -> bool:
@@ -658,7 +658,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if not self._storable:
             raise exceptions.StoringNotAllowed(self._unstorable_message)
 
-        if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
+        if not is_registered_entry_point(
+            self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data', 'aiida.container')
+        ):
             msg = (
                 f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point. '
                 'Check that the corresponding plugin is installed '
@@ -818,9 +820,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return self.backend_entity.mtime
 
     def store_all(self) -> Self:
-        """Store the node, together with all input links.
+        """Store the node, together with all input links, atomically.
 
-        Unstored nodes from cached incoming linkswill also be stored.
+        Unstored nodes from cached incoming links will also be stored. The inputs and this node are stored inside a
+        single backend transaction, so a failure rolls everything back instead of leaving partially stored inputs
+        behind. Repository content written before the failure is not rolled back; it becomes unreferenced and is
+        cleaned up by the regular storage maintenance.
         """
         if self.is_stored:
             msg = f'Node<{self.pk}> is already stored'
@@ -830,11 +835,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         for link_triple in self.base.links.incoming_cache:
             link_triple.node._verify_are_parents_stored()
 
-        for link_triple in self.base.links.incoming_cache:
-            if not link_triple.node.is_stored:
-                link_triple.node.store()
+        with self.backend.transaction():
+            for link_triple in self.base.links.incoming_cache:
+                if not link_triple.node.is_stored:
+                    link_triple.node.store()
 
-        return self.store()
+            return self.store()
 
     def store(self) -> Self:
         """Store the node in the database while saving its attributes and repository directory.
@@ -846,6 +852,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             already stored, will be automatically stored. The others will remain unstored.
         """
         if not self.is_stored:
+            # Owned container children cannot be frozen independently of their ownership root.
+            if getattr(self, '_container_owner', None) is not None:
+                msg = 'owned container children cannot be stored independently; store the ownership root instead'
+                raise exceptions.ModificationNotAllowed(msg)
             # Call `_validate_storability` directly and not in `_validate` in case sub class forgets to call the super.
             self._validate_storability()
             self._validate()

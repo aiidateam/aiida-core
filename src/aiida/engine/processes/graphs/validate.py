@@ -13,9 +13,27 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common.exceptions import GraphTypeCheckError
-from aiida.engine.processes.graphs.ir import BranchControl, Endpoint, LoopControl, OutputTree, _input_ports_at, _port_at
+from aiida.engine.processes.graphs.ir import (
+    BranchControl,
+    Endpoint,
+    InlineOperation,
+    LoopControl,
+    MapControl,
+    OptionalOutputNamespace,
+    OutputTree,
+    _input_ports_at,
+    _port_at,
+    collection_members_agree,
+)
+from aiida.engine.processes.graphs.operations import (
+    BINARY_OPERATIONS,
+    LEFT_PORT,
+    OPERAND_PORT,
+    RIGHT_PORT,
+    infer_operation_shape,
+)
 from aiida.engine.processes.ports import OutputPort, PortNamespace, _infer_node_types
-from aiida.orm import Data
+from aiida.orm.nodes.data.datanode import DataNode
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.graphs.ir import Dependency, GraphIR, GraphTask, Route
@@ -37,8 +55,20 @@ def validate_graph(graph: GraphIR) -> None:
         except GraphTypeCheckError as exception:
             msg = f'task `{task.name}` declares ports the spec cannot represent.'
             raise GraphTypeCheckError(msg) from exception
-        _validate_region(task)
+        _validate_region(graph, task)
+        if isinstance(task, InlineOperation):
+            _validate_operation(task)
     _validate_outputs(graph, boundary)
+    if graph.return_outputs is not None:
+        outputs = graph.build_return_namespace()
+        for name, tree in graph.return_outputs.items():
+            port = outputs[name]
+            assert isinstance(port, (OutputPort, PortNamespace))
+            _validate_output_tree(graph, boundary, tree, port, f'early return `{name}`')
+    if graph.identifier is not None:
+        expected = graph.build_output_namespace()
+        for site in graph.success_returns():
+            _check_types(site.build_return_namespace(), expected, 'early return')
     _validate_acyclic(graph)
 
 
@@ -108,12 +138,14 @@ def _validate_edge(graph: GraphIR, edge: Dependency) -> None:
         _check_types(origin, port, f'dependency `{edge.source}` to `{edge.target}`')
 
 
-def _validate_region(task: GraphTask) -> None:
+def _validate_region(graph: GraphIR, task: GraphTask) -> None:
     """Check that control-flow bodies agree on their condition and outputs."""
     if isinstance(task, BranchControl):
         if task.condition_port in task.body.inputs or task.condition_port in task.otherwise.inputs:
             msg = f'branch `{task.name}` condition conflicts with a body input.'
             raise GraphTypeCheckError(msg)
+        if any(arm.always_returns for arm in task.branches):
+            return
         if task.body.outputs.keys() != task.otherwise.outputs.keys():
             msg = (
                 f'both branches of `{task.name}` must return the same outputs; '
@@ -123,6 +155,14 @@ def _validate_region(task: GraphTask) -> None:
         _check_compatible(
             task.body.build_output_namespace(), task.otherwise.build_output_namespace(), f'branch `{task.name}`'
         )
+        if not collection_members_agree(task.body.result_shape, task.otherwise.result_shape):
+            msg = (
+                f'branch `{task.name}` has incompatible collection members; '
+                'both arms must return the same member types.'
+            )
+            raise GraphTypeCheckError(msg)
+    if isinstance(task, MapControl):
+        _validate_map(graph, task)
     if isinstance(task, LoopControl) and type(task.max_iterations) is not int:
         msg = f'loop `{task.name}` needs an integer `max_iterations`.'
         raise GraphTypeCheckError(msg)
@@ -134,6 +174,102 @@ def _validate_region(task: GraphTask) -> None:
         msg = (
             f'loop `{task.name}` must take its condition as state and return it updated, '
             'allowing at least one iteration.'
+        )
+        raise GraphTypeCheckError(msg)
+
+
+def _validate_map(graph: GraphIR, task: MapControl) -> None:
+    """Check that a map carries one callable with a single leaf output per element.
+
+    A plain map names a unary callable. A `partial` map binds every input but one,
+    naming the remaining input in `element`: the bound inputs travel with every item
+    through the normal placement wires while each element wires into `element`.
+    """
+    if (task.spec is None) == (task.body is None):
+        msg = f'map `{task.name}` carries exactly one mapped callable: a task `spec` or a nested graph `body`.'
+        raise GraphTypeCheckError(msg)
+    if task.body is not None:
+        validate_graph(task.body)
+    fields = [name for name, _ in task.mapped_inputs.fields]
+    if task.element is None:
+        if len(fields) != 1:
+            msg = (
+                f'map `{task.name}` wires one element into one input, so the callable takes exactly one input; '
+                'map a unary task or graph instead.'
+            )
+            raise GraphTypeCheckError(msg)
+    else:
+        if task.element not in fields:
+            msg = (
+                f'map `{task.name}` binds partial inputs around `{task.element}`, '
+                'which is not an input of the mapped callable; check the spelling instead.'
+            )
+            raise GraphTypeCheckError(msg)
+        if 'collection' in fields and task.element != 'collection':
+            msg = (
+                f'map `{task.name}` wires its collection under `collection`, '
+                'so a mapped input named `collection` cannot be bound; '
+                'map the `collection` input as the element instead.'
+            )
+            raise GraphTypeCheckError(msg)
+        for port in _map_wired_ports(graph, task):
+            if port == 'collection':
+                continue
+            if port == task.element:
+                msg = (
+                    f'map `{task.name}` wires each element into `{task.element}`, '
+                    'so that input cannot also be wired; leave it unbound instead.'
+                )
+                raise GraphTypeCheckError(msg)
+            if port not in fields:
+                msg = (
+                    f'map `{task.name}` wires `{port}`, '
+                    'which is not an input of the mapped callable; check the spelling instead.'
+                )
+                raise GraphTypeCheckError(msg)
+    if not task.mapped_result_port:
+        msg = (
+            f'map `{task.name}` collects one output per element, so the callable returns exactly one value; '
+            'map a unary task or graph with one output instead.'
+        )
+        raise GraphTypeCheckError(msg)
+
+
+def _map_wired_ports(graph: GraphIR, task: MapControl) -> set[str]:
+    """Return the top-level input names wired into a map placement through any route."""
+    wired = set(task.inputs)
+    for edge in graph.dependencies:
+        if edge.target == task.name and edge.target_port is not None:
+            wired.add(edge.target_port.split('.')[0])
+    for targets in graph.inputs.values():
+        for route in targets:
+            if route.task == task.name:
+                wired.add(route.port.split('.')[0])
+    return wired
+
+
+def _validate_operation(task: InlineOperation) -> None:
+    """Check that an inline operation declares the operand contracts and result its operator infers."""
+    if task.operation in ('const', 'expression'):
+        # `InlineOperation.__post_init__` already checks the bound value, its port, and the
+        # result contract; inference below would re-derive the same identity shape.
+        return
+    by_name = dict(task.input_shape.fields)
+    operands = (
+        (by_name[LEFT_PORT], by_name[RIGHT_PORT]) if task.operation in BINARY_OPERATIONS else (by_name[OPERAND_PORT],)
+    )
+    try:
+        inferred = infer_operation_shape(task.operation, operands)
+    except GraphTypeCheckError as exception:
+        msg = f'inline operation `{task.name}` misdeclares its operands: {exception}.'
+        raise GraphTypeCheckError(msg) from exception
+    declared = task.result_shape.types or ()
+    produced = inferred.types or ()
+    if tuple(declared) != tuple(produced):
+        declared_names = _type_names(tuple(declared)) if declared else 'unconstrained types'
+        msg = (
+            f'inline operation `{task.name}` declares result {declared_names} '
+            f'but `{task.operation}` produces {_type_names(tuple(produced))}.'
         )
         raise GraphTypeCheckError(msg)
 
@@ -151,6 +287,17 @@ def _validate_output_tree(
     graph: GraphIR, boundary: PortNamespace, tree: OutputTree, port: OutputPort | PortNamespace, context: str
 ) -> None:
     """Check one output leaf or nested mapping against its declared contracts."""
+    if isinstance(tree, OptionalOutputNamespace):
+        source = tree.presence
+        origin = (
+            _port_at(boundary, source.port)
+            if source.task is None
+            else _port_at(_task_at(graph, source.task, context).output_ports(), source.port)
+        )
+        if not isinstance(origin, PortNamespace) or origin.dynamic:
+            msg = f'{context} requires a declared static namespace to check for presence.'
+            raise GraphTypeCheckError(msg)
+        tree = tree.fields
     if isinstance(tree, dict):
         assert isinstance(port, PortNamespace)  # `build_output_namespace` mirrors the output tree
         for field, child in tree.items():
@@ -192,7 +339,7 @@ def _check_types(source: t.Any, target: t.Any, context: str) -> None:
     if (
         produced
         and accepted
-        and Data not in produced
+        and DataNode not in produced
         and not all(any(issubclass(kind, expected) for expected in accepted) for kind in produced)
     ):
         msg = f'{context} has incompatible types: {_type_names(produced)} cannot feed {_type_names(accepted)}.'

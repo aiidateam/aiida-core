@@ -1329,6 +1329,56 @@ def _get_ormclass_from_str(type_string: str) -> tuple[EntityTypes, Classifier]:
     return ormclass, classifiers
 
 
+def _get_data_base_filters(value: str) -> dict | None:
+    """Return the explicit ``node_type`` filter for the ``DataNode``/``Data``/``Container`` bases.
+
+    The data hierarchy does not align with ``node_type`` string prefixes: both branches share the ``data.``
+    prefix (common node identity), while the concrete containers live under ``data.core.data_list.`` and
+    ``data.core.data_dict.`` rather than under ``data.container.``. A plain prefix match on the queried class
+    would therefore be wrong in both directions, so these bases map to explicit filters over the exact legacy
+    stored type strings instead of their own module-derived prefixes. Returns ``None`` for any other class.
+
+    :param value: the ``ormclass_type_string`` of the queried class.
+    """
+    from aiida.common.escaping import escape_for_sql_like
+
+    # Local imports: this module is imported while the ORM packages initialise, so ORM classes stay lazy.
+    from aiida.orm.nodes.data.container import Container
+    from aiida.orm.nodes.data.data import Data
+    from aiida.orm.nodes.data.datanode import DataNode
+    from aiida.orm.utils.node import get_query_type_from_type_string
+    from aiida.storage.ownership import DICT_NODE_TYPE, LIST_NODE_TYPE
+
+    def _like_prefix(type_string: str) -> str:
+        return f'{escape_for_sql_like(get_query_type_from_type_string(type_string))}%'
+
+    # Closed container set: concrete subtree prefixes come from the shared storage identifier mapping,
+    # not from ORM class imports (they coincide with the concrete ``class_node_type`` strings).
+    container_prefixes = [
+        _like_prefix(Container.class_node_type),
+        _like_prefix(LIST_NODE_TYPE),
+        _like_prefix(DICT_NODE_TYPE),
+    ]
+
+    if value == DataNode.class_node_type:
+        # Abstract base, never stored itself: match every data and container node via the shared legacy prefix.
+        return {'like': f'{escape_for_sql_like("data.")}%'}
+
+    if value == Data.class_node_type:
+        # A plain ``data.%`` match would also match containers, which share the prefix: exclude the container
+        # subtrees explicitly by their legacy stored prefixes.
+        return {
+            'and': [{'like': f'{escape_for_sql_like("data.")}%'}] + [{'~like': prefix} for prefix in container_prefixes]
+        }
+
+    if value == Container.class_node_type:
+        # The concrete containers do not live under the ``data.container.`` prefix: match the base prefix for
+        # completeness plus each concrete container subtree.
+        return {'or': [{'like': prefix} for prefix in container_prefixes]}
+
+    return None
+
+
 def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
     """Return filter dictionaries given a set of classifiers.
 
@@ -1343,13 +1393,20 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
     value = classifiers.ormclass_type_string
 
     if not subclassing:
-        filters = {'==': value}
-    else:
-        # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
-        # the query type string
-        filters = {'like': f'{escape_for_sql_like(get_query_type_from_type_string(value))}%'}
+        return {'==': value}
 
-    return filters
+    # The ``Data``/``Container`` hierarchy does not align with the ``node_type`` string prefixes: both branches
+    # share the ``data.`` prefix (common node identity), while the concrete containers live under
+    # ``data.core.data_list.``/``data.core.data_dict.`` and not under ``data.container.``. A plain prefix match on
+    # the queried class would therefore be wrong in both directions, so the three data bases map to explicit
+    # filters over the exact legacy stored type strings instead of their own module-derived prefixes.
+    data_bases = _get_data_base_filters(value)
+    if data_bases is not None:
+        return data_bases
+
+    # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
+    # the query type string
+    return {'like': f'{escape_for_sql_like(get_query_type_from_type_string(value))}%'}
 
 
 def _get_process_type_filter(classifiers: Classifier, subclassing: bool) -> dict:

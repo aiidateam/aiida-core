@@ -1,0 +1,11 @@
+# Immutable raw logs, submissions and evaluator fixtures are in evaluation-logs.tar.xz.
+/graph/
+/workchain/
+/baseline-manifest.json
+/collaborators.py
+/test_acceptance.py
+/*.log
+__pycache__/
+/pilot/
+/summarize.py
+/recorded-tooling/

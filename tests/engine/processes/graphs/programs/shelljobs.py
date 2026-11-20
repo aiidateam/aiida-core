@@ -98,9 +98,9 @@ fail = task(
 
 
 @task
-def recover_shell(error: ShellErrors) -> str:
-    """Recover from a failed shell command."""
-    return f'recovered from {error.value.status}'
+def recover_shell(content: SinglefileData, error: ShellErrors) -> str:
+    """Recover from a failed shell command, keeping its stored output."""
+    return f'recovered from {error.value.status} with {len(content.get_content())} bytes'
 
 
 @task
@@ -114,7 +114,7 @@ def recover_failing(text: SinglefileData, code: Code, arguments: list[str]) -> s
     """Run a command that may fail, recovering with `recover_shell` when it does."""
     ran = fail(code=code, arguments=arguments, nodes={'text': text})
     if ran.error is not None:
-        selected = recover_shell(error=ran.error)
+        selected = recover_shell(content=ran.stdout, error=ran.error)
     else:
         selected = read_stdout(content=ran.stdout)
     return selected

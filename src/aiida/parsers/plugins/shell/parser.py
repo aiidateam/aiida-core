@@ -16,7 +16,7 @@ import typing as t
 
 from aiida.calculations.shell import ShellJob
 from aiida.engine import ExitCode
-from aiida.orm import Data, FolderData, SinglefileData
+from aiida.orm import DataNode, FolderData, SinglefileData
 from aiida.parsers.parser import Parser
 
 
@@ -146,8 +146,8 @@ class ShellParser(Parser):
         else:
             results = unpickled_parser(dirpath) or {}
 
-        if not isinstance(results, dict) or any(not isinstance(value, Data) for value in results.values()):
-            msg = f'{unpickled_parser} did not return a dictionary of `Data` nodes but: {results}'
+        if not isinstance(results, dict) or any(not isinstance(value, DataNode) for value in results.values()):
+            msg = f'{unpickled_parser} did not return a dictionary of `DataNode` nodes but: {results}'
             raise TypeError(msg)
 
         for key, value in results.items():

@@ -1,0 +1,2091 @@
+{
+    "machine_info": {
+        "node": "mpc3244",
+        "processor": "x86_64",
+        "machine": "x86_64",
+        "python_compiler": "GCC 11.2.0",
+        "python_implementation": "CPython",
+        "python_implementation_version": "3.12.4",
+        "python_version": "3.12.4",
+        "python_build": [
+            "main",
+            "Jun 18 2024 15:12:24"
+        ],
+        "release": "6.8.0-101-generic",
+        "system": "Linux",
+        "cpu": {
+            "python_version": "3.12.4.final.0 (64 bit)",
+            "cpuinfo_version": [
+                9,
+                0,
+                0
+            ],
+            "cpuinfo_version_string": "9.0.0",
+            "arch": "X86_64",
+            "bits": 64,
+            "count": 28,
+            "arch_string_raw": "x86_64",
+            "vendor_id_raw": "GenuineIntel",
+            "brand_raw": "Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz",
+            "hz_advertised_friendly": "3.3000 GHz",
+            "hz_actual_friendly": "1.2000 GHz",
+            "hz_advertised": [
+                3300000000,
+                0
+            ],
+            "hz_actual": [
+                1199980000,
+                0
+            ],
+            "stepping": 7,
+            "model": 85,
+            "family": 6,
+            "flags": [
+                "3dnowprefetch",
+                "abm",
+                "acpi",
+                "adx",
+                "aes",
+                "aperfmperf",
+                "apic",
+                "arat",
+                "arch_capabilities",
+                "arch_perfmon",
+                "art",
+                "avx",
+                "avx2",
+                "avx512_vnni",
+                "avx512bw",
+                "avx512cd",
+                "avx512dq",
+                "avx512f",
+                "avx512vl",
+                "avx512vnni",
+                "bmi1",
+                "bmi2",
+                "bts",
+                "cat_l3",
+                "cdp_l3",
+                "clflush",
+                "clflushopt",
+                "clwb",
+                "cmov",
+                "constant_tsc",
+                "cpuid",
+                "cpuid_fault",
+                "cqm",
+                "cqm_llc",
+                "cqm_mbm_local",
+                "cqm_mbm_total",
+                "cqm_occup_llc",
+                "cx16",
+                "cx8",
+                "dca",
+                "de",
+                "ds_cpl",
+                "dtes64",
+                "dtherm",
+                "dts",
+                "epb",
+                "ept",
+                "ept_ad",
+                "erms",
+                "est",
+                "f16c",
+                "flexpriority",
+                "flush_l1d",
+                "fma",
+                "fpu",
+                "fsgsbase",
+                "fxsr",
+                "ht",
+                "hwp",
+                "hwp_act_window",
+                "hwp_epp",
+                "hwp_pkg_req",
+                "ibpb",
+                "ibpb_exit_to_user",
+                "ibrs",
+                "ibrs_enhanced",
+                "ida",
+                "intel_pt",
+                "invpcid",
+                "lahf_lm",
+                "lm",
+                "mba",
+                "mca",
+                "mce",
+                "md_clear",
+                "mmx",
+                "monitor",
+                "movbe",
+                "mpx",
+                "msr",
+                "mtrr",
+                "nonstop_tsc",
+                "nopl",
+                "nx",
+                "osxsave",
+                "pae",
+                "pat",
+                "pbe",
+                "pcid",
+                "pclmulqdq",
+                "pdcm",
+                "pdpe1gb",
+                "pebs",
+                "pge",
+                "pln",
+                "pni",
+                "popcnt",
+                "pqe",
+                "pqm",
+                "pse",
+                "pse36",
+                "pts",
+                "rdrand",
+                "rdrnd",
+                "rdseed",
+                "rdt_a",
+                "rdtscp",
+                "rep_good",
+                "sdbg",
+                "sep",
+                "smap",
+                "smep",
+                "ss",
+                "ssbd",
+                "sse",
+                "sse2",
+                "sse4_1",
+                "sse4_2",
+                "ssse3",
+                "stibp",
+                "syscall",
+                "tm",
+                "tm2",
+                "tpr_shadow",
+                "tsc",
+                "tsc_adjust",
+                "tsc_deadline_timer",
+                "tscdeadline",
+                "vme",
+                "vmx",
+                "vnmi",
+                "vpid",
+                "x2apic",
+                "xgetbv1",
+                "xsave",
+                "xsavec",
+                "xsaveopt",
+                "xsaves",
+                "xtopology",
+                "xtpr"
+            ],
+            "l3_cache_size": 20185088,
+            "l2_cache_size": 14680064,
+            "l1_data_cache_size": 458752,
+            "l1_instruction_cache_size": 458752,
+            "l2_cache_line_size": 256,
+            "l2_cache_associativity": 6
+        }
+    },
+    "commit_info": {
+        "id": "4ae87025e528f358f8194e4750334d247075ce6b",
+        "time": "2026-11-13T21:48:20+01:00",
+        "author_time": "2026-11-13T21:48:20+01:00",
+        "dirty": false,
+        "project": "aiida-core",
+        "branch": "graph-benchmark-v6"
+    },
+    "benchmarks": [
+        {
+            "group": "basic-loop",
+            "name": "test_benchmark[workchain-basic-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[workchain-basic-loop]",
+            "params": {
+                "workload": "basic-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-basic-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "basic-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.1691090576350689,
+                "max": 0.20663917064666748,
+                "mean": 0.18728952445089816,
+                "stddev": 0.011501949987660565,
+                "rounds": 10,
+                "median": 0.18563206866383553,
+                "iqr": 0.015567120164632797,
+                "q1": 0.1800197847187519,
+                "q3": 0.1955869048833847,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 0.1691090576350689,
+                "hd15iqr": 0.20663917064666748,
+                "ops": 5.339326921416636,
+                "total": 1.8728952445089817,
+                "data": [
+                    0.20663917064666748,
+                    0.18367166444659233,
+                    0.19959738105535507,
+                    0.19238604605197906,
+                    0.1955869048833847,
+                    0.18756723403930664,
+                    0.1800197847187519,
+                    0.1836969032883644,
+                    0.1746210977435112,
+                    0.1691090576350689
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "basic-loop",
+            "name": "test_benchmark[graph-basic-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[graph-basic-loop]",
+            "params": {
+                "workload": "basic-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-basic-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "basic-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 9,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 1.5108810178935528,
+                "max": 1.9279368855059147,
+                "mean": 1.7121061556041242,
+                "stddev": 0.13142905851599607,
+                "rounds": 10,
+                "median": 1.7488075699657202,
+                "iqr": 0.20569432899355888,
+                "q1": 1.5746470391750336,
+                "q3": 1.7803413681685925,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 1.5108810178935528,
+                "hd15iqr": 1.9279368855059147,
+                "ops": 0.5840759328659417,
+                "total": 17.12106155604124,
+                "data": [
+                    1.6686160415410995,
+                    1.747833278030157,
+                    1.5108810178935528,
+                    1.7803413681685925,
+                    1.7497818619012833,
+                    1.5619306713342667,
+                    1.7648680619895458,
+                    1.5746470391750336,
+                    1.8342253305017948,
+                    1.9279368855059147
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-wc-loop",
+            "name": "test_benchmark[workchain-serial-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[workchain-serial-wc-loop]",
+            "params": {
+                "workload": "serial-wc-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-serial-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-wc-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 4,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.6853465251624584,
+                "max": 0.9310707375407219,
+                "mean": 0.7725106872618198,
+                "stddev": 0.0845168258646621,
+                "rounds": 10,
+                "median": 0.7441961467266083,
+                "iqr": 0.12094155326485634,
+                "q1": 0.6987746059894562,
+                "q3": 0.8197161592543125,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 0.6853465251624584,
+                "hd15iqr": 0.9310707375407219,
+                "ops": 1.294480473201634,
+                "total": 7.725106872618198,
+                "data": [
+                    0.9310707375407219,
+                    0.6987746059894562,
+                    0.7461619898676872,
+                    0.8856323435902596,
+                    0.6853465251624584,
+                    0.7965907752513885,
+                    0.6871119476854801,
+                    0.7324714846909046,
+                    0.7422303035855293,
+                    0.8197161592543125
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-wc-loop",
+            "name": "test_benchmark[graph-serial-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[graph-serial-wc-loop]",
+            "params": {
+                "workload": "serial-wc-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-serial-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-wc-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 21,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 8.090558402240276,
+                "max": 8.72146163508296,
+                "mean": 8.38680472187698,
+                "stddev": 0.17297055135829267,
+                "rounds": 10,
+                "median": 8.3660518694669,
+                "iqr": 0.15329351276159286,
+                "q1": 8.330248590558767,
+                "q3": 8.48354210332036,
+                "iqr_outliers": 2,
+                "stddev_outliers": 2,
+                "outliers": "2;2",
+                "ld15iqr": 8.216756410896778,
+                "hd15iqr": 8.72146163508296,
+                "ops": 0.11923492118416686,
+                "total": 83.86804721876979,
+                "data": [
+                    8.72146163508296,
+                    8.090558402240276,
+                    8.403135530650616,
+                    8.48354210332036,
+                    8.216756410896778,
+                    8.544870290905237,
+                    8.330248590558767,
+                    8.345370516180992,
+                    8.376285482198,
+                    8.355818256735802
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-wc-loop",
+            "name": "test_benchmark[workchain-threaded-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[workchain-threaded-wc-loop]",
+            "params": {
+                "workload": "threaded-wc-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-threaded-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-wc-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 4,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.5951790437102318,
+                "max": 0.8540876023471355,
+                "mean": 0.7421237345784902,
+                "stddev": 0.08285076673283003,
+                "rounds": 10,
+                "median": 0.7678853590041399,
+                "iqr": 0.11518225073814392,
+                "q1": 0.6760411411523819,
+                "q3": 0.7912233918905258,
+                "iqr_outliers": 0,
+                "stddev_outliers": 3,
+                "outliers": "3;0",
+                "ld15iqr": 0.5951790437102318,
+                "hd15iqr": 0.8540876023471355,
+                "ops": 1.3474841908512436,
+                "total": 7.421237345784903,
+                "data": [
+                    0.5951790437102318,
+                    0.8105477727949619,
+                    0.6268273778259754,
+                    0.7912233918905258,
+                    0.775859173387289,
+                    0.7530704326927662,
+                    0.6760411411523819,
+                    0.7599115446209908,
+                    0.8540876023471355,
+                    0.7784898653626442
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-wc-loop",
+            "name": "test_benchmark[graph-threaded-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[graph-threaded-wc-loop]",
+            "params": {
+                "workload": "threaded-wc-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-threaded-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-wc-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 13,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.392583440989256,
+                "max": 2.781658213585615,
+                "mean": 2.5338872984051704,
+                "stddev": 0.14278410519190918,
+                "rounds": 10,
+                "median": 2.4778448957949877,
+                "iqr": 0.24342529475688934,
+                "q1": 2.420283365994692,
+                "q3": 2.663708660751581,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 2.392583440989256,
+                "hd15iqr": 2.781658213585615,
+                "ops": 0.3946505437038973,
+                "total": 25.338872984051704,
+                "data": [
+                    2.401120577007532,
+                    2.4904018864035606,
+                    2.781658213585615,
+                    2.5704731307923794,
+                    2.392583440989256,
+                    2.420283365994692,
+                    2.663708660751581,
+                    2.4298027753829956,
+                    2.723553027957678,
+                    2.4652879051864147
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-calcjob-loop",
+            "name": "test_benchmark[workchain-serial-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[workchain-serial-calcjob-loop]",
+            "params": {
+                "workload": "serial-calcjob-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-serial-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-calcjob-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.5021011158823967,
+                "max": 3.0149009115993977,
+                "mean": 2.7990319546312095,
+                "stddev": 0.17701169416737644,
+                "rounds": 10,
+                "median": 2.7911219019442797,
+                "iqr": 0.2878255285322666,
+                "q1": 2.6722621358931065,
+                "q3": 2.960087664425373,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 2.5021011158823967,
+                "hd15iqr": 3.0149009115993977,
+                "ops": 0.3572663750213443,
+                "total": 27.990319546312094,
+                "data": [
+                    2.6722621358931065,
+                    3.0149009115993977,
+                    3.0073923356831074,
+                    2.926866941154003,
+                    2.5021011158823967,
+                    2.6014096923172474,
+                    2.960087664425373,
+                    2.7230549454689026,
+                    2.807143233716488,
+                    2.7751005701720715
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-calcjob-loop",
+            "name": "test_benchmark[graph-serial-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[graph-serial-calcjob-loop]",
+            "params": {
+                "workload": "serial-calcjob-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-serial-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-calcjob-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 9,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 4.592205621302128,
+                "max": 4.871572759002447,
+                "mean": 4.705525232478976,
+                "stddev": 0.08396615435681323,
+                "rounds": 10,
+                "median": 4.692285940051079,
+                "iqr": 0.04855336248874664,
+                "q1": 4.6616143099963665,
+                "q3": 4.710167672485113,
+                "iqr_outliers": 2,
+                "stddev_outliers": 3,
+                "outliers": "3;2",
+                "ld15iqr": 4.592205621302128,
+                "hd15iqr": 4.821047555655241,
+                "ops": 0.21251612744475235,
+                "total": 47.05525232478976,
+                "data": [
+                    4.592205621302128,
+                    4.62336403131485,
+                    4.821047555655241,
+                    4.694746807217598,
+                    4.709924105554819,
+                    4.710167672485113,
+                    4.68078438937664,
+                    4.871572759002447,
+                    4.6616143099963665,
+                    4.68982507288456
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-calcjob-loop",
+            "name": "test_benchmark[workchain-threaded-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[workchain-threaded-calcjob-loop]",
+            "params": {
+                "workload": "threaded-calcjob-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-threaded-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-calcjob-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.1527562364935875,
+                "max": 2.6913483291864395,
+                "mean": 2.304258770495653,
+                "stddev": 0.14845662795903836,
+                "rounds": 10,
+                "median": 2.2709549125283957,
+                "iqr": 0.10054196417331696,
+                "q1": 2.2227132841944695,
+                "q3": 2.3232552483677864,
+                "iqr_outliers": 1,
+                "stddev_outliers": 2,
+                "outliers": "2;1",
+                "ld15iqr": 2.1527562364935875,
+                "hd15iqr": 2.6913483291864395,
+                "ops": 0.4339790360372142,
+                "total": 23.04258770495653,
+                "data": [
+                    2.1527562364935875,
+                    2.2227132841944695,
+                    2.2048955224454403,
+                    2.3232552483677864,
+                    2.3130906000733376,
+                    2.2424860894680023,
+                    2.2557424679398537,
+                    2.6913483291864395,
+                    2.2861673571169376,
+                    2.350132569670677
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-calcjob-loop",
+            "name": "test_benchmark[graph-threaded-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine.py::test_benchmark[graph-threaded-calcjob-loop]",
+            "params": {
+                "workload": "threaded-calcjob-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-threaded-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-calcjob-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.2443537674844265,
+                "max": 2.7167071141302586,
+                "mean": 2.4683884285390376,
+                "stddev": 0.14489030537091854,
+                "rounds": 10,
+                "median": 2.4697673618793488,
+                "iqr": 0.22168876603245735,
+                "q1": 2.345279026776552,
+                "q3": 2.5669677928090096,
+                "iqr_outliers": 0,
+                "stddev_outliers": 3,
+                "outliers": "3;0",
+                "ld15iqr": 2.2443537674844265,
+                "hd15iqr": 2.7167071141302586,
+                "ops": 0.40512262512584735,
+                "total": 24.683884285390377,
+                "data": [
+                    2.41039302572608,
+                    2.5669677928090096,
+                    2.7167071141302586,
+                    2.630376398563385,
+                    2.345279026776552,
+                    2.485676944255829,
+                    2.2443537674844265,
+                    2.4538577795028687,
+                    2.324510358273983,
+                    2.5057620778679848
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "basic-loop",
+            "name": "test_benchmark_inline[workchain-basic-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[workchain-basic-loop]",
+            "params": {
+                "workload": "basic-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-basic-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "basic-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.14990055188536644,
+                "max": 0.3044026792049408,
+                "mean": 0.17779900096356868,
+                "stddev": 0.046015426008228874,
+                "rounds": 10,
+                "median": 0.1636529192328453,
+                "iqr": 0.018028389662504196,
+                "q1": 0.15426240861415863,
+                "q3": 0.17229079827666283,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 0.14990055188536644,
+                "hd15iqr": 0.3044026792049408,
+                "ops": 5.624328565293242,
+                "total": 1.7779900096356869,
+                "data": [
+                    0.3044026792049408,
+                    0.15233955532312393,
+                    0.15426240861415863,
+                    0.17229079827666283,
+                    0.16531358286738396,
+                    0.1899002008140087,
+                    0.16983578354120255,
+                    0.15775219351053238,
+                    0.16199225559830666,
+                    0.14990055188536644
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "basic-loop",
+            "name": "test_benchmark_inline[graph-basic-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[graph-basic-loop]",
+            "params": {
+                "workload": "basic-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-basic-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "basic-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 9,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 1.6706936582922935,
+                "max": 1.8900541327893734,
+                "mean": 1.7681665118783711,
+                "stddev": 0.08283533472166782,
+                "rounds": 10,
+                "median": 1.7684788350015879,
+                "iqr": 0.12866603583097458,
+                "q1": 1.6973021775484085,
+                "q3": 1.825968213379383,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 1.6706936582922935,
+                "hd15iqr": 1.8900541327893734,
+                "ops": 0.5655575949901194,
+                "total": 17.681665118783712,
+                "data": [
+                    1.6706936582922935,
+                    1.8900541327893734,
+                    1.888152189552784,
+                    1.672465804964304,
+                    1.7991214729845524,
+                    1.7697466872632504,
+                    1.7009497992694378,
+                    1.7672109827399254,
+                    1.825968213379383,
+                    1.6973021775484085
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "basic-loop",
+            "name": "test_benchmark_inline[inline-basic-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[inline-basic-loop]",
+            "params": {
+                "workload": "basic-loop",
+                "implementation": "inline"
+            },
+            "param": "inline-basic-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "basic-loop",
+                    "implementation": "inline",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.07577450200915337,
+                "max": 0.10645145922899246,
+                "mean": 0.08207977749407291,
+                "stddev": 0.009593707456354699,
+                "rounds": 10,
+                "median": 0.0786619484424591,
+                "iqr": 0.01114092767238617,
+                "q1": 0.07586918771266937,
+                "q3": 0.08701011538505554,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 0.07577450200915337,
+                "hd15iqr": 0.10645145922899246,
+                "ops": 12.183268894365744,
+                "total": 0.8207977749407291,
+                "data": [
+                    0.07586918771266937,
+                    0.07584613934159279,
+                    0.07938997820019722,
+                    0.0870504342019558,
+                    0.07793391868472099,
+                    0.07600213959813118,
+                    0.10645145922899246,
+                    0.08701011538505554,
+                    0.07577450200915337,
+                    0.07946990057826042
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-wc-loop",
+            "name": "test_benchmark_inline[workchain-serial-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[workchain-serial-wc-loop]",
+            "params": {
+                "workload": "serial-wc-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-serial-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-wc-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 4,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.6606618463993073,
+                "max": 0.9216800034046173,
+                "mean": 0.7802822664380074,
+                "stddev": 0.08693168245562596,
+                "rounds": 10,
+                "median": 0.7634031698107719,
+                "iqr": 0.10728351771831512,
+                "q1": 0.723397258669138,
+                "q3": 0.8306807763874531,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 0.6606618463993073,
+                "hd15iqr": 0.9216800034046173,
+                "ops": 1.2815875011039342,
+                "total": 7.8028226643800735,
+                "data": [
+                    0.8272559083998203,
+                    0.6606618463993073,
+                    0.723397258669138,
+                    0.736301526427269,
+                    0.6828501746058464,
+                    0.8931888304650784,
+                    0.8306807763874531,
+                    0.7412194274365902,
+                    0.9216800034046173,
+                    0.7855869121849537
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-wc-loop",
+            "name": "test_benchmark_inline[graph-serial-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[graph-serial-wc-loop]",
+            "params": {
+                "workload": "serial-wc-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-serial-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-wc-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 21,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 8.275959324091673,
+                "max": 8.621894031763077,
+                "mean": 8.443296278268098,
+                "stddev": 0.11000235337179075,
+                "rounds": 10,
+                "median": 8.442726043984294,
+                "iqr": 0.1565534919500351,
+                "q1": 8.365499086678028,
+                "q3": 8.522052578628063,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 8.275959324091673,
+                "hd15iqr": 8.621894031763077,
+                "ops": 0.11843715618198364,
+                "total": 84.43296278268099,
+                "data": [
+                    8.275959324091673,
+                    8.488829530775547,
+                    8.421029388904572,
+                    8.522052578628063,
+                    8.365499086678028,
+                    8.296704400330782,
+                    8.621894031763077,
+                    8.555542353540659,
+                    8.44953729212284,
+                    8.435914795845747
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-wc-loop",
+            "name": "test_benchmark_inline[inline-serial-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[inline-serial-wc-loop]",
+            "params": {
+                "workload": "serial-wc-loop",
+                "implementation": "inline"
+            },
+            "param": "inline-serial-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-wc-loop",
+                    "implementation": "inline",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.1030472107231617,
+                "max": 0.13531645759940147,
+                "mean": 0.11069531589746476,
+                "stddev": 0.010022470422022986,
+                "rounds": 10,
+                "median": 0.10622713342308998,
+                "iqr": 0.012118075042963028,
+                "q1": 0.1047997996211052,
+                "q3": 0.11691787466406822,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 0.1030472107231617,
+                "hd15iqr": 0.13531645759940147,
+                "ops": 9.033805919360523,
+                "total": 1.1069531589746475,
+                "data": [
+                    0.13531645759940147,
+                    0.11753394454717636,
+                    0.1030472107231617,
+                    0.10605688393115997,
+                    0.1047997996211052,
+                    0.1067633368074894,
+                    0.10639738291501999,
+                    0.10533636808395386,
+                    0.10478390008211136,
+                    0.11691787466406822
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-wc-loop",
+            "name": "test_benchmark_inline[workchain-threaded-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[workchain-threaded-wc-loop]",
+            "params": {
+                "workload": "threaded-wc-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-threaded-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-wc-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 4,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.6021845377981663,
+                "max": 0.9087581150233746,
+                "mean": 0.734303905442357,
+                "stddev": 0.09735162262929371,
+                "rounds": 10,
+                "median": 0.708617802709341,
+                "iqr": 0.11766286939382553,
+                "q1": 0.6767675764858723,
+                "q3": 0.7944304458796978,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 0.6021845377981663,
+                "hd15iqr": 0.9087581150233746,
+                "ops": 1.3618339662752892,
+                "total": 7.343039054423571,
+                "data": [
+                    0.8569557145237923,
+                    0.7053670324385166,
+                    0.7118685729801655,
+                    0.6791269406676292,
+                    0.7715756669640541,
+                    0.6767675764858723,
+                    0.636004451662302,
+                    0.6021845377981663,
+                    0.7944304458796978,
+                    0.9087581150233746
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-wc-loop",
+            "name": "test_benchmark_inline[graph-threaded-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[graph-threaded-wc-loop]",
+            "params": {
+                "workload": "threaded-wc-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-threaded-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-wc-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 13,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.3413014709949493,
+                "max": 2.670328862965107,
+                "mean": 2.519659259915352,
+                "stddev": 0.11123230087057683,
+                "rounds": 10,
+                "median": 2.542793497443199,
+                "iqr": 0.16035006567835808,
+                "q1": 2.45293740183115,
+                "q3": 2.613287467509508,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 2.3413014709949493,
+                "hd15iqr": 2.670328862965107,
+                "ops": 0.39687906055741645,
+                "total": 25.19659259915352,
+                "data": [
+                    2.5438436195254326,
+                    2.6332869976758957,
+                    2.613287467509508,
+                    2.4599183462560177,
+                    2.5727644823491573,
+                    2.45293740183115,
+                    2.367180574685335,
+                    2.3413014709949493,
+                    2.5417433753609657,
+                    2.670328862965107
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-wc-loop",
+            "name": "test_benchmark_inline[inline-threaded-wc-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[inline-threaded-wc-loop]",
+            "params": {
+                "workload": "threaded-wc-loop",
+                "implementation": "inline"
+            },
+            "param": "inline-threaded-wc-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-wc-loop",
+                    "implementation": "inline",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 1,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.27690180763602257,
+                "max": 0.43175723776221275,
+                "mean": 0.32504296153783796,
+                "stddev": 0.05231376268493978,
+                "rounds": 10,
+                "median": 0.30441953986883163,
+                "iqr": 0.056109074503183365,
+                "q1": 0.2885047495365143,
+                "q3": 0.34461382403969765,
+                "iqr_outliers": 1,
+                "stddev_outliers": 2,
+                "outliers": "2;1",
+                "ld15iqr": 0.27690180763602257,
+                "hd15iqr": 0.43175723776221275,
+                "ops": 3.0765163942292926,
+                "total": 3.25042961537838,
+                "data": [
+                    0.4004782699048519,
+                    0.3013704717159271,
+                    0.28814758360385895,
+                    0.2885047495365143,
+                    0.34461382403969765,
+                    0.30746860802173615,
+                    0.2893233001232147,
+                    0.27690180763602257,
+                    0.43175723776221275,
+                    0.3218637630343437
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-calcjob-loop",
+            "name": "test_benchmark_inline[workchain-serial-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[workchain-serial-calcjob-loop]",
+            "params": {
+                "workload": "serial-calcjob-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-serial-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-calcjob-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.6499768532812595,
+                "max": 2.9010109603405,
+                "mean": 2.742440778389573,
+                "stddev": 0.0784934696299982,
+                "rounds": 10,
+                "median": 2.737478371709585,
+                "iqr": 0.12955471128225327,
+                "q1": 2.6650104708969593,
+                "q3": 2.7945651821792126,
+                "iqr_outliers": 0,
+                "stddev_outliers": 3,
+                "outliers": "3;0",
+                "ld15iqr": 2.6499768532812595,
+                "hd15iqr": 2.9010109603405,
+                "ops": 0.364638685320025,
+                "total": 27.42440778389573,
+                "data": [
+                    2.7945651821792126,
+                    2.71262539178133,
+                    2.6650104708969593,
+                    2.731954298913479,
+                    2.7430024445056915,
+                    2.656869687139988,
+                    2.9010109603405,
+                    2.808694548904896,
+                    2.7606979459524155,
+                    2.6499768532812595
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-calcjob-loop",
+            "name": "test_benchmark_inline[graph-serial-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[graph-serial-calcjob-loop]",
+            "params": {
+                "workload": "serial-calcjob-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-serial-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-calcjob-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 9,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 4.1901496052742,
+                "max": 4.739391133189201,
+                "mean": 4.480631579086184,
+                "stddev": 0.20570125225726013,
+                "rounds": 10,
+                "median": 4.466517252847552,
+                "iqr": 0.392703864723444,
+                "q1": 4.306502662599087,
+                "q3": 4.699206527322531,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 4.1901496052742,
+                "hd15iqr": 4.739391133189201,
+                "ops": 0.22318282196367234,
+                "total": 44.806315790861845,
+                "data": [
+                    4.1901496052742,
+                    4.564462535083294,
+                    4.306502662599087,
+                    4.6073789447546005,
+                    4.368571970611811,
+                    4.739391133189201,
+                    4.312596391886473,
+                    4.699206527322531,
+                    4.716255489736795,
+                    4.3018005304038525
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "serial-calcjob-loop",
+            "name": "test_benchmark_inline[inline-serial-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[inline-serial-calcjob-loop]",
+            "params": {
+                "workload": "serial-calcjob-loop",
+                "implementation": "inline"
+            },
+            "param": "inline-serial-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "serial-calcjob-loop",
+                    "implementation": "inline",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.4624891951680183,
+                "max": 2.934226591140032,
+                "mean": 2.792863339558244,
+                "stddev": 0.14031099479590628,
+                "rounds": 10,
+                "median": 2.81622501835227,
+                "iqr": 0.11335285380482674,
+                "q1": 2.7653119415044785,
+                "q3": 2.878664795309305,
+                "iqr_outliers": 1,
+                "stddev_outliers": 2,
+                "outliers": "2;1",
+                "ld15iqr": 2.663662437349558,
+                "hd15iqr": 2.934226591140032,
+                "ops": 0.35805547154275486,
+                "total": 27.928633395582438,
+                "data": [
+                    2.878664795309305,
+                    2.8099242225289345,
+                    2.4624891951680183,
+                    2.8225258141756058,
+                    2.663662437349558,
+                    2.800116464495659,
+                    2.9158757589757442,
+                    2.7653119415044785,
+                    2.934226591140032,
+                    2.8758361749351025
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-calcjob-loop",
+            "name": "test_benchmark_inline[workchain-threaded-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[workchain-threaded-calcjob-loop]",
+            "params": {
+                "workload": "threaded-calcjob-loop",
+                "implementation": "workchain"
+            },
+            "param": "workchain-threaded-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-calcjob-loop",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.3142465613782406,
+                "max": 2.887238398194313,
+                "mean": 2.5345738369971516,
+                "stddev": 0.1851297749349628,
+                "rounds": 10,
+                "median": 2.500541878864169,
+                "iqr": 0.2457939311861992,
+                "q1": 2.3744861260056496,
+                "q3": 2.6202800571918488,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 2.3142465613782406,
+                "hd15iqr": 2.887238398194313,
+                "ops": 0.3945436449327335,
+                "total": 25.345738369971514,
+                "data": [
+                    2.6202800571918488,
+                    2.3142465613782406,
+                    2.4467577673494816,
+                    2.3489981666207314,
+                    2.7691702395677567,
+                    2.583477295935154,
+                    2.4821855537593365,
+                    2.3744861260056496,
+                    2.887238398194313,
+                    2.5188982039690018
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-calcjob-loop",
+            "name": "test_benchmark_inline[graph-threaded-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[graph-threaded-calcjob-loop]",
+            "params": {
+                "workload": "threaded-calcjob-loop",
+                "implementation": "graph"
+            },
+            "param": "graph-threaded-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-calcjob-loop",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.1136269457638264,
+                "max": 2.9357555508613586,
+                "mean": 2.458144989982247,
+                "stddev": 0.2716052375469115,
+                "rounds": 10,
+                "median": 2.4746853690594435,
+                "iqr": 0.40631625428795815,
+                "q1": 2.2266176640987396,
+                "q3": 2.6329339183866978,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 2.1136269457638264,
+                "hd15iqr": 2.9357555508613586,
+                "ops": 0.4068108285212346,
+                "total": 24.581449899822474,
+                "data": [
+                    2.1136269457638264,
+                    2.2266176640987396,
+                    2.482239969074726,
+                    2.543123446404934,
+                    2.6329339183866978,
+                    2.1301454715430737,
+                    2.9357555508613586,
+                    2.75793494284153,
+                    2.2919412218034267,
+                    2.467130769044161
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "threaded-calcjob-loop",
+            "name": "test_benchmark_inline[inline-threaded-calcjob-loop]",
+            "fullname": "tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[inline-threaded-calcjob-loop]",
+            "params": {
+                "workload": "threaded-calcjob-loop",
+                "implementation": "inline"
+            },
+            "param": "inline-threaded-calcjob-loop",
+            "extra_info": {
+                "provenance": {
+                    "workload": "threaded-calcjob-loop",
+                    "implementation": "inline",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 0,
+                    "calcfunctions": 0,
+                    "calcjobs": 4
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.0747688449919224,
+                "max": 2.6001927703619003,
+                "mean": 2.379973880201578,
+                "stddev": 0.16822168266895665,
+                "rounds": 10,
+                "median": 2.4581300113350153,
+                "iqr": 0.17253586277365685,
+                "q1": 2.3061515353620052,
+                "q3": 2.478687398135662,
+                "iqr_outliers": 0,
+                "stddev_outliers": 3,
+                "outliers": "3;0",
+                "ld15iqr": 2.0747688449919224,
+                "hd15iqr": 2.6001927703619003,
+                "ops": 0.42017267849817846,
+                "total": 23.79973880201578,
+                "data": [
+                    2.3078097626566887,
+                    2.478687398135662,
+                    2.4969501607120037,
+                    2.0747688449919224,
+                    2.4676589220762253,
+                    2.47770319506526,
+                    2.1412151120603085,
+                    2.6001927703619003,
+                    2.3061515353620052,
+                    2.4486011005938053
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "restart",
+            "name": "test_benchmark_restart_local[restart-workchain]",
+            "fullname": "tests/benchmark/test_graph_restart.py::test_benchmark_restart_local[restart-workchain]",
+            "params": {
+                "implementation": "workchain"
+            },
+            "param": "restart-workchain",
+            "extra_info": {
+                "provenance": {
+                    "workload": "restart-recover",
+                    "implementation": "workchain",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 3,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.7369650788605213,
+                "max": 1.18659033998847,
+                "mean": 0.8856017358601094,
+                "stddev": 0.14415178453064112,
+                "rounds": 10,
+                "median": 0.8589250482618809,
+                "iqr": 0.22048835456371307,
+                "q1": 0.7595651112496853,
+                "q3": 0.9800534658133984,
+                "iqr_outliers": 0,
+                "stddev_outliers": 3,
+                "outliers": "3;0",
+                "ld15iqr": 0.7369650788605213,
+                "hd15iqr": 1.18659033998847,
+                "ops": 1.1291757451545479,
+                "total": 8.856017358601093,
+                "data": [
+                    1.18659033998847,
+                    0.8519805371761322,
+                    0.8658695593476295,
+                    0.7369650788605213,
+                    0.7523862645030022,
+                    0.7595651112496853,
+                    1.04071943461895,
+                    0.874170321971178,
+                    0.9800534658133984,
+                    0.8077172450721264
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "restart",
+            "name": "test_benchmark_restart_local[restart-graph]",
+            "fullname": "tests/benchmark/test_graph_restart.py::test_benchmark_restart_local[restart-graph]",
+            "params": {
+                "implementation": "graph"
+            },
+            "param": "restart-graph",
+            "extra_info": {
+                "provenance": {
+                    "workload": "restart-recover",
+                    "implementation": "graph",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 3,
+                    "calcfunctions": 7,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.275591094046831,
+                "max": 2.768066592514515,
+                "mean": 2.455322876945138,
+                "stddev": 0.16352942099124107,
+                "rounds": 10,
+                "median": 2.4204741306602955,
+                "iqr": 0.1593257635831833,
+                "q1": 2.340778585523367,
+                "q3": 2.50010434910655,
+                "iqr_outliers": 1,
+                "stddev_outliers": 4,
+                "outliers": "4;1",
+                "ld15iqr": 2.275591094046831,
+                "hd15iqr": 2.768066592514515,
+                "ops": 0.40727841107568685,
+                "total": 24.55322876945138,
+                "data": [
+                    2.7025649063289165,
+                    2.44125097617507,
+                    2.768066592514515,
+                    2.275591094046831,
+                    2.3926647752523422,
+                    2.440974075347185,
+                    2.50010434910655,
+                    2.399974185973406,
+                    2.291259229183197,
+                    2.340778585523367
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "restart",
+            "name": "test_benchmark_restart_local[restart-graph-direct-ir]",
+            "fullname": "tests/benchmark/test_graph_restart.py::test_benchmark_restart_local[restart-graph-direct-ir]",
+            "params": {
+                "implementation": "graph-direct-ir"
+            },
+            "param": "restart-graph-direct-ir",
+            "extra_info": {
+                "provenance": {
+                    "workload": "restart-recover",
+                    "implementation": "graph-direct-ir",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 3,
+                    "calcfunctions": 7,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.3307998925447464,
+                "max": 2.5609684996306896,
+                "mean": 2.4440896816551687,
+                "stddev": 0.08135254504940108,
+                "rounds": 10,
+                "median": 2.4395109340548515,
+                "iqr": 0.1409182846546173,
+                "q1": 2.3643777146935463,
+                "q3": 2.5052959993481636,
+                "iqr_outliers": 0,
+                "stddev_outliers": 4,
+                "outliers": "4;0",
+                "ld15iqr": 2.3307998925447464,
+                "hd15iqr": 2.5609684996306896,
+                "ops": 0.4091502891672892,
+                "total": 24.440896816551685,
+                "data": [
+                    2.5609684996306896,
+                    2.5052959993481636,
+                    2.3307998925447464,
+                    2.4087303802371025,
+                    2.3597287349402905,
+                    2.480897430330515,
+                    2.3643777146935463,
+                    2.46916526183486,
+                    2.5510762967169285,
+                    2.409856606274843
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": null,
+            "name": "test_benchmark_restart_ir",
+            "fullname": "tests/benchmark/test_graph_restart.py::test_benchmark_restart_ir",
+            "params": null,
+            "param": null,
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.003307849168777466,
+                "max": 0.005287185311317444,
+                "mean": 0.0037120793014764784,
+                "stddev": 0.0005685047423453351,
+                "rounds": 10,
+                "median": 0.0035854950547218323,
+                "iqr": 0.00017550215125083923,
+                "q1": 0.0034582726657390594,
+                "q3": 0.0036337748169898987,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 0.003307849168777466,
+                "hd15iqr": 0.005287185311317444,
+                "ops": 269.39079658191844,
+                "total": 0.037120793014764786,
+                "data": [
+                    0.0037727393209934235,
+                    0.003405176103115082,
+                    0.005287185311317444,
+                    0.0034582726657390594,
+                    0.0036337748169898987,
+                    0.003577571362257004,
+                    0.0035934187471866608,
+                    0.0034865178167819977,
+                    0.003307849168777466,
+                    0.0035982877016067505
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "restart-daemon",
+            "name": "test_benchmark_restart_daemon[restart-workchain-daemon]",
+            "fullname": "tests/benchmark/test_graph_restart.py::test_benchmark_restart_daemon[restart-workchain-daemon]",
+            "params": {
+                "implementation": "workchain-submitted"
+            },
+            "param": "restart-workchain-daemon",
+            "extra_info": {
+                "provenance": {
+                    "workload": "restart-recover",
+                    "implementation": "workchain-submitted",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 3,
+                    "calcfunctions": 0,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 1.0994491465389729,
+                "max": 1.2069592028856277,
+                "mean": 1.14111163392663,
+                "stddev": 0.04155902230050436,
+                "rounds": 5,
+                "median": 1.1376667581498623,
+                "iqr": 0.05307386443018913,
+                "q1": 1.1098202597349882,
+                "q3": 1.1628941241651773,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 1.0994491465389729,
+                "hd15iqr": 1.2069592028856277,
+                "ops": 0.8763384495160593,
+                "total": 5.70555816963315,
+                "data": [
+                    1.1482057645916939,
+                    1.2069592028856277,
+                    1.0994491465389729,
+                    1.1376667581498623,
+                    1.1132772974669933
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "restart-daemon",
+            "name": "test_benchmark_restart_daemon[restart-graph-daemon]",
+            "fullname": "tests/benchmark/test_graph_restart.py::test_benchmark_restart_daemon[restart-graph-daemon]",
+            "params": {
+                "implementation": "graph-submitted"
+            },
+            "param": "restart-graph-daemon",
+            "extra_info": {
+                "provenance": {
+                    "workload": "restart-recover",
+                    "implementation": "graph-submitted",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 3,
+                    "calcfunctions": 7,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.5615316443145275,
+                "max": 2.9869285710155964,
+                "mean": 2.793126597255468,
+                "stddev": 0.17270618547023223,
+                "rounds": 5,
+                "median": 2.8638589419424534,
+                "iqr": 0.2656910102814436,
+                "q1": 2.6432047076523304,
+                "q3": 2.908895717933774,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 2.5615316443145275,
+                "hd15iqr": 2.9869285710155964,
+                "ops": 0.3580217241075295,
+                "total": 13.965632986277342,
+                "data": [
+                    2.8638589419424534,
+                    2.9869285710155964,
+                    2.8828847669065,
+                    2.6704290620982647,
+                    2.5615316443145275
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": "restart-daemon",
+            "name": "test_benchmark_restart_daemon[restart-graph-direct-ir-daemon]",
+            "fullname": "tests/benchmark/test_graph_restart.py::test_benchmark_restart_daemon[restart-graph-direct-ir-daemon]",
+            "params": {
+                "implementation": "graph-submitted-direct-ir"
+            },
+            "param": "restart-graph-direct-ir-daemon",
+            "extra_info": {
+                "provenance": {
+                    "workload": "restart-recover",
+                    "implementation": "graph-submitted-direct-ir",
+                    "finished_ok": true,
+                    "graph_nodes": 0,
+                    "workchains": 3,
+                    "calcfunctions": 7,
+                    "calcjobs": 0
+                }
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 2.776935636997223,
+                "max": 3.4680079109966755,
+                "mean": 3.0335106298327448,
+                "stddev": 0.27108706737720456,
+                "rounds": 5,
+                "median": 2.9814435355365276,
+                "iqr": 0.3524660365656018,
+                "q1": 2.8323221998289227,
+                "q3": 3.1847882363945246,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 2.776935636997223,
+                "hd15iqr": 3.4680079109966755,
+                "ops": 0.32965106176507314,
+                "total": 15.167553149163723,
+                "data": [
+                    2.8507843874394894,
+                    3.4680079109966755,
+                    3.0903816781938076,
+                    2.9814435355365276,
+                    2.776935636997223
+                ],
+                "iterations": 1
+            }
+        }
+    ],
+    "datetime": "2026-11-13T21:08:38.764426",
+    "version": "4.0.0"
+}

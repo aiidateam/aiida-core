@@ -37,13 +37,23 @@ def prepare_inputs(inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> d
     """Prepare inputs for launch of a process.
 
     This is a utility function to pre-process inputs for the process that can be specified both through keyword
-    arguments as well as through the explicit ``inputs`` argument. When both are specified, a ``ValueError`` is raised.
+    arguments as well as through the explicit ``inputs`` argument. When both are specified, a ``ValueError`` is raised,
+    except for graph execution configuration: that launch envelope keeps the scientific mapping separate
+    for its adapter.
 
     :param inputs: Inputs dictionary.
     :param kwargs: Inputs defined as keyword arguments.
     :raises ValueError: If both ``kwargs`` and ``inputs`` are defined.
     :returns: The dictionary of inputs for the process.
     """
+    if inputs is not None and kwargs.keys() & {
+        'runtime_config',
+        'execution_environment',
+        'execution_policy',
+        'prepared_run',
+    }:
+        return {'inputs': inputs, **kwargs}
+
     if inputs is not None and kwargs:
         raise ValueError('Cannot specify both `inputs` and `kwargs`.')
 

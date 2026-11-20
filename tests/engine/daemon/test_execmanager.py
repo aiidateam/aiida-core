@@ -9,6 +9,7 @@
 """Tests for the :mod:`aiida.engine.daemon.execmanager` module."""
 
 import io
+import logging
 import pathlib
 
 import pytest
@@ -18,7 +19,17 @@ from aiida.common.exceptions import StashingError
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.engine.daemon import execmanager
-from aiida.orm import CalcJobNode, FolderData, Int, PortableCode, RemoteData, SinglefileData
+from aiida.orm import (
+    CalcJobNode,
+    DataDict,
+    DataList,
+    FolderData,
+    Int,
+    PortableCode,
+    RemoteData,
+    SinglefileData,
+    load_node,
+)
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -73,6 +84,48 @@ def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_code_installed
     calc_info.codes_info = [code_info]
 
     return node, calc_info
+
+
+@pytest.mark.presto
+@pytest.mark.parametrize('stored', [False, True])
+def test_find_owned_container_member(aiida_profile_clean, stored: bool) -> None:
+    """Lookup traverses mappings and mixed owned containers without changing member identity."""
+    container = DataDict({'files': DataList([SinglefileData(__file__), SinglefileData(__file__)])})
+    if stored:
+        container.store()
+        container = load_node(container.uuid)
+    member = container['files'][1]
+    inputs = {'namespace': {'bundle': container}}
+    found = execmanager._find_data_node(inputs, member.uuid)
+    assert found is not None
+    assert found.uuid == member.uuid
+    assert found.base.repository.get_object_content(member.filename, mode='rb') == pathlib.Path(__file__).read_bytes()
+    assert execmanager._find_data_node(inputs, container.uuid) is container
+    assert execmanager._find_data_node(inputs, '00000000-0000-4000-8000-000000000000') is None
+
+
+@pytest.mark.presto
+@pytest.mark.asyncio
+async def test_copy_unstored_owned_file(aiida_profile_clean, tmp_path):
+    """The unstored-input staging path copies an owned file without detaching or storing it."""
+    content = b'pseudopotential file content\n'
+    container = DataDict({'Si': SinglefileData(io.BytesIO(content), filename='Si.upf')})
+    member = container['Si']
+    identity = member.uuid
+    node = CalcJobNode()
+    async with LocalTransport() as transport:
+        await execmanager._copy_local_files(
+            logging.getLogger(__name__),
+            node,
+            transport,
+            {'pseudos': container},
+            [(member.uuid, member.filename, 'pseudo/Si.upf')],
+            workdir=tmp_path,
+        )
+    assert (tmp_path / 'pseudo' / 'Si.upf').read_bytes() == content
+    assert container['Si'].uuid == identity
+    assert not container.is_stored
+    assert not member.is_stored
 
 
 def test_hierarchy_utility(file_hierarchy, tmp_path, create_file_hierarchy, serialize_file_hierarchy):

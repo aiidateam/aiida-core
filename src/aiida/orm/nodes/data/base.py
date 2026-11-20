@@ -14,6 +14,7 @@ import typing as t
 from functools import singledispatch
 
 from aiida.orm.nodes.data.data import Data
+from aiida.orm.nodes.data.datanode import DataNode
 from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('BaseType', 'from_aiida_type', 'to_aiida_type')
@@ -27,7 +28,7 @@ def to_aiida_type(value):
 
 
 @singledispatch
-def from_aiida_type(node: Data) -> object:
+def from_aiida_type(node: DataNode) -> object:
     """Return the Python value of a registered data type or the unregistered node.
 
     Plugins can register conversions through `from_aiida_type.register`.

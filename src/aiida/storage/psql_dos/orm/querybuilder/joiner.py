@@ -14,7 +14,7 @@ import weakref
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from sqlalchemy import and_, join, select
+from sqlalchemy import and_, join, or_, select
 from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.orm import Query, aliased
 from sqlalchemy.orm.util import AliasedClass
@@ -41,6 +41,9 @@ class _EntityMapper(t.Protocol):
 
     @property
     def Link(self) -> type[Model]: ...
+
+    @property
+    def Membership(self) -> type[Model]: ...
 
     @property
     def User(self) -> type[Model]: ...
@@ -115,6 +118,8 @@ class SqlaJoiner:
                 'with_comment': self._join_comment_node,
                 'with_incoming': self._join_node_outputs,
                 'with_outgoing': self._join_node_inputs,
+                'with_owner': self._join_node_owner,
+                'with_members': self._join_node_members,
                 'with_descendants': self._join_node_ancestors_recursive,
                 'with_ancestors': self._join_node_descendants_recursive,
                 'with_computer': self._join_computer_node,
@@ -348,40 +353,115 @@ class SqlaJoiner:
 
         return JoinReturn(new_query)
 
+    def _join_node_owner(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+        """Join a node to its ownership owner (child ``with_owner`` owner).
+
+        :param joined_entity: the (aliased) owned child node in the database.
+        :param entity_to_join: the (aliased) owner container node.
+
+        **joined_entity** and **entity_to_join** are joined via the
+        ``db_dbmembership`` containment table: ``entity_to_join`` is the
+        immediate owner of ``joined_entity``. The membership edge is exposed
+        for edge filters/projections (``position``, ``key``), so membership
+        position/key filters and per-join child matching apply here. Each
+        child join matches its own child independently: separate joins may
+        match different children.
+        """
+        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_owner')
+        aliased_edge = aliased(self._entities.Membership)
+
+        def new_query(q):
+            return q.join(aliased_edge, aliased_edge.child_id == joined_entity.id, isouter=isouterjoin).join(
+                entity_to_join, aliased_edge.owner_id == entity_to_join.id, isouter=isouterjoin
+            )
+
+        return JoinReturn(new_query, aliased_edge)
+
+    def _join_node_members(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+        """Join a container to its immediate owned children (container ``with_members`` children).
+
+        :param joined_entity: the (aliased) owner container node in the database.
+        :param entity_to_join: the (aliased) owned child node.
+
+        **joined_entity** and **entity_to_join** are joined via the
+        ``db_dbmembership`` containment table: ``entity_to_join`` is an
+        immediately owned child of ``joined_entity``. The membership edge is
+        exposed for edge filters/projections (``position``, ``key``).
+        """
+        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_members')
+        aliased_edge = aliased(self._entities.Membership)
+
+        def new_query(q):
+            return q.join(aliased_edge, aliased_edge.owner_id == joined_entity.id, isouter=isouterjoin).join(
+                entity_to_join, aliased_edge.child_id == entity_to_join.id, isouter=isouterjoin
+            )
+
+        return JoinReturn(new_query, aliased_edge)
+
     def _join_node_outputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """:param joined_entity: The (aliased) ORMclass that is an input
+        """Join nodes to their outgoing neighbours (``with_incoming``).
+
+        :param joined_entity: The (aliased) ORMclass that is an input
         :param entity_to_join: The (aliased) ORMClass that is an output.
 
         **joined_entity** and **entity_to_join** are joined with a link
         from **joined_entity** as input to **enitity_to_join** as output
-        (**enitity_to_join** is *with_incoming* **joined_entity**)
+        (**enitity_to_join** is *with_incoming* **joined_entity**). Owned data-container
+        children additionally match through the ``db_dbmembership`` containment table: a
+        container's immediate children are outgoing neighbours of the container for query
+        purposes. This is query-time traversal only; membership rows are containment edges and
+        are never duplicated as provenance links. Edge filters/projections apply to the
+        provenance-link edge; membership ``position``/``key`` filters use ``with_members``.
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_incoming')
 
         aliased_edge = aliased(self._entities.Link)
+        aliased_member = aliased(self._entities.Membership)
 
         def new_query(q):
-            return q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin).join(
-                entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin
+            query = q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=True).join(
+                aliased_member, aliased_member.owner_id == joined_entity.id, isouter=True
+            )
+            return query.join(
+                entity_to_join,
+                or_(
+                    aliased_edge.output_id == entity_to_join.id,
+                    aliased_member.child_id == entity_to_join.id,
+                ),
+                isouter=isouterjoin,
             )
 
         return JoinReturn(new_query, aliased_edge)
 
     def _join_node_inputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """:param joined_entity: The (aliased) ORMclass that is an output
+        """Join nodes to their incoming neighbours (``with_outgoing``).
+
+        :param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
 
         **joined_entity** and **entity_to_join** are joined with a link
         from **joined_entity** as output to **enitity_to_join** as input
-        (**enitity_to_join** is *with_outgoing* **joined_entity**)
-
+        (**enitity_to_join** is *with_outgoing* **joined_entity**). An owned child
+        additionally matches its immediate owner through the ``db_dbmembership`` containment
+        table (query-time traversal only, never persisted as provenance links). Edge
+        filters/projections apply to the provenance-link edge; membership ``position``/``key``
+        filters use ``with_owner``.
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_outgoing')
         aliased_edge = aliased(self._entities.Link)
+        aliased_member = aliased(self._entities.Membership)
 
         def new_query(q):
-            return q.join(aliased_edge, aliased_edge.output_id == joined_entity.id).join(
-                entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin
+            query = q.join(aliased_edge, aliased_edge.output_id == joined_entity.id, isouter=True).join(
+                aliased_member, aliased_member.child_id == joined_entity.id, isouter=True
+            )
+            return query.join(
+                entity_to_join,
+                or_(
+                    aliased_edge.input_id == entity_to_join.id,
+                    aliased_member.owner_id == entity_to_join.id,
+                ),
+                isouter=isouterjoin,
             )
 
         return JoinReturn(new_query, aliased_edge)

@@ -223,3 +223,57 @@ def test_link_manager_contains():
 
     with pytest.warns(Warning, match=r'The use of double underscores in keys is deprecated..*'):
         assert 'nested__namespace' not in calc.inputs
+
+
+def test_link_manager_with_namespace_scope():
+    """Test the ``namespace`` option projects one top-level namespace flat with inherited semantics."""
+    from aiida.orm.utils.managers import NodeLinksManager
+
+    kept = orm.Data()
+    kept.store()
+    nested_leaf = orm.Data()
+    nested_leaf.store()
+    sibling = orm.Data()
+    sibling.store()
+
+    calc = orm.CalculationNode()
+    calc.base.links.add_incoming(kept, link_type=LinkType.INPUT_CALC, link_label='scope__value')
+    calc.base.links.add_incoming(nested_leaf, link_type=LinkType.INPUT_CALC, link_label='scope__nested__leaf')
+    calc.base.links.add_incoming(sibling, link_type=LinkType.INPUT_CALC, link_label='sibling')
+    calc.store()
+
+    scoped = NodeLinksManager(node=calc, link_type=LinkType.INPUT_CALC, incoming=True, namespace='scope')
+
+    # Only the namespace contents are visible, flat at the top level.
+    assert set(scoped) == {'value', 'nested'}
+    assert scoped.value.uuid == kept.uuid
+    assert scoped['value'].uuid == kept.uuid
+    assert scoped.nested.leaf.uuid == nested_leaf.uuid
+    assert scoped['nested']['leaf'].uuid == nested_leaf.uuid
+    assert scoped.nested['leaf'].uuid == nested_leaf.uuid
+    assert 'value' in scoped
+    assert 'leaf' in scoped.nested
+    assert 'sibling' not in scoped
+    assert 'scope' not in scoped
+    assert sorted(dir(scoped)) == sorted({*dir(type(scoped)), 'value', 'nested'})
+    with pytest.raises(AttributeError):
+        getattr(scoped, 'sibling')
+    with pytest.raises(KeyError):
+        _ = scoped['sibling']
+
+    # The default manager keeps the stored layout, including the namespace key itself.
+    unscoped = NodeLinksManager(node=calc, link_type=LinkType.INPUT_CALC, incoming=True)
+    assert set(unscoped) == {'scope', 'sibling'}
+    assert unscoped.scope.value.uuid == kept.uuid
+    assert unscoped.scope.nested.leaf.uuid == nested_leaf.uuid
+
+    # A missing scope exposes an empty view instead of leaking siblings.
+    missing = NodeLinksManager(node=calc, link_type=LinkType.INPUT_CALC, incoming=True, namespace='absent')
+    assert set(missing) == set()
+    assert list(missing) == []
+    assert 'value' not in missing
+    assert 'sibling' not in missing
+
+    # The scope must be a link label string when given.
+    with pytest.raises(TypeError):
+        NodeLinksManager(node=calc, link_type=LinkType.INPUT_CALC, incoming=True, namespace=42)

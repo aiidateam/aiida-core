@@ -1,0 +1,12 @@
+revision: 4ae87025e528f358f8194e4750334d247075ce6b
+branch: graph-benchmark-v6
+dirty: 1 untracked-or-modified lines
+?? reports/
+python: 3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 15:12:24) [GCC 11.2.0]
+aiida 3.0.0.dev0
+pytest 9.1.1
+model name	: Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz
+28
+               total        used        free      shared  buff/cache   available
+Mem:             251          12           7           0         231         236
+Fr 13 Nov 2026 20:55:51 UTC

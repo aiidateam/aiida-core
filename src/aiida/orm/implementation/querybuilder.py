@@ -39,6 +39,8 @@ EntityRelationships: dict[str, set[str]] = {
         'with_computer',
         'with_user',
         'with_group',
+        'with_owner',
+        'with_members',
     },
     EntityTypes.USER.value: {'with_authinfo', 'with_comment', 'with_group', 'with_node'},
     EntityTypes.LINK.value: set(),

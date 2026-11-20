@@ -6,7 +6,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tasks declarations shared by the graph behavior suites."""
+"""Tasks declarations shared by the graph behavior suites.
+
+The arithmetic and predicate tasks here (``add``, ``decrement``, ``is_positive``, ...) deliberately
+exercise stored provenance: each call records a calculation node. Ordinary orchestration prefers
+inline operations for counters, comparisons, and branch/loop gates, which leave no nodes behind;
+see :func:`tests.engine.processes.graphs.programs.loops.bounded_steps` and
+:func:`tests.engine.processes.graphs.programs.loops.retry_until_present` for the recommended inline
+authoring examples.
+"""
 
 import typing as t
 
@@ -257,6 +265,11 @@ def unannotated_function(x: int):  # rejected at decoration
     return x
 
 
+def unannotated_inputs(a, b=0) -> float:  # rejected at decoration
+    """Reject missing input annotations even for parameters with defaults."""
+    return float(a) + b
+
+
 def kwargs_function(**kwargs: t.Any) -> int:  # rejected at decoration
     """Reject undecorated functions with kwargs at decoration."""
     return 1
@@ -267,9 +280,10 @@ def args_function(*args: int) -> int:  # rejected at decoration
     return args[0]
 
 
-def after_parameter(x: int, after: int = 0) -> int:  # rejected at decoration
-    """Reserve `after` for ordering; it cannot be a task parameter."""
-    return x
+@task
+def after_parameter(x: int, after: int = 0) -> int:
+    """Use `after` as an ordinary input."""
+    return x + after
 
 
 @task

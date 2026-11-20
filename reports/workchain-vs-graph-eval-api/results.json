@@ -1,0 +1,80 @@
+{
+  "workchain": {
+    "arm": "workchain",
+    "provider": "openai-codex",
+    "model": "gpt-6.1-sol",
+    "thinking": "medium",
+    "started_utc": "2026-11-14T19:16:40Z",
+    "wall_seconds": 124.90258033201098,
+    "timed_out": false,
+    "agent_returncode": 0,
+    "usage": {
+      "input": 23336,
+      "output": 2993,
+      "cacheRead": 82688,
+      "cacheWrite": 0,
+      "totalTokens": 109017
+    },
+    "provider_reported_cost_usd": 0.0848708,
+    "assistant_messages": 12,
+    "tool_calls": 14,
+    "errors": [],
+    "fixed_files_unchanged": {
+      "collaborators.py": true,
+      "test_acceptance.py": true
+    },
+    "validation_command": [
+      "uv",
+      "run",
+      "--no-sync",
+      "pytest",
+      "--broker-backend=none",
+      "-q",
+      "tests/engine/processes/workflow_eval",
+      "--junitxml=/home/goscin_a/code/aiida-core/worktree/graph-benchmark/reports/workchain-vs-graph-eval-api/workchain/validation.xml"
+    ],
+    "validation_returncode": 0,
+    "validation_seconds": 33.98709062486887,
+    "workspace": "/tmp/aiida-paired-workflow-eval-rgyg01z1/workchain",
+    "git_status": " A tests/engine/processes/workflow_eval/solution.py\n A tests/engine/processes/workflow_eval/test_solution.py\n"
+  },
+  "graph": {
+    "arm": "graph",
+    "provider": "openai-codex",
+    "model": "gpt-6.1-sol",
+    "thinking": "medium",
+    "started_utc": "2026-11-14T19:16:40Z",
+    "wall_seconds": 116.4805460870266,
+    "timed_out": false,
+    "agent_returncode": 0,
+    "usage": {
+      "input": 11703,
+      "output": 2178,
+      "cacheRead": 77312,
+      "cacheWrite": 0,
+      "totalTokens": 91193
+    },
+    "provider_reported_cost_usd": 0.0529172,
+    "assistant_messages": 9,
+    "tool_calls": 11,
+    "errors": [],
+    "fixed_files_unchanged": {
+      "collaborators.py": true,
+      "test_acceptance.py": true
+    },
+    "validation_command": [
+      "uv",
+      "run",
+      "--no-sync",
+      "pytest",
+      "--broker-backend=none",
+      "-q",
+      "tests/engine/processes/workflow_eval",
+      "--junitxml=/home/goscin_a/code/aiida-core/worktree/graph-benchmark/reports/workchain-vs-graph-eval-api/graph/validation.xml"
+    ],
+    "validation_returncode": 0,
+    "validation_seconds": 46.672120824456215,
+    "workspace": "/tmp/aiida-paired-workflow-eval-rgyg01z1/graph",
+    "git_status": " A tests/engine/processes/workflow_eval/solution.py\n A tests/engine/processes/workflow_eval/test_solution.py\n"
+  }
+}

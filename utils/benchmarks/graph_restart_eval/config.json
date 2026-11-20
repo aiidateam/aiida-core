@@ -1,0 +1,17 @@
+{
+  "eval_id": "graph-restart-eval-v1",
+  "model": "gpt-6.1-sol",
+  "thinking": "medium",
+  "provider": "openai-codex",
+  "tools": "read,bash,edit,write,codemode",
+  "exclude_tools": "mcp__*",
+  "no_mcp": true,
+  "no_extensions": true,
+  "codemode_extension": "builtin:codemode",
+  "extra_args": [],
+  "timeout_s_each_arm": 1800,
+  "max_total_tokens_each_arm": 1000000,
+  "max_iterations_task": 5,
+  "pi_version_expected": "1.5.2",
+  "notes": "Same model/thinking/tools/timeout/token-cap for both arms (GO values used by the completed reports/graph-restart-study paired run and reused for future runs). Token cap (when set) is sampled at assistant message_end boundaries from authoritative usage, so the recorded total can overshoot the cap by up to one response before the child group is terminated. Tokens are otherwise measured post-hoc."
+}

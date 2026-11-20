@@ -15,9 +15,10 @@ import pytest
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.common import exceptions
-from aiida.engine import Process, calcfunction, launch
+from aiida.engine import ExitCode, Process, ToContext, WorkChain, calcfunction, launch
 from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.generic.futures import Future
+from aiida.engine.processes.states import Wait
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcFunctionNode, Int, QueryBuilder, Str, WorkflowNode
 
@@ -54,6 +55,49 @@ def add_one(value: Int) -> Int:
     return Int(value.value + 1)
 
 
+class TerminatingProcess(Process):
+    """Exercise every terminal outcome of locally scheduled execution."""
+
+    _node_class = WorkflowNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('mode', valid_type=Str)
+
+    async def run(self):
+        mode = self.inputs.mode.value
+        if mode == 'excepted':
+            msg = 'child failed'
+            raise RuntimeError(msg)
+        if mode == 'killed':
+            self.call_soon(self.kill)
+            return Wait()
+        return ExitCode(1 if mode == 'failed' else 0)
+
+
+class AwaitingWorkChain(WorkChain):
+    """Wait for a local child, including another work chain."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('mode', valid_type=Str)
+        spec.input('nested', valid_type=Int, default=lambda: Int(0))
+        spec.outline(cls.launch_child, cls.check_child)
+
+    def launch_child(self):
+        if self.inputs.nested.value:
+            child = self.submit(AwaitingWorkChain, mode=self.inputs.mode)
+        else:
+            child = self.submit(TerminatingProcess, mode=self.inputs.mode)
+        return ToContext(child=child)
+
+    def check_child(self):
+        assert self.ctx.child.is_terminated
+        assert self.ctx.child.is_sealed
+
+
 def the_hans_klok_comeback(loop):
     loop.stop()
 
@@ -83,6 +127,107 @@ def test_call_on_process_finish(runner):
 
     assert not future.exception()
     assert future.result()
+
+
+@pytest.fixture
+def local_runner(manager):
+    """Use production-like polling without a broker to expose missing local notifications."""
+    runner = manager.create_runner(communicator=None, poll_interval=3600)
+    yield runner
+    runner.close()
+
+
+@pytest.mark.parametrize('method', ['submit', 'schedule'])
+@pytest.mark.parametrize('mode', ['finished', 'failed', 'excepted', 'killed'])
+def test_local_completion(local_runner, method, mode):
+    """Every terminal state wakes all local watchers without waiting for polling."""
+    node = getattr(local_runner, method)(TerminatingProcess, mode=Str(mode))
+    notifications = []
+    completed = local_runner.loop.create_future()
+
+    def on_done():
+        notifications.append((node.process_state.value, node.is_sealed))
+        if len(notifications) == 2:
+            completed.set_result(None)
+
+    local_runner.call_on_process_finish(node.pk, on_done)
+    local_runner.call_on_process_finish(node.pk, on_done)
+    local_runner.run_until_complete(asyncio.wait_for(completed, timeout=5))
+    expected_state = 'finished' if mode == 'failed' else mode
+    assert notifications == [(expected_state, True)] * 2
+    if mode == 'failed':
+        assert node.exit_status == 1
+    assert not local_runner._local_process_tasks
+
+    # A watcher registered after execution was removed from the local registry still fires.
+    late = local_runner.loop.create_future()
+    local_runner.call_on_process_finish(node.pk, lambda: late.set_result(None))
+    local_runner.run_until_complete(asyncio.wait_for(late, timeout=5))
+    assert len(notifications) == 2
+
+
+@pytest.mark.parametrize('cancelled', [False, True])
+def test_local_execution_interrupted(local_runner, monkeypatch, caplog, cancelled):
+    """A broken execution task is not mistaken for terminal process state."""
+    process = TerminatingProcess(runner=local_runner, inputs={'mode': Str('finished')})
+
+    async def interrupted():
+        if cancelled:
+            raise asyncio.CancelledError
+        msg = 'unexpected execution failure'
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(process, 'step_until_terminated', interrupted)
+    monkeypatch.setattr(local_runner, '_poll_interval', 0.01)
+    node = local_runner.schedule(process)
+    completed = local_runner.loop.create_future()
+    local_runner.call_on_process_finish(node.pk, lambda: completed.set_result(None))
+
+    async def check():
+        await asyncio.sleep(0.03)
+        assert not completed.done()
+        assert not node.is_terminated
+        assert not local_runner._local_process_tasks
+        process.kill()
+        await asyncio.wait_for(completed, timeout=5)
+
+    local_runner.run_until_complete(check())
+    assert node.is_killed
+    if not cancelled:
+        assert 'unexpected execution failure' in caplog.text
+
+
+def test_nonlocal_completion_polling(local_runner, monkeypatch):
+    """Execution not owned by the runner still has a polling fallback."""
+    monkeypatch.setattr(local_runner, '_poll_interval', 0.01)
+    process = TerminatingProcess(runner=local_runner, inputs={'mode': Str('finished')})
+    completed = local_runner.loop.create_future()
+    local_runner.call_on_process_finish(process.node.pk, lambda: completed.set_result(None))
+
+    async def execute():
+        await process.step_until_terminated()
+        await asyncio.wait_for(completed, timeout=5)
+
+    local_runner.run_until_complete(execute())
+    assert process.node.is_finished_ok
+
+
+@pytest.mark.parametrize('mode', ['finished', 'failed', 'excepted', 'killed'])
+@pytest.mark.timeout(10)
+def test_nested_workchain_local_completion(local_runner, mode):
+    """Nested work chains resume promptly even when their leaf fails or is killed."""
+    _, node = local_runner.run_get_node(AwaitingWorkChain, mode=Str(mode), nested=Int(1))
+    assert node.is_finished_ok
+
+
+@pytest.mark.timeout(10)
+def test_graph_local_completion(local_runner):
+    """Sequential graph tasks do not incur a polling interval per dependency."""
+    from tests.engine.processes.graphs.programs.calls import multiply_add
+
+    outputs, node = local_runner.run_get_node(multiply_add, x=2, y=3, z=4)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 10
 
 
 def test_submit(runner):

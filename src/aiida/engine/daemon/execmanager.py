@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import shutil
 import typing as t
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from logging import LoggerAdapter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
@@ -33,7 +33,7 @@ from aiida.common.links import LinkType
 from aiida.common.typing import FilePath
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
-from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
+from aiida.orm import CalcJobNode, Code, DataDict, DataList, FolderData, Node, PortableCode, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.transports.transport import has_magic
@@ -49,21 +49,29 @@ EXEC_LOGGER = AIIDA_LOGGER.getChild('execmanager')
 def _find_data_node(inputs: Mapping[str, t.Any], uuid: str) -> Node | None:
     """Find and return the node with the given UUID from a nested mapping of input nodes.
 
+    Descend into owned ``DataDict``/``DataList`` members without cloning or detaching
+    them: file-copy requests reference member UUIDs, but only the owner is linked.
+
     :param inputs: (nested) mapping of nodes
     :param uuid: UUID of the node to find
     :return: instance of `Node` or `None` if not found
     """
-    data_node = None
 
-    for input_node in inputs.values():
-        if isinstance(input_node, Mapping):
-            data_node = _find_data_node(input_node, uuid)
-        elif isinstance(input_node, Node) and input_node.uuid == uuid:
-            data_node = input_node
-        if data_node is not None:
-            break
+    def find(values: Iterable[object]) -> Node | None:
+        for value in values:
+            if isinstance(value, Node) and value.uuid == uuid:
+                return value
+            if isinstance(value, (Mapping, DataDict)):
+                found = find(value.values())
+            elif isinstance(value, DataList):
+                found = find(value)
+            else:
+                continue
+            if found is not None:
+                return found
+        return None
 
-    return data_node
+    return find(inputs.values())
 
 
 async def upload_calculation(

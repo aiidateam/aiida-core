@@ -32,8 +32,30 @@ def verdi_group():
 @with_dbenv()
 def group_add_nodes(group, force, nodes):
     """Add nodes to a group."""
+    from aiida.manage import get_manager
+    from aiida.orm import Node, QueryBuilder
+    from aiida.orm.nodes.data.container import expand_ownership_unit, stored_ownership_root_pk
+
+    backend = get_manager().get_profile_storage()
+    requested = [node.pk for node in nodes]
+    # The Python API rejects child-targeted requests; the CLI instead resolves them to their
+    # ownership roots, shows the whole-unit expansion and applies it only with confirmation.
+    roots = sorted({stored_ownership_root_pk(backend, pk) for pk in requested})
+    expanded = sorted(expand_ownership_unit(backend, requested))
+    if expanded != sorted(requested):
+        echo.echo_info(
+            'Ownership expansion: the requested nodes target container member(s); the complete '
+            f'ownership unit(s) will be added instead (roots {roots}, {len(expanded)} nodes: {expanded}).'
+        )
     if not force:
-        click.confirm(f'Do you really want to add {len(nodes)} nodes to {group}?', abort=True)
+        click.confirm(f'Do you really want to add {len(expanded)} nodes to {group}?', abort=True)
+    if roots != sorted(requested):
+        by_pk = {node.pk: node for node in nodes}
+        missing = [pk for pk in roots if pk not in by_pk]
+        if missing:
+            for root in QueryBuilder(backend=backend).append(Node, filters={'id': {'in': missing}}).all(flat=True):
+                by_pk[root.pk] = root
+        nodes = [by_pk[pk] for pk in roots]
 
     group.add_nodes(nodes)
 
@@ -52,6 +74,30 @@ def group_remove_nodes(group, nodes, clear, force):
         echo.echo_critical(
             'Specify either the `--clear` flag to remove all nodes or the identifiers of the nodes you want to remove.'
         )
+
+    if nodes:
+        from aiida.manage import get_manager
+        from aiida.orm.nodes.data.container import expand_ownership_unit, stored_ownership_root_pk
+
+        backend = get_manager().get_profile_storage()
+        # Child-targeted requests resolve to their ownership roots (shown with the whole-unit
+        # expansion); the Python API would reject them, so substitute roots before applying.
+        # Substitution always applies; only the confirmation prompt is gated on `--force`.
+        requested = [node.pk for node in nodes]
+        roots = sorted({stored_ownership_root_pk(backend, pk) for pk in requested})
+        expanded = sorted(expand_ownership_unit(backend, requested))
+        if expanded != sorted(requested):
+            echo.echo_info(
+                'Ownership expansion: the requested nodes target container member(s); the complete '
+                f'ownership unit(s) will be removed instead (roots {roots}, {len(expanded)} nodes).'
+            )
+        if roots != sorted(requested):
+            by_pk = {node.pk: node for node in nodes}
+            missing = [pk for pk in roots if pk not in by_pk]
+            if missing:
+                for root in QueryBuilder(backend=backend).append(Node, filters={'id': {'in': missing}}).all(flat=True):
+                    by_pk[root.pk] = root
+            nodes = [by_pk[pk] for pk in roots]
 
     if not force:
         if nodes:
@@ -307,7 +353,12 @@ def group_delete(
                 )
                 return not click.confirm('Do you want to continue?', abort=True)
 
-            _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
+            _, nodes_deleted = delete_group_nodes(
+                [group.pk],
+                dry_run=dry_run or _dry_run_callback,
+                allow_ownership_expansion=force,
+                **traversal_rules,
+            )
             if not nodes_deleted:
                 # don't delete the group if the nodes were not deleted
                 return

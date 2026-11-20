@@ -54,10 +54,17 @@ def verdi_node():
 @options.RAW()
 def node_list(entry_point, subclassing, project, past_days, order_by, order_dir, limit, raw):
     """Query all nodes with optional filtering and ordering."""
+    from aiida.common.exceptions import InvalidEntryPointTypeError, MissingEntryPointError
     from aiida.orm import Node
-    from aiida.plugins.factories import DataFactory
+    from aiida.plugins.factories import ContainerFactory, DataFactory
 
-    node_class = DataFactory(entry_point) if entry_point else Node
+    if entry_point is None:
+        node_class = Node
+    else:
+        try:
+            node_class = DataFactory(entry_point)
+        except (InvalidEntryPointTypeError, MissingEntryPointError):
+            node_class = ContainerFactory(entry_point)
 
     if past_days is not None:
         filters = {'ctime': {'>': timezone.now() - datetime.timedelta(days=past_days)}}
@@ -71,7 +78,13 @@ def node_list(entry_point, subclassing, project, past_days, order_by, order_dir,
         subclassing=subclassing,
         order_by=[{order_by: order_dir}],
     )
-    echo_tabulate(query.all(), headers=project if not raw else [], tablefmt='plain' if raw else None)
+    if raw:
+        # Raw output is meant for machine consumption: disable numeric parsing so values print
+        # exactly as returned, without the right-alignment padding that tabulate otherwise applies
+        # to columns of mixed-width numbers (e.g. node pks spanning digit widths).
+        echo_tabulate(query.all(), headers=[], tablefmt='plain', disable_numparse=True)
+    else:
+        echo_tabulate(query.all(), headers=project)
 
 
 @verdi_node.group('repo')
@@ -405,7 +418,9 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
         return not click.confirm('Shall I continue?', abort=True)
 
     def _perform_delete():
-        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        _, was_deleted = delete_nodes(
+            pks, dry_run=dry_run or _dry_run_callback, allow_ownership_expansion=force, **traversal_rules
+        )
         if was_deleted:
             echo.echo_success('Finished deletion.')
 
@@ -469,7 +484,9 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
 @click.option(
     '-e',
     '--entry-point',
-    type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.node', 'aiida.workflows'), load=True),
+    type=PluginParamType(
+        group=('aiida.calculations', 'aiida.data', 'aiida.container', 'aiida.node', 'aiida.workflows'), load=True
+    ),
     default=None,
     help='Only include nodes that are class or sub class of the class identified by this entry point.',
 )
@@ -480,11 +497,11 @@ def rehash(nodes, entry_point, force):
 
     The set of nodes that will be rehashed can be filtered by their identifier and/or based on their class.
     """
-    from aiida.orm import Data, ProcessNode, QueryBuilder
+    from aiida.orm import DataNode, ProcessNode, QueryBuilder
 
-    # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
+    # If no explicit entry point is defined, rehash all nodes, which are either DataNode nodes or ProcessNodes
     if entry_point is None:
-        classes: tuple = (Data, ProcessNode)
+        classes: tuple = (DataNode, ProcessNode)
     else:
         classes = (entry_point,)
 

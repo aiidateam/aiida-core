@@ -1,0 +1,21 @@
+{
+  "successful_fresh_process_executions": 78,
+  "distinct_process_ids": 78,
+  "cases_per_implementation": 13,
+  "repetitions_per_case": 3,
+  "single_cpu_affinity_verified": 0,
+  "all_results_and_provenance_verified": true,
+  "all_workflow_window_rss_resets_supported": true,
+  "original_agent_metrics_unchanged": true,
+  "unavailable_cache_counters_are_null_not_zero": true,
+  "source_integrity": {
+    "workchain": {
+      "source_files_verified": 708,
+      "submission_matches": true
+    },
+    "graph": {
+      "source_files_verified": 708,
+      "submission_matches": true
+    }
+  }
+}

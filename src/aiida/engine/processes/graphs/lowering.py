@@ -19,18 +19,24 @@ import copy
 import enum
 import functools
 import inspect
+import linecache
 import textwrap
 import typing as t
 from collections import Counter
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
-from types import UnionType
+from itertools import pairwise
+from types import ModuleType, UnionType
+
+from typing_extensions import get_type_hints, is_typeddict
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
 from aiida.common.loaders import get_object_loader
+from aiida.engine.execution import ExecutionEnvironment, PreparedRun
 from aiida.engine.processes.calcjobs import CalcJob
 from aiida.engine.processes.exit_code import ExitCodeEnum
+from aiida.engine.processes.graphs.expressions import compile_expression, infer_expression_shape
 from aiida.engine.processes.graphs.inputs import _drops_none_value, _place
 from aiida.engine.processes.graphs.ir import (
     _CONDITION_PORT,
@@ -38,19 +44,37 @@ from aiida.engine.processes.graphs.ir import (
     Dependency,
     Endpoint,
     GraphIR,
+    InlineOperation,
     LoopControl,
+    MapControl,
+    OptionalOutputNamespace,
     OutputTree,
     ProcessTask,
     Route,
     SubgraphTask,
     TaskIR,
+    _ancestry_required,
+    _port_at,
+    merge_branch_shape,
 )
+from aiida.engine.processes.graphs.operations import (
+    CONSTANT_PORT,
+    LEFT_PORT,
+    OPERAND_PORT,
+    RESULT_PORT,
+    RIGHT_PORT,
+    OperationKind,
+    const_result_shape,
+    infer_operation_shape,
+)
+from aiida.engine.processes.graphs.par_map import par_map
 from aiida.engine.processes.graphs.process import GraphProcess
+from aiida.engine.processes.graphs.results import Err, Ok, _error_types, _result_contract
 from aiida.engine.processes.graphs.shapes import (
-    Forward,
     LeafShape,
     NamespaceShape,
     Shape,
+    expose,
     json_default,
     namespace_shape_for,
     shape_for_annotation,
@@ -58,15 +82,23 @@ from aiida.engine.processes.graphs.shapes import (
 from aiida.engine.processes.graphs.tasks import (
     CalcJobTaskHandle,
     FunctionTaskHandle,
+    PlacementHandle,
     PortDeclaration,
     WorkChainTaskHandle,
     _build_task,
     _typevar_solution,
 )
-from aiida.engine.processes.ports import _node_type
+from aiida.engine.processes.ports import PortNamespace, _node_type
 from aiida.engine.processes.workchains.workchain import WorkChain
+from aiida.orm import Bool, DataDict, DataList, EnumData
 
-__all__ = ('Forward', 'GraphHandle', 'graph', 'task')
+__all__ = ('GraphHandle', 'expose', 'forward_outputs', 'graph', 'par_map', 'task')
+
+# `compile_graph` is intentionally absent from `__all__` and from the
+# `aiida.engine.processes.graphs` and `aiida.engine` re-exports: it is the
+# core-only compilation entrypoint for the engine, shapes, IR, and test
+# helpers. User code validates with `GraphHandle.build`, which returns
+# `None`, and launches with `run`/`submit`.
 
 P = t.ParamSpec('P')
 R = t.TypeVar('R')
@@ -75,11 +107,6 @@ R = t.TypeVar('R')
 # Value forms the language rejects, with the guidance each carries. The key sets
 # are the unsupported list; anything missing here reports the generic fallback.
 _VALUE_REJECTIONS: dict[tuple[type[ast.expr], ...], str] = {
-    (ast.BoolOp, ast.Compare): (
-        'operators compute a new value, which only a task can create and record; '
-        + 'put this check in a task and use its result instead'
-    ),
-    (ast.IfExp,): 'an inline conditional evaluates Python instead of branching; write this as if and else instead',
     (ast.NamedExpr,): 'bindings must stay visible as wires; give it a name on its own line before the if instead',
     (ast.Subscript,): (
         'collections travel whole through ports and indexing is computation; '
@@ -103,8 +130,37 @@ _VALUE_REJECTIONS: dict[tuple[type[ast.expr], ...], str] = {
 }
 
 
+# Source operators lowering to fixed inline operations. Only these spellings run without a task:
+# `+`, `-`, `*`, `//`, `%`, comparisons, and unary `-`, `+`, `not`. Anything else stays a task call.
+# In-place updates reuse the same binary operators, so `/=`, `**=`, and shifts stay tasks.
+_BINARY_OPERATIONS: dict[type[ast.operator], OperationKind] = {
+    ast.Add: 'add',
+    ast.Sub: 'sub',
+    ast.Mult: 'mul',
+    ast.FloorDiv: 'floordiv',
+    ast.Mod: 'mod',
+}
+_COMPARISON_OPERATIONS: dict[type[ast.cmpop], OperationKind] = {
+    ast.Lt: 'lt',
+    ast.LtE: 'le',
+    ast.Gt: 'gt',
+    ast.GtE: 'ge',
+    ast.Eq: 'eq',
+    ast.NotEq: 'ne',
+}
+_UNARY_OPERATIONS: dict[type[ast.unaryop], OperationKind] = {
+    ast.USub: 'neg',
+    ast.UAdd: 'pos',
+    ast.Not: 'not',
+}
+
+
 class GraphHandle(t.Generic[P, R]):
-    """An importable source declaration that builds without executing its body."""
+    """An importable source declaration that builds without executing its body.
+
+    See :func:`graph` for the authoring contract and nested-helper composition.
+    Launch with ``run`` or ``submit``; ``build`` lowers the source early to surface diagnostics.
+    """
 
     def __init__(self, function: Callable[P, R]) -> None:
         self._definition: _SourceDefinition = _SourceDefinition.capture(function)
@@ -116,6 +172,10 @@ class GraphHandle(t.Generic[P, R]):
         msg = f'`{self.identifier}` declares a graph; launch it with `run` or `submit`.'
         raise GraphError(msg)
 
+    def alias(self, name: str) -> PlacementHandle[P, R]:
+        """Name a `par_map` placement of this graph; direct calls use `graph(...).alias(name)`."""
+        return PlacementHandle(self, name)
+
     @property
     def identifier(self) -> str:
         """Return the fully qualified name of the graph declaration."""
@@ -126,14 +186,15 @@ class GraphHandle(t.Generic[P, R]):
         """Return the declared function for the lowering pipeline."""
         return self._definition.function
 
-    def build(self) -> GraphIR:
-        """Lower the declaration once and return the cached template.
+    def build(self) -> None:
+        """Validate the declaration without executing it.
 
-        Lowering validates the source, so this raises its diagnostics early.
+        Checking raises the declaration diagnostics early. It runs no placement, stores no node, and creates no data;
+        use `run` or `submit` to execute. The validated template stays private to the implementation.
+
+        :return: `None`.
         """
-        if self._template is None:
-            self._template = _lower_graph(self, stack=())
-        return self._template
+        compile_graph(self)
 
     @property
     def process_class(self) -> type[GraphProcess]:
@@ -143,17 +204,67 @@ class GraphHandle(t.Generic[P, R]):
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
         """Validate graph arguments and prepare the declaration and provenance inputs.
 
+        Engine `Launchable` adapter consumed by `run`/`submit`; not an
+        authoring or inspection API. It serializes the compiled template into
+        the stored `graph` input alongside the `graph_inputs` namespace.
+
         Binds the function signature by name first, so every parameter arrives as a keyword.
-        Per-placement `CalcJob` options ride under `task_metadata`; standard `metadata` passes through.
+        Execution inputs ride under `runtime_config`; standard `metadata` passes through.
         """
-        # `task_metadata` carries per-placement `CalcJob` options, not graph inputs.
-        task_metadata = inputs.pop('task_metadata', None)
+        if 'task_metadata' in inputs:
+            msg = (
+                '`task_metadata` was replaced by `runtime_config`; '
+                "put task metadata under the placement's `metadata` key."
+            )
+            raise GraphValidationError(msg)
         metadata = inputs.pop('metadata', None)
+        protocol_record = None
+        if 'prepared_run' in inputs:
+            prepared = inputs.pop('prepared_run')
+            if inputs or not isinstance(prepared, PreparedRun):
+                msg = 'pass a PreparedRun without additional scientific inputs or execution channels.'
+                raise GraphValidationError(msg)
+            inputs = dict(prepared.inputs)
+            environment = prepared.execution_environment
+            runtime_config, execution_policy = environment.runtime_config, environment.execution_policy
+            protocol_record = {
+                'protocol': prepared.protocol,
+                'version': prepared.version,
+                'overrides': prepared.overrides,
+            }
+            explicit_channels = False
+        else:
+            explicit_channels = bool(inputs.keys() & {'execution_environment', 'runtime_config', 'execution_policy'})
+            if 'execution_environment' in inputs:
+                environment = inputs.pop('execution_environment')
+                if inputs.keys() & {'runtime_config', 'execution_policy'}:
+                    msg = 'execution_environment cannot be combined with runtime_config or execution_policy.'
+                    raise GraphValidationError(msg)
+                if not isinstance(environment, ExecutionEnvironment):
+                    msg = 'execution_environment must be an ExecutionEnvironment.'
+                    raise GraphValidationError(msg)
+                runtime_config, execution_policy = environment.runtime_config, environment.execution_policy
+            else:
+                runtime_config = inputs.pop('runtime_config', {})
+                execution_policy = inputs.pop('execution_policy', {})
+        if (
+            protocol_record is None
+            and 'inputs' in inputs
+            and (explicit_channels or 'inputs' not in inspect.signature(self.function).parameters)
+        ):
+            scientific = inputs.pop('inputs')
+            if not isinstance(scientific, Mapping):
+                msg = '`inputs` must be a mapping of workflow arguments.'
+                raise GraphValidationError(msg)
+            if inputs.keys() & scientific.keys():
+                msg = 'workflow arguments were supplied both through `inputs` and flattened keywords.'
+                raise GraphValidationError(msg)
+            inputs = {**scientific, **inputs}
         if isinstance(metadata, Mapping) and any(
             key != 'options' and isinstance(value, Mapping) and 'options' in value for key, value in metadata.items()
         ):
             msg = (
-                'per-placement options ride under `task_metadata`, keyed by placement name; '
+                'per-placement execution inputs ride under `runtime_config`, keyed by placement name; '
                 'standard keys (label, `store_provenance`, ...) go directly under `metadata`'
             )
             raise GraphValidationError(msg)
@@ -167,7 +278,9 @@ class GraphHandle(t.Generic[P, R]):
             for parameter in inspect.signature(self.function).parameters.values()
         ]
         bound = inspect.Signature(parameters).bind_partial(**inputs)
-        launch_inputs = GraphProcess._launch_inputs(self.build(), dict(bound.arguments), task_metadata=task_metadata)
+        launch_inputs = GraphProcess._launch_inputs(
+            compile_graph(self), dict(bound.arguments), runtime_config, execution_policy, protocol_record
+        )
         if metadata is not None:
             launch_inputs['metadata'] = metadata
         return launch_inputs
@@ -183,6 +296,11 @@ class _SourceDefinition:
     filename: str
     first_line: int
     hints: Mapping[str, t.Any]
+
+    @functools.cached_property
+    def symbols(self) -> _DeclarationNamespace:
+        """Resolve declaration references without exposing global values as graph inputs."""
+        return _DeclarationNamespace(getattr(self.function, '__globals__', {}), self.filename)
 
     @classmethod
     def capture(cls, function: Callable[..., t.Any]) -> _SourceDefinition:
@@ -208,6 +326,75 @@ class _SourceDefinition:
         )
 
 
+@dataclass
+class _DeclarationNamespace:
+    """A module's declarations, distinct from its ordinary Python variables."""
+
+    values: Mapping[str, t.Any]
+    filename: str
+    modules: dict[ModuleType, _DeclarationNamespace] = field(default_factory=dict)
+
+    @functools.cached_property
+    def aliases(self) -> set[str]:
+        """Exclude explicit global rebindings without guessing factory names from process names."""
+        linecache.checkcache(self.filename)
+        source = ''.join(linecache.getlines(self.filename))
+        try:
+            statements = ast.parse(source).body
+        except (SyntaxError, ValueError):
+            return set()
+        names: set[str] = set()
+        for statement in statements:
+            if isinstance(statement, ast.ImportFrom):
+                for alias in statement.names:
+                    name = alias.asname or alias.name
+                    if alias.asname not in (None, alias.name):
+                        names.add(name)
+                    else:
+                        names.discard(name)
+            elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                names.discard(statement.name)
+            elif isinstance(statement, ast.Assign) or (
+                isinstance(statement, ast.AnnAssign) and statement.value is not None
+            ):
+                targets = statement.targets if isinstance(statement, ast.Assign) else [statement.target]
+                bound = {target.id for target in targets if isinstance(target, ast.Name)}
+                names.update(bound)
+                value = statement.value
+                if isinstance(value, ast.Call) and (
+                    (isinstance(value.func, ast.Name) and value.func.id == 'task')
+                    or (isinstance(value.func, ast.Attribute) and value.func.attr == 'task')
+                ):
+                    names.difference_update(bound)
+        return names
+
+    def lookup(self, name: str) -> t.Any:
+        """Resolve a declaration by its own name, rejecting implicit placement aliases."""
+        target = self.values.get(name)
+        if isinstance(target, PlacementHandle):
+            msg = 'stored `.alias(...)` handles are not declarations; construct the alias inline at the call instead'
+            raise GraphLanguageError(msg)
+        if isinstance(target, (FunctionTaskHandle, GraphHandle)) or target is par_map:
+            valid = name == getattr(target, '__name__', name) and name not in self.aliases
+        elif isinstance(target, (CalcJobTaskHandle, WorkChainTaskHandle)):
+            valid = name not in self.aliases
+        else:
+            return target
+        if not valid:
+            msg = (
+                f'calls resolve by plain names to declarations; {name!r} is a global alias; '
+                "use `call(...).alias('name')` inline instead"
+            )
+            raise GraphLanguageError(msg)
+        return target
+
+    def module(self, module: ModuleType) -> _DeclarationNamespace:
+        """Share the declaration table of each qualified module reference."""
+        if module not in self.modules:
+            self.modules[module] = _DeclarationNamespace(vars(module), getattr(module, '__file__', '') or '')
+        return self.modules[module]
+
+
 @dataclass(frozen=True)
 class _Reference:
     """A parsed reference to a leaf or fixed input namespace."""
@@ -218,7 +405,24 @@ class _Reference:
 
 
 _CapturedValue: t.TypeAlias = '_Reference | int | float | str | bool | dict[str, _CapturedValue] | None'
-_ReferenceTree: t.TypeAlias = '_Reference | dict[str, _ReferenceTree]'
+
+
+@dataclass
+class _PartialBinding:
+    """A `partial` bound in one graph body, fixing some inputs of a task or graph.
+
+    The binding carries no placement: it records the ultimate target and the fixed
+    input values captured at declaration time. Each fixed value is a lowered
+    `_CapturedValue` holding declaration-time references, so later rebinding of the
+    same name cannot change it. Each use site merges these with its own arguments
+    into one ordinary placement; a `par_map` use fans out with the remaining input
+    as its element. `fixed` keys are top-level input names; namespace values nest.
+    """
+
+    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle
+    call_name: str
+    explicit: str | None
+    fixed: dict[str, _CapturedValue]
 
 
 @dataclass
@@ -227,12 +431,21 @@ class _LoweringState:
 
     definition: _SourceDefinition
     stack: tuple[str, ...]
-    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl | MapControl | InlineOperation] = field(
+        default_factory=list
+    )
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     input_shapes: dict[str, Shape] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
     used: Counter[str] = field(default_factory=Counter)
+    partials: dict[str, _PartialBinding] = field(default_factory=dict)
+    synthetic_fixed: dict[str, _CapturedValue] = field(default_factory=dict)
+    success_annotation: object = None
+    error_enums: frozenset[str] = frozenset()
+    return_outputs: dict[str, OutputTree] | None = None
+    return_error: tuple[str, str] | None = None
+    return_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
 
     @property
     def key(self) -> str:
@@ -295,9 +508,14 @@ def task(
 ) -> t.Any:
     """Register an importable task with static ports and fixed graph inputs.
 
-    Accepts a task function, a `CalcJob` subclass, or a `WorkChain` subclass; task inputs
-    wire task outputs and graph inputs alike. `CalcJob` tasks read their metadata from the
-    launch inputs instead.
+    A task is an independent, provenance-bearing calculation: each call runs as its own child
+    process and its outputs become stored nodes. Accepts a task function, a `CalcJob` subclass,
+    or a `WorkChain` subclass; task inputs wire task outputs and graph inputs alike. `CalcJob`
+    tasks read their metadata from the launch inputs instead.
+
+    Keep counters and predicates inline in the graph (see :func:`graph`) to avoid
+    a child process per check. Validation-only tasks returning ``None`` remain useful
+    when failure must stop the graph without replacing its scientific output.
 
     :param function: the function, `CalcJob` subclass, or `WorkChain` subclass to decorate.
     :param inputs: names and node types inside dynamic input namespaces of a process class,
@@ -343,6 +561,66 @@ def graph(function: Callable[..., t.Any] | None = None) -> t.Any:
     ... def add_twice(x: int, y: int) -> int:
     ...     first = add(x=x, y=y)
     ...     return add(x=first, y=y)
+
+    A `@task` is an independent, provenance-bearing calculation, while ordinary orchestration
+    -- arithmetic (``+ - * // %``), comparisons (``< <= > >= == !=``), and ``is None`` /
+    ``is not None`` / ``is Member`` branch tests -- belongs here directly, not in `@task`
+    boolean wrappers; each `@task` call is its own child process with its own nodes, so a
+    task per increment or comparison stores a node per check. The scientific result stays an
+    existing task output, while a validation-only task returning `None` stays legitimate.
+
+    Generic retry shape (default-seeded counter and short-circuiting member check)::
+
+        @task
+        def step(x: int, attempt: int) -> Result[int, MyErrors]:
+            ...
+
+        @task
+        def ensure(value: int | None) -> None:
+            if value is None:
+                raise ValueError('the step never succeeded.')
+
+        @graph
+        def retrying(x: int, limit: int, attempt: int = 0) -> int:
+            value, error = step(x=x, attempt=attempt).catch()
+            retry = error is MyErrors.RETRYABLE and attempt < limit
+            while retry:
+                attempt = attempt + 1
+                value, error = step(x=x, attempt=attempt).catch()
+                retry = error is MyErrors.RETRYABLE and attempt < limit
+            checked = ensure(value=value)
+            return value
+
+    The counter seeds from its default graph input (``attempt: int = 0``); scalar
+    literals can also initialize counters and flags without creating nodes.
+    ``and`` and ``or`` short-circuit boolean checks, so the budget is evaluated only
+    for the matching error member. The graph returns the step's stored output;
+    ``ensure`` only validates and creates no output nodes.
+
+    Shared orchestration composes through nested `@graph` helpers: the callee's placements
+    inline at the call site, so a helper returning an inline comparison costs no stored
+    nodes. Bind its result and branch on it::
+
+        @task
+        def advance(x: int) -> int:
+            ...
+
+        @graph
+        def within_budget(attempt: int, limit: int) -> bool:
+            return attempt < limit
+
+        @graph
+        def spending(x: int, limit: int) -> int:
+            value = advance(x=x)
+            ok = within_budget(attempt=value, limit=limit)
+            if ok:
+                value = advance(x=value)
+            return value
+
+    `ok` is orchestration state for the branch, not scientific data: returning it as the
+    root output would fail at run time, since root graph outputs must be existing task
+    outputs or graph inputs. Create a returned value in a `@task` and return that task's
+    output instead.
 
     A graph is launched like any other process, by passing it to ``run`` or ``submit``.
 
@@ -460,6 +738,12 @@ def _declare_graph_inputs(state: _LoweringState, function: ast.FunctionDef) -> N
     defaults = _parameter_defaults(state, function=function)
     boundary = namespace_shape_for(state.definition.hints, tuple(arg.arg for arg in parameters), defaults=defaults)
     for arg in parameters:
+        if arg.arg == 'partial':
+            msg = (
+                '`partial` is reserved for binding fixed inputs without an import, '
+                + 'so no graph input may take that name; rename the input instead'
+            )
+            _reject(state, node=arg, reason=msg)
         state.inputs[arg.arg] = []
         shape = boundary.select(arg.arg)
         state.input_shapes[arg.arg] = shape
@@ -471,22 +755,39 @@ def _lower_function(state: _LoweringState) -> GraphIR:
     """Lower one registered graph definition to a static template."""
     function = _parse_function(state.definition)
     _check_signature(state, function=function)
+    if 'return' not in state.definition.hints:
+        msg = (
+            'graph outputs are checked against the return annotation, so every graph declares one; '
+            + 'annotate the return, such as `-> int` or a `TypedDict`'
+        )
+        _reject(state, node=function, reason=msg)
     boundary = _declare_graph_inputs(state, function=function)
     statements = function.body
     if statements and isinstance(statements[0], ast.Expr) and isinstance(statements[0].value, ast.Constant):
         if isinstance(statements[0].value.value, str):
             statements = statements[1:]
-    if not statements or not isinstance(statements[-1], ast.Return):
+    annotation = state.definition.hints.get('return')
+    state.success_annotation, errors = _result_contract(annotation)
+    if state.success_annotation is t.Any:
+        msg = (
+            '`Any` declares no outputs, so the return cannot be checked against it; '
+            + 'annotate the outputs, such as `-> int` or a `TypedDict`'
+        )
+        _reject(state, node=function, reason=msg)
+    if errors:
+        state.error_enums = frozenset(
+            get_object_loader().identify_object(kind) for kind in _error_types(t.get_args(annotation)[1])
+        )
+    has_final = bool(statements and isinstance(statements[-1], ast.Return))
+    if not has_final and not _ends_in_return(statements):
         msg = (
             f'{state.key}: the final return declares the graph outputs, so without it the graph promises nothing; '
             + 'end the graph with a return declaring its outputs'
         )
         raise GraphLanguageError(msg)
-    for statement in statements[:-1]:
-        if isinstance(statement, ast.If):
-            _lower_branch(state, statement=statement)
-        elif isinstance(statement, ast.While):
-            _lower_loop(state, statement=statement)
+    for statement in statements[:-1] if has_final else statements:
+        if isinstance(statement, (ast.If, ast.While)):
+            _lower_control(state, statement)
         elif isinstance(statement, (ast.For, ast.AsyncFor)):
             msg = (
                 'the list of placements is fixed before anything runs, '
@@ -512,37 +813,117 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             and isinstance(statement.targets[0], ast.Tuple)
         ):
             _lower_unpack(state, statement=statement)
+        elif isinstance(statement, ast.Return):
+            _lower_early_return(state, statement)
         else:
             _lower_assignment(state, statement=statement)
-    result: ast.expr | None = statements[-1].value
-    if result is None:
-        msg = (
-            'graphs only pass along existing nodes, so a bare return with no value names nothing; '
-            + 'return must name a task or graph input; return placements, input leaves, or mappings'
-        )
-        _reject(state, node=statements[-1], reason=msg)
-    outputs, output_typehints = _lower_outputs(state, result=result)
+        if _ends_in_return([statement]):
+            has_final = False
+            break
+    outputs: dict[str, OutputTree] = {}
+    output_typehints: dict[str, tuple[type, ...]] = {}
+    if has_final:
+        returned = statements[-1]
+        assert isinstance(returned, ast.Return)
+        result = _return_expression(state, returned)
+        if result is not None:
+            outputs, output_typehints = _lower_outputs(state, result=result)
     return GraphIR(
         tasks=tuple(state.tasks),
-        dependencies=tuple(state.dependencies),
+        dependencies=_serial_dependencies(state),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=outputs,
         identifier=state.key,
         output_typehints=output_typehints,
         input_shape=boundary,
+        return_outputs=state.return_outputs,
+        return_error=state.return_error,
+        return_typehints=state.return_typehints,
     )
+
+
+def _result_constructor(state: _LoweringState, expression: ast.expr) -> object:
+    """Resolve a result wrapper by identity, respecting region-local bindings."""
+    if isinstance(expression, ast.Call):
+        base, parts = _attribute_path(expression.func)
+        if isinstance(base, ast.Name) and base.id not in state.names:
+            resolved = state.definition.symbols.values.get(base.id)
+            for part in parts:
+                resolved = getattr(resolved, part, None)
+            return resolved
+    return None
+
+
+def _return_expression(state: _LoweringState, statement: ast.Return) -> ast.expr | None:
+    """Unwrap a successful return or record the declared error at this site."""
+    result = statement.value
+    if result is None:
+        msg = (
+            'graphs only pass along existing nodes, so a bare return with no value names nothing; '
+            + 'return must name a task or graph input; return placements, input leaves, or mappings'
+        )
+        _reject(state, node=statement, reason=msg)
+    constructor = _result_constructor(state, result)
+    if not state.error_enums:
+        if constructor is Ok and isinstance(result, ast.Call):
+            if len(result.args) != 1 or result.keywords or not isinstance(result.args[0], ast.Dict):
+                _reject(state, node=result, reason='`Ok` graph returns must wrap an output mapping')
+            return result.args[0]
+        return result
+    if (
+        not isinstance(result, ast.Call)
+        or (constructor is not Ok and constructor is not Err)
+        or len(result.args) != 1
+        or result.keywords
+    ):
+        _reject(state, node=result, reason='Result returns need `Ok(...)` or `Err(...)` with one positional argument')
+    value = result.args[0]
+    if constructor is Ok:
+        return value
+    member = _resolve_enum_member(state, value)
+    if member is None or member[0] not in state.error_enums:
+        _reject(state, node=value, reason='Err must name a member of an exit-code enum declared in Result')
+    state.return_error = member
+    return None
+
+
+def _lower_early_return(state: _LoweringState, statement: ast.Return) -> None:
+    """Record the output endpoints or declared error for a region terminator."""
+    value = _return_expression(state, statement)
+    if value is not None:
+        state.return_outputs, state.return_typehints = _lower_outputs(state, result=value)
+
+
+def forward_outputs(source: object, /, *, exclude: tuple[str, ...]) -> dict[str, t.Any]:
+    """Forward selected fields from a static output namespace in a graph return mapping.
+
+    :param source: A reference to a task or nested graph's declared output namespace.
+    :param exclude: A tuple of literal names of immediate fields to omit.
+    :return: The remaining fields, referring to the original stored nodes.
+    :raises GraphLanguageError: If called outside a graph return mapping.
+    """
+    msg = '`forward_outputs` is only supported as a value in the final graph return mapping.'
+    raise GraphLanguageError(msg)
 
 
 def _lower_outputs(
     state: _LoweringState, result: ast.expr
 ) -> tuple[dict[str, OutputTree], dict[str, tuple[type, ...]]]:
-    """Lower the return statement to named endpoints and their type hints."""
-    hints = state.definition.hints
-    references = _lower_return(state, expression=result)
-    returned = shape_for_annotation(hints.get('return'))
-    outputs: dict[str, OutputTree] = {name: _endpoint_tree(reference) for name, reference in references.items()}
-    if len(outputs) == 1 and not isinstance(result, ast.Dict):
+    """Lower the return statement to named endpoints and their type hints, checked against the annotation."""
+    outputs = _lower_return(state, expression=result)
+    returned = _declared_return_shape(state.success_annotation)
+    mapping = isinstance(result, ast.Dict)
+    if len(outputs) == 1 and not mapping:
         outputs = {'result': next(iter(outputs.values()))}
+    _check_return_agreement(state, returned, outputs if mapping else outputs['result'], node=result, path='')
+    if mapping and isinstance(returned, NamespaceShape):
+        # One hint per top-level leaf, so `validate` checks each declared field type.
+        fields = dict(returned.fields)
+        return outputs, {
+            name: shape.types
+            for name, tree in outputs.items()
+            if isinstance(tree, Endpoint) and isinstance(shape := fields[name], LeafShape) and shape.types
+        }
     typehints: dict[str, tuple[type, ...]] = (
         {next(iter(outputs)): returned.types}
         if len(outputs) == 1
@@ -555,15 +936,94 @@ def _lower_outputs(
     return outputs, typehints
 
 
-def _endpoint_tree(reference: _ReferenceTree) -> OutputTree:
+def _declared_return_shape(annotation: object, *, required: bool = True) -> Shape:
+    """Return the output contract of a graph return annotation.
+
+    A `TypedDict` declares one field per key, also when nested, and `X | None` declares
+    `X` as optional, so structured annotations compare field by field with the return.
+    """
+    # `is_typeddict` narrows nothing for type checkers, so the TypedDict attributes read through `Any`.
+    bare: t.Any = t.get_args(annotation)[0] if t.get_origin(annotation) is t.Annotated else annotation
+    if is_typeddict(bare):
+        keys = bare.__required_keys__
+        hints = get_type_hints(bare)
+        return NamespaceShape(
+            fields=tuple((key, _declared_return_shape(hint, required=key in keys)) for key, hint in hints.items()),
+            required=required,
+        )
+    members = t.get_args(bare) if t.get_origin(bare) in (t.Union, UnionType) else ()
+    if type(None) in members and len(members) == 2:
+        declared = _declared_return_shape(next(member for member in members if member is not type(None)))
+        if isinstance(declared, NamespaceShape):
+            return replace(declared, required=False)
+    return shape_for_annotation(annotation, required=required)
+
+
+def _check_return_agreement(
+    state: _LoweringState, declared: Shape, tree: OutputTree, *, node: ast.AST, path: str
+) -> None:
+    """Reject a return whose outputs disagree with the fields its return annotation declares."""
+    if isinstance(tree, OptionalOutputNamespace):
+        tree = tree.fields
+    where = f'`{path}`' if path else 'the graph output'
+    if isinstance(declared, LeafShape):
+        if declared.types is None or dict in declared.types:
+            return  # unconstrained annotations and dynamic mappings declare no fields
+        if isinstance(tree, dict) or _is_namespace_endpoint(state, tree):
+            produced = ', '.join(f'`{name}`' for name in tree) if isinstance(tree, dict) else 'a namespace'
+            msg = (
+                f'the return annotation declares {where} as one value, so the return must produce one value there; '
+                + f'the return produces {produced}; return one value, or annotate those outputs with a `TypedDict`'
+            )
+            _reject(state, node=node, reason=msg)
+        return
+    assert isinstance(declared, NamespaceShape)
+    if isinstance(tree, Endpoint):
+        if _is_namespace_endpoint(state, tree):
+            # shortcut: an optional task namespace returns as one endpoint, so its keys are not compared here.
+            return
+        names = ', '.join(f'`{name}`' for name, _ in declared.fields)
+        msg = (
+            f'the return annotation declares {where} as outputs {names}, so the return must produce them; '
+            + 'the return produces one value; return a mapping of those outputs, or annotate one value'
+        )
+        _reject(state, node=node, reason=msg)
+    fields = dict(declared.fields)
+    for name, child in tree.items():
+        location = f'{path}.{name}' if path else name
+        if name not in fields:
+            msg = (
+                'the return annotation declares the graph outputs, so the return produces only those; '
+                + f'`{location}` is not declared; declare `{location}` in the annotation, or drop it from the return'
+            )
+            _reject(state, node=node, reason=msg)
+        _check_return_agreement(state, fields[name], child, node=node, path=location)
+    for name, shape in declared.fields:
+        location = f'{path}.{name}' if path else name
+        if name not in tree and shape.required:
+            msg = (
+                f'the return annotation declares output `{location}`, so the return must produce it; '
+                + f'the return omits `{location}`; return `{location}`, or mark it `NotRequired`'
+            )
+            _reject(state, node=node, reason=msg)
+
+
+def _is_namespace_endpoint(state: _LoweringState, endpoint: Endpoint) -> bool:
+    """Return whether an endpoint regroups a whole task output namespace instead of naming one leaf."""
+    task = next((task for task in state.tasks if task.name == endpoint.task), None)
+    return task is not None and isinstance(_port_at(task.output_ports(), endpoint.port), PortNamespace)
+
+
+def _endpoint_tree(reference: _Reference, *, preserve_optional_namespaces: bool = False) -> OutputTree:
     """Expand a leaf or namespace reference to endpoints regrouping existing nodes.
 
     Namespaces regroup their existing leaves instead of creating data; every leaf
     keeps its stored node, so workflows return but never create data.
     """
-    if isinstance(reference, dict):
-        return {name: _endpoint_tree(item) for name, item in reference.items()}
     if isinstance(reference.shape, NamespaceShape):
+        if preserve_optional_namespaces and not reference.shape.required and reference.task and reference.port:
+            # A missing whole arm must not turn into an empty mapping at an invocation boundary.
+            return Endpoint(task=reference.task, port=reference.port)
         return {name: _endpoint_tree(field) for name, field in _fields(reference).items()}
     return Endpoint(task=reference.task, port=reference.port)
 
@@ -577,7 +1037,7 @@ def _fields(reference: _Reference) -> dict[str, _Reference]:
     }
 
 
-def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _ReferenceTree]:
+def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, OutputTree]:
     """Return a leaf reference, a namespace reference, or a nested mapping of those."""
     if isinstance(expression, ast.Dict):
         lowered = _lower_return_value(state, expression)
@@ -590,16 +1050,17 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
         msg = 'graphs return existing nodes rather than creating data; ' + 'return a task output or graph input instead'
         _reject(state, node=expression, reason=msg)
     assert isinstance(reference, _Reference)
+    _reject_const_return(state, reference, node=expression)
     if isinstance(reference.shape, NamespaceShape):
-        return {'result': reference}
+        return {'result': _endpoint_tree(reference, preserve_optional_namespaces=True)}
     port = reference.port.split('.')[-1]
-    return {port: reference}
+    return {port: _endpoint_tree(reference)}
 
 
-def _lower_return_value(state: _LoweringState, expression: ast.expr) -> _ReferenceTree:
+def _lower_return_value(state: _LoweringState, expression: ast.expr) -> OutputTree:
     """Lower one output mapping value to a leaf, a namespace, or a nested mapping."""
     if isinstance(expression, ast.Dict):
-        nested: dict[str, _ReferenceTree] = {}
+        nested: dict[str, OutputTree] = {}
         for key, value in zip(expression.keys, expression.values, strict=True):
             if not isinstance(key, ast.Constant) or not isinstance(key.value, str) or not key.value.isidentifier():
                 msg = (
@@ -612,19 +1073,125 @@ def _lower_return_value(state: _LoweringState, expression: ast.expr) -> _Referen
                 _reject(state, node=expression, reason=msg)
             nested[key.value] = _lower_return_value(state, value)
         return nested
+    if isinstance(expression, ast.Call) and _calls_intrinsic(state, expression, forward_outputs):
+        return _lower_forward_outputs(state, expression)
     reference = _lower_value(state, expression, allow_call=True)
     if not isinstance(reference, _Reference):
         msg = 'graphs return existing nodes rather than creating data; ' + 'return a task output or graph input instead'
         _reject(state, node=expression, reason=msg)
     assert isinstance(reference, _Reference)
-    return reference
+    _reject_const_return(state, reference, node=expression)
+    return _endpoint_tree(reference, preserve_optional_namespaces=True)
+
+
+def _calls_intrinsic(state: _LoweringState, node: ast.Call, intrinsic: object) -> bool:
+    """Recognize a graph intrinsic by declaration identity, also through a module."""
+    try:
+        target, _ = _resolve_base(state, node.func)
+    except GraphLanguageError:
+        return False
+    return target is intrinsic
+
+
+def _lower_forward_outputs(state: _LoweringState, call: ast.Call) -> OutputTree:
+    """Resolve a static selection to the original fields' output endpoints."""
+    if len(call.args) != 1 or len(call.keywords) != 1 or call.keywords[0].arg != 'exclude':
+        _reject(state, node=call, reason='use `forward_outputs(source, exclude=(...))`')
+    excluded = call.keywords[0].value
+    if not isinstance(excluded, ast.Tuple):
+        _reject(state, node=excluded, reason='`exclude` must be a tuple of literal field names')
+    if not isinstance(call.args[0], (ast.Name, ast.Attribute, ast.Subscript)):
+        _reject(state, node=call, reason='`forward_outputs` requires a reference to a static output namespace')
+    source = _lower_value(state, call.args[0])
+    if not isinstance(source, _Reference) or source.task is None or not isinstance(source.shape, NamespaceShape):
+        _reject(state, node=call, reason='`forward_outputs` requires a reference to a static output namespace')
+    fields = _fields(source)
+    names: set[str] = set()
+    for item in excluded.elts:
+        if not isinstance(item, ast.Constant) or not isinstance(item.value, str):
+            _reject(state, node=item, reason='`exclude` must be a tuple of literal field names')
+        name = item.value
+        if name in names:
+            _reject(state, node=item, reason=f'duplicate exclusion {name!r}')
+        if name not in fields:
+            _reject(state, node=item, reason=f'unknown immediate output field {name!r}')
+        names.add(name)
+    selected = {name: field for name, field in fields.items() if name not in names}
+    if not selected:
+        _reject(state, node=call, reason='`forward_outputs` must retain at least one field')
+    ports = next(task.output_ports() for task in state.tasks if task.name == source.task)
+    return _forwarded_namespace(source, selected, optional=not _ancestry_required(ports, source.port))
+
+
+def _forwarded_namespace(source: _Reference, fields: dict[str, _Reference], *, optional: bool = False) -> OutputTree:
+    """Regroup selected endpoints, retaining the presence of each optional namespace."""
+    nested = {
+        name: (
+            _forwarded_namespace(field, _fields(field))
+            if isinstance(field.shape, NamespaceShape)
+            else Endpoint(task=field.task, port=field.port)
+        )
+        for name, field in fields.items()
+    }
+    if optional or not source.shape.required:
+        return OptionalOutputNamespace(Endpoint(task=source.task, port=source.port), nested)
+    return nested
+
+
+def _is_inline_operation(value: ast.expr) -> bool:
+    """Return whether an assignment value computes an inline operation rather than a literal."""
+    if isinstance(value, (ast.BinOp, ast.Compare)):
+        return True
+    if not isinstance(value, ast.UnaryOp):
+        return False
+    try:
+        ast.literal_eval(value)
+    except (ValueError, TypeError):
+        return True
+    return False
+
+
+def _lower_augmented(state: _LoweringState, statement: ast.AugAssign, *, rebind: bool) -> str:
+    """Lower an in-place update to a rebinding through the matching inline operation."""
+    if not rebind:
+        msg = (
+            'the body declares a template and never executes, so only calls, branches, and loops belong here; '
+            + 'this statement is not supported here; move it into a task instead'
+        )
+        _reject(state, node=statement, reason=msg)
+    if not isinstance(statement.target, ast.Name):
+        msg = (
+            'each line wires one placement, so targets cannot nest or repeat; '
+            + 'assign to a plain name instead, one per line'
+        )
+        _reject(state, node=statement, reason=msg)
+    operation = _BINARY_OPERATIONS.get(type(statement.op))
+    if operation is None:
+        _reject(state, node=statement, reason=_unsupported_operation_reason())
+    target = statement.target.id
+    if target not in state.names:
+        msg = (
+            'names only exist after a call or an input introduces them; '
+            + f'{target!r} is not known here; assign it on an earlier line instead'
+        )
+        _reject(state, node=statement.target, reason=msg)
+    reference = _place_operation(
+        state,
+        operation=operation,
+        operands=(state.names[target], _lower_operand(state, statement.value)),
+        node=statement,
+    )
+    state.names[target] = reference
+    return target
 
 
 def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: bool = False) -> str:
-    """Bind a call result to new placement names."""
+    """Bind a call or inline operation result to new placement names."""
     if isinstance(statement, ast.AnnAssign):
         msg = 'drop the annotation; types come from the task or input instead'
         _reject(state, node=statement, reason=msg)
+    if isinstance(statement, ast.AugAssign):
+        return _lower_augmented(state, statement=statement, rebind=rebind)
     if not isinstance(statement, ast.Assign) or not statement.targets:
         msg = (
             'the body declares a template and never executes, so only calls, branches, and loops belong here; '
@@ -639,6 +1206,18 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
         )
         _reject(state, node=statement, reason=msg)
     for name in names:
+        if name == 'partial':
+            msg = (
+                '`partial` is reserved for binding fixed inputs without an import, '
+                + 'so it cannot name a placement or binding; pick another name instead'
+            )
+            _reject(state, node=statement, reason=msg)
+        if name in state.partials and not rebind:
+            msg = (
+                'each placement is stored once under its name, so names cannot be reused; '
+                + f'{name!r} already binds a `partial`; assign each result a new name instead of reusing one'
+            )
+            _reject(state, node=statement, reason=msg)
         if name in state.names and not rebind:
             if name in state.input_shapes:
                 msg = (
@@ -651,10 +1230,30 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
                 + 'assign each result a new name instead of reusing one'
             )
             _reject(state, node=statement, reason=msg)
-    if not isinstance(statement.value, ast.Call):
-        ref = _lower_alias(state, statement)
+    value = statement.value
+    if isinstance(value, ast.Call) and _is_partial_call(state, value):
+        if len(names) != 1:
+            msg = (
+                'a `partial` binds fixed inputs without running anything, so it takes one name; '
+                + 'bind it to one name instead'
+            )
+            _reject(state, node=statement, reason=msg)
+        _bind_partial(state, name=names[0], node=value)
+        return names[0]
+    if isinstance(value, ast.Call):
+        ref: _Reference = _lower_call(state, expression=value)
+    elif _is_inline_operation(value):
+        assert isinstance(value, (ast.BinOp, ast.Compare, ast.UnaryOp))
+        ref = _lower_operation(state, node=value)
     else:
-        ref = _lower_call(state, expression=statement.value)
+        # A plain name or dotted field aliases an existing wire (structured outputs
+        # bind whole namespaces this way); a scalar literal binds ephemeral control state.
+        reference = _lower_value(state, value)
+        if isinstance(reference, _Reference):
+            for name in names:
+                state.names[name] = reference
+            return names[0]
+        ref = _place_constant(state, value=reference, node=value)
     for name in names:
         state.names[name] = ref
     return names[0]
@@ -677,7 +1276,11 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool 
     target: ast.expr = statement.targets[0]
     assert isinstance(target, ast.Tuple)
     names: list[str] = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
-    if not names or len(names) != len(target.elts) or (not rebind and any(name in state.names for name in names)):
+    if (
+        not names
+        or len(names) != len(target.elts)
+        or (not rebind and any(name in state.names or name in state.partials for name in names))
+    ):
         msg = (
             'unpacking maps positions to declared output ports, so every element needs a fresh name; '
             + 'give each unpacked output a new name instead'
@@ -685,11 +1288,16 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool 
         _reject(state, node=statement, reason=msg)
     if not isinstance(statement.value, ast.Call):
         msg = (
-            'only calls are recorded as work; plain values would run without leaving a trace; '
-            + 'each line must call a task or graph instead'
+            'unpacking maps positions to declared output ports, so only a multi-output call unpacks; '
+            + 'call a task or graph with one output per name instead'
         )
         _reject(state, node=statement.value, reason=msg)
-    ref: _Reference = _lower_call(state, expression=statement.value)
+    call = statement.value
+    if _invocation_receiver(call, 'catch') is not None and (
+        len(statement.targets) != 1 or len(names) != 2 or (names[0] == names[1] and names[0] != '_')
+    ):
+        _reject(state, node=target, reason='`.catch()` must unpack into exactly two names')
+    ref = _lower_call(state, expression=call, unpack=True)
     if not isinstance(ref.shape, NamespaceShape):
         if len(names) == 1:
             state.names[names[0]] = ref
@@ -706,7 +1314,8 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool 
     for name, (field_name, field_shape) in zip(names, fields):
         # `_` discards its arm: it never becomes a wire, so regions never route it.
         if name != '_':
-            state.names[name] = _Reference(ref.task, port=field_name, shape=field_shape)
+            port = f'{ref.port}.{field_name}' if ref.port else field_name
+            state.names[name] = _Reference(ref.task, port=port, shape=field_shape)
 
 
 def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
@@ -790,6 +1399,8 @@ def _single_assign_target(statement: ast.stmt) -> str | None:
     """Return the assigned plain name, or `None` for other statements."""
     if isinstance(statement, ast.Assign) and len(statement.targets) == 1 and isinstance(statement.targets[0], ast.Name):
         return statement.targets[0].id
+    if isinstance(statement, ast.AugAssign) and isinstance(statement.target, ast.Name):
+        return statement.target.id
     return None
 
 
@@ -831,18 +1442,156 @@ def _rekey_alias(arm: _Arm, port: str) -> _Arm:
     return arm._replace(body=replace(arm.body, outputs={port: endpoint}))
 
 
-def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
-    """Lower an if statement to a branch control task, returning the exposed wire."""
-    _check_branch_shape(state, statement=statement)
-    test: ast.expr = statement.test
-    if isinstance(test, ast.Call):
-        test = _bind_call_condition(state, test=test)
-    condition_test: t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'] = 'truthy'
+def _fresh_wire(state: _LoweringState, base: str) -> str:
+    """Return a wire name unused by any enclosing binding."""
+    name = base
+    count = 2
+    while name in state.names:
+        name = f'{base}_{count}'
+        count += 1
+    return name
+
+
+def _lower_bool_operand(state: _LoweringState, expression: ast.expr, *, op: str) -> _Reference:
+    """Lower one `and`/`or` operand to a boolean reference, rejecting non-boolean values.
+
+    Python returns the operand itself (`1 and 2` gives `2`); graphs have no such values, so
+    every operand must statically read as a boolean instead.
+    """
+    if isinstance(expression, ast.BoolOp):
+        return _lower_boolop(state, node=expression)
+    if isinstance(expression, ast.Call):
+        reference = _lower_call(state, expression=expression)
+    elif isinstance(expression, (ast.BinOp, ast.Compare, ast.UnaryOp)):
+        reference = _lower_operation(state, node=expression)
+    else:
+        lowered = _lower_value(state, expression)
+        if not isinstance(lowered, _Reference):
+            if not isinstance(lowered, bool):
+                msg = (
+                    f'boolean `{op}` combines true/false values, so operands must be boolean; '
+                    + 'compare values or call a task returning a boolean instead'
+                )
+                _reject(state, node=expression, reason=msg)
+            return _place_constant(state, value=lowered, node=expression)
+        reference = lowered
+    if not _is_bool_reference(reference):
+        msg = (
+            f'boolean `{op}` combines true/false values, so operands must be boolean; '
+            + 'compare values or call a task returning a boolean instead'
+        )
+        _reject(state, node=expression, reason=msg)
+    return reference
+
+
+def _combine_bool(state: _LoweringState, op: str, left: ast.expr, right: ast.expr, node: ast.BoolOp) -> _Reference:
+    """Lower one `and`/`or` pair to a branch selecting the joined boolean.
+
+    The right side lowers inside the taken arm, so it never runs when skipped: `and` evaluates
+    it only when the left side holds, `or` only when it does not. Presence and member tests on
+    the left stay branch tests instead of values, reusing the same selection machinery. The left
+    side lowers before the joined wire is claimed, so a nested combination never reuses the
+    outer alias for its inner branch.
+    """
+    if _match_none_test(left) is None and _match_member_test(state, left) is None:
+        # A computed left side wires through an alias the branch test reads; claim the alias only
+        # after lowering the left side so nested combinations claim distinct wires.
+        lowered = _lower_bool_operand(state, left, op=op)
+        armed = _fresh_wire(state, 'conjunction')
+        state.names[armed] = lowered
+        test: ast.expr = ast.Name(id=armed, ctx=ast.Load())
+        ast.copy_location(test, left)
+    else:
+        armed = _fresh_wire(state, 'conjunction')
+        test = left
+    taken: ast.expr = right
+    skipped: ast.expr = ast.Constant(value=op == 'or')
+    ast.copy_location(skipped, node)
+    if op == 'and':
+        body, orelse = taken, skipped
+    else:
+        body, orelse = skipped, taken
+    statement = ast.If(
+        test=test,
+        body=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=body)],
+        orelse=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=orelse)],
+    )
+    ast.copy_location(statement, node)
+    ast.fix_missing_locations(statement)
+    _lower_branch(state, statement=statement)
+    if not _is_bool_reference(state.names[armed]):
+        # Alias arms carry the right side through unchecked, so a non-boolean right side only
+        # shows up in the joined shape here; reject it with the operator diagnostic instead of a
+        # downstream condition or contract failure.
+        msg = (
+            f'boolean `{op}` combines true/false values, so operands must be boolean; '
+            + 'compare values or call a task returning a boolean instead'
+        )
+        _reject(state, node=node, reason=msg)
+    return state.names[armed]
+
+
+def _lower_boolop(state: _LoweringState, node: ast.BoolOp) -> _Reference:
+    """Lower an `and`/`or` chain to left-folded branch selections, returning the joined boolean."""
+    op = 'and' if isinstance(node.op, ast.And) else 'or'
+    combined = _combine_bool(state, op, node.values[0], node.values[1], node)
+    for extra in node.values[2:]:
+        alias = _fresh_wire(state, 'conjunction')
+        state.names[alias] = combined
+        name = ast.Name(id=alias, ctx=ast.Load())
+        ast.copy_location(name, node)
+        combined = _combine_bool(state, op, name, extra, node)
+    return combined
+
+
+def _lower_ifexp(state: _LoweringState, node: ast.IfExp) -> _Reference:
+    """Lower a conditional expression to a branch selecting one arm, returning the joined wire.
+
+    Only the taken arm ever runs: each arm lowers inside its own region, so task calls there
+    become placements of the taken side alone. Both arms must expose the same wire.
+    """
+    armed = _fresh_wire(state, 'conditional')
+    statement = ast.If(
+        test=node.test,
+        body=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=node.body)],
+        orelse=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=node.orelse)],
+    )
+    ast.copy_location(statement, node)
+    ast.fix_missing_locations(statement)
+    _lower_branch(state, statement=statement)
+    return state.names[armed]
+
+
+_ConditionTest: t.TypeAlias = t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member']
+
+
+def _lower_branch_condition(
+    state: _LoweringState, test: ast.expr
+) -> tuple[ast.expr, _ConditionTest, tuple[str, str] | None]:
+    """Prepare a condition and its runtime dispatch mode."""
+    original = test
+    if isinstance(test, (ast.Call, ast.BoolOp, ast.IfExp)):
+        test = _bind_test_condition(state, test=test)
+    condition_test: _ConditionTest = 'truthy'
     condition_member: tuple[str, str] | None = None
     if (none_test := _match_none_test(test)) is not None:
         test, condition_test = none_test
     elif (matched := _match_member_test(state, test)) is not None:
         test, condition_test, condition_member = matched
+        shape = _probe_shape(state, test)
+        if isinstance(shape, LeafShape) and shape.error_enums and condition_member[0] not in shape.error_enums:
+            _reject(state, node=original, reason='this enum is not declared by the captured invocation')
+    elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp)):
+        # Numeric inline operations bind to a fresh boolean wire; `is`/`is not`
+        # presence and member tests above must win over this numeric path.
+        test = _bind_test_condition(state, test=test)
+    return test, condition_test, condition_member
+
+
+def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
+    """Lower an if statement to a branch control task, returning the exposed wire."""
+    _check_branch_shape(state, statement=statement)
+    test, condition_test, condition_member = _lower_branch_condition(state, statement.test)
     first = _lower_arm(state, statements=statement.body)
     if statement.orelse:
         second = _lower_arm(state, statements=statement.orelse)
@@ -876,7 +1625,9 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
     # Namespace arms expose their fields at the branch root, so the carried
     # name restarts at the whole branch namespace instead of the call port.
     carried = '' if _is_namespace_arm(first) or _is_namespace_arm(second) else port or selected.port
-    state.names[first.name] = _Reference(instance, port=carried, shape=selected.shape)
+    merged = merge_branch_shape(selected.shape, second.child.names[second.name].shape)
+    # Incompatible arms retain the existing validation path, including boolean diagnostics.
+    state.names[first.name] = _Reference(instance, port=carried, shape=merged if merged is not None else selected.shape)
     return first.name
 
 
@@ -935,6 +1686,56 @@ def _match_member_test(
     return None
 
 
+def _is_supported_predicate(state: _LoweringState, expression: ast.expr) -> bool:
+    """Return whether an expression is a supported presence or member test, optionally negated.
+
+    Only the already-supported `is None`, `is not None`, and declared error-member forms count;
+    arbitrary `x is y` identities never do. A leading `not` inverts the boolean without changing
+    which identities are supported, so `not (value is None)` counts while `not flag` does not.
+    """
+    if _match_none_test(expression) is not None:
+        return True
+    if _match_member_test(state, expression) is not None:
+        return True
+    if isinstance(expression, ast.UnaryOp) and isinstance(expression.op, ast.Not):
+        return _is_supported_predicate(state, expression.operand)
+    return False
+
+
+def _lower_predicate_value(state: _LoweringState, expression: ast.expr, node: ast.AST) -> _Reference | None:
+    """Lower a presence or member test to an ephemeral boolean control value, or return `None`.
+
+    The test reuses the branch selection machinery to choose between `True` and `False`, so the
+    joined wire reads as a boolean without running any task. `None` means the expression is no
+    supported predicate and the caller falls through to its usual rejection.
+    """
+    if isinstance(expression, ast.UnaryOp) and isinstance(expression.op, ast.Not):
+        if not _is_supported_predicate(state, expression.operand):
+            return None
+        inner = _lower_predicate_value(state, expression.operand, node=expression.operand)
+        assert inner is not None
+        return _place_operation(state, operation='not', operands=(inner,), node=node)
+    matched_none = _match_none_test(expression)
+    matched_member = None if matched_none is not None else _match_member_test(state, expression)
+    if matched_none is None and matched_member is None:
+        return None
+    armed = _fresh_wire(state, 'predicate')
+    test = copy.deepcopy(expression)
+    taken: ast.expr = ast.Constant(value=True)
+    skipped: ast.expr = ast.Constant(value=False)
+    ast.copy_location(taken, node)
+    ast.copy_location(skipped, node)
+    statement = ast.If(
+        test=test,
+        body=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=taken)],
+        orelse=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=skipped)],
+    )
+    ast.copy_location(statement, node)
+    ast.fix_missing_locations(statement)
+    _lower_branch(state, statement=statement)
+    return state.names[armed]
+
+
 def _reject_unknown_member(state: _LoweringState, left: ast.expr, right: ast.expr) -> None:
     """Reject a wire compared against a name that is no declared enum member."""
     for value, other in ((left, right), (right, left)):
@@ -966,7 +1767,7 @@ def _enum_base(state: _LoweringState, node: ast.Attribute) -> type | None:
     base, _ = _attribute_path(node)
     if not isinstance(base, ast.Name) or base.id in state.names:
         return None
-    resolved = state.definition.function.__globals__.get(base.id)
+    resolved = state.definition.symbols.values.get(base.id)
     return resolved if isinstance(resolved, type) and issubclass(resolved, enum.Enum) else None
 
 
@@ -975,7 +1776,7 @@ def _known_name(state: _LoweringState, node: ast.expr) -> bool:
     base, _ = _attribute_path(node)
     if not isinstance(base, ast.Name):
         return True
-    return base.id in state.names or base.id in state.definition.function.__globals__
+    return base.id in state.names or base.id in state.definition.symbols.values
 
 
 def _resolve_enum_member(state: _LoweringState, node: ast.expr) -> tuple[str, str] | None:
@@ -985,7 +1786,7 @@ def _resolve_enum_member(state: _LoweringState, node: ast.expr) -> tuple[str, st
     if not isinstance(base, ast.Name) or base.id in state.names:
         return None
     try:
-        resolved: t.Any = state.definition.function.__globals__[base.id]
+        resolved: t.Any = state.definition.symbols.values[base.id]
         for part in parts:
             resolved = getattr(resolved, part)
     except (KeyError, AttributeError):
@@ -1021,7 +1822,11 @@ def _check_arms_agree(state: _LoweringState, statement: ast.If, first: _Arm, sec
             + 'both sides must share one new name instead'
         )
         _reject(state, node=statement, reason=msg)
-    if _CONDITION_PORT in first.body.inputs or _CONDITION_PORT in second.body.inputs:
+    _check_condition_port(state, statement, first.body, second.body)
+
+
+def _check_condition_port(state: _LoweringState, statement: ast.If, *arms: GraphIR) -> None:
+    if any(_CONDITION_PORT in arm.inputs for arm in arms):
         msg = (
             'the condition travels on a reserved port, so a body input with that name would collide; '
             + 'condition conflicts with a branch input; rename one of them'
@@ -1035,8 +1840,14 @@ def _wire_branch_inputs(
     """Wire the condition and the region inputs into a branch placement."""
     given: dict[str, _CapturedValue] = {}
     _wire(state, instance=instance, port=_CONDITION_PORT, value=_lower_value(state, test), given=given)
+    for side in (first, second):
+        for name in side.child.inputs:
+            if name in side.child.synthetic_fixed:
+                _wire_fixed_value(state, instance, name, side.child.synthetic_fixed[name], given)
     read = {path.split('.')[0] for side in (first, second) for path in side.child.inputs}
     for name in sorted(read):
+        if any(name in side.child.synthetic_fixed for side in (first, second)):
+            continue
         _wire(state, instance=instance, port=name, value=state.names[name], given=given)
     return given
 
@@ -1050,6 +1861,8 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
         elif isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
             # A `_` element discards its arm, so it never carries across iterations.
             assigned.update(elt.id for elt in node.targets[0].elts if isinstance(elt, ast.Name) and elt.id != '_')
+        elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
+            assigned.add(node.target.id)
         elif isinstance(node, ast.If):
             assigned.update(_body_state_names([*node.body, *node.orelse]))
         elif isinstance(node, ast.While):
@@ -1057,16 +1870,144 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
     return assigned
 
 
+def _has_region_return(statements: list[ast.stmt]) -> bool:
+    """Find returns without crossing an unsupported construct or a declaration."""
+    return any(
+        isinstance(node, ast.Return)
+        or (isinstance(node, (ast.If, ast.While)) and _has_region_return([*node.body, *node.orelse]))
+        for node in statements
+    )
+
+
+def _ends_in_return(statements: list[ast.stmt]) -> bool:
+    """Whether there is no path from the region entry to its join."""
+    return any(
+        isinstance(node, ast.Return)
+        or (isinstance(node, ast.If) and _ends_in_return(node.body) and _ends_in_return(node.orelse))
+        for node in statements
+    )
+
+
+def _serial_dependencies(state: _LoweringState) -> tuple[Dependency, ...]:
+    """Order consecutive placements that aren't already connected by a value wire."""
+    connected = {(edge.source, edge.target) for edge in state.dependencies}
+    return (
+        *state.dependencies,
+        *(
+            Dependency(prior.name, target=following.name)
+            for prior, following in pairwise(state.tasks)
+            if (prior.name, following.name) not in connected
+        ),
+    )
+
+
+def _lower_control(state: _LoweringState, statement: ast.If | ast.While) -> None:
+    """Lower a control statement to a placement."""
+    if isinstance(statement, ast.While):
+        _lower_loop(state, statement)
+    elif _has_region_return([statement]):
+        _lower_returning_branch(state, statement)
+    else:
+        _lower_branch(state, statement)
+
+
+def _lower_region_statements(state: _LoweringState, statements: list[ast.stmt]) -> set[str]:
+    """Lower a region sequence, tracking bindings reaching its end."""
+    written: set[str] = set()
+    for statement in statements:
+        if isinstance(statement, (ast.If, ast.While)):
+            prior = dict(state.names)
+            _lower_control(state, statement)
+            written.update(
+                name for name in _body_state_names([statement]) if prior.get(name) is not state.names.get(name)
+            )
+        elif isinstance(statement, ast.Return):
+            _lower_early_return(state, statement)
+        elif (
+            isinstance(statement, ast.Assign)
+            and len(statement.targets) == 1
+            and isinstance(statement.targets[0], ast.Tuple)
+        ):
+            _lower_unpack(state, statement, rebind=True)
+            written.update(_body_state_names([statement]))
+        else:
+            _lower_assignment(state, statement, rebind=True)
+            written.update(_body_state_names([statement]))
+        if _ends_in_return([statement]):
+            break
+    return written
+
+
+def _lower_returning_branch(state: _LoweringState, statement: ast.If) -> None:
+    """Lower a branch with nonlocal returns, merging only the continuing arms."""
+    test, condition_test, condition_member = _lower_branch_condition(state, statement.test)
+    children = [_collect_region_inputs(state, arm) for arm in (statement.body, statement.orelse)]
+    writes = [
+        _lower_region_statements(child, arm)
+        for child, arm in zip(children, (statement.body, statement.orelse), strict=True)
+    ]
+    continues = [not _ends_in_return(arm) for arm in (statement.body, statement.orelse)]
+    joined = sorted({name for names, live in zip(writes, continues, strict=True) if live for name in names})
+    instance = _claim_name(state, f'branch_{len(state.tasks) + 1}')
+    given: dict[str, _CapturedValue] = {}
+    _wire(state, instance=instance, port=_CONDITION_PORT, value=_lower_value(state, test), given=given)
+    arms: list[GraphIR] = []
+    bindings: dict[str, _Reference] = {}
+    for child, live in zip(children, continues, strict=True):
+        outputs: dict[str, _Reference] = {}
+        if live:
+            for name in joined:
+                if name not in child.names:
+                    if name not in state.names:
+                        _reject(state, node=statement, reason=f'each continuing arm must provide `{name}`')
+                    ref = state.names[name]
+                    child.inputs[name] = []
+                    child.input_shapes[name] = ref.shape
+                    child.names[name] = _Reference(None, port=name, shape=ref.shape)
+                outputs[name] = child.names[name]
+                bindings.setdefault(name, _Reference(instance, port=name, shape=outputs[name].shape))
+        arms.append(_lower_region_body(child, outputs))
+    _check_condition_port(state, statement, *arms)
+    read = {path.split('.')[0] for child in children for path in child.inputs}
+    for name in sorted(read):
+        _wire(state, instance=instance, port=name, value=state.names[name], given=given)
+    state.tasks.append(
+        BranchControl(
+            name=instance,
+            inputs=given,
+            body=arms[0],
+            otherwise=arms[1],
+            condition_test=condition_test,
+            condition_member=condition_member,
+        )
+    )
+    state.names.update(bindings)
+
+
 def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     """Lower a while statement to a resumable loop control task."""
     body: list[ast.stmt] = list(statement.body)
+    terminal = _ends_in_return(body)
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
-        test = _bind_call_condition(state, test=test)
+        test = _bind_test_condition(state, test=test)
         update = ast.Assign(targets=[ast.Name(id=test.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
-        body.append(update)
+        if not terminal:
+            body.append(update)
+    elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp, ast.BoolOp, ast.IfExp)) and (
+        _identity_compare(test) is None or _is_supported_predicate(state, test)
+    ):
+        # Inline conditions bind to a boolean wire and recompute each pass, including supported
+        # presence and member predicates, which lower to ephemeral boolean control values; other
+        # `is`/`is not` identities stay rejected when the binding lowers them.
+        test = _bind_test_condition(state, test=test)
+        update = ast.Assign(targets=[ast.Name(id=test.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
+        ast.copy_location(update, statement.test)
+        ast.copy_location(update.targets[0], statement.test)
+        if not terminal:
+            body.append(update)
     if statement.orelse or not isinstance(test, ast.Name) or test.id not in state.names:
         msg = (
             'the loop runs again from one stored true/false value each pass and has no other exit; '
@@ -1078,42 +2019,98 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     # Loop state is read from the previous iteration, including values rebound in the body.
     # Branches in the body assign loop state through their arms, and nested loops through
     # their own state, so both join it; every name still starts from an enclosing binding.
-    assigned = _body_state_names(body)
+    assigned = {condition} if terminal else _body_state_names(body)
+    live = _loop_live_in(state, body)
+    carried: set[str] = set()
     for name in assigned:
+        if name != condition and name not in live and name not in state.names:
+            # Iteration-local: declared on its first write, fresh every pass, never routed
+            # in, carried, or exported. Reads before that write fail at the use instead.
+            continue
         if name not in state.names:
             msg = (
                 'loop state comes from enclosing names, so unknown names have nothing to start from; '
                 + f'set {name!r} before the loop instead'
             )
             _reject(state, node=statement, reason=msg)
+        carried.add(name)
         child.inputs.setdefault(name, [])
         child.input_shapes[name] = state.names[name].shape
         child.names[name] = _Reference(None, port=name, shape=state.names[name].shape)
     if condition not in assigned:
         msg = 'without an update the loop never ends; ' + 'update the check inside the loop body instead'
         _reject(state, node=statement, reason=msg)
-    for node in body:
-        if isinstance(node, ast.If):
-            _lower_branch(child, statement=node)
-            continue
-        if isinstance(node, ast.While):
-            _lower_loop(child, statement=node)
-            continue
-        if not isinstance(node, ast.Assign):
-            msg = 'loop bodies only record task calls, branches, and loops; ' + 'move anything else into a task instead'
-            _reject(state, node=node, reason=msg)
-        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
-            _lower_unpack(child, node, rebind=True)
-            continue
-        _lower_assignment(child, node, rebind=True)
-    outputs: dict[str, _Reference] = {name: child.names[name] for name in assigned}
+    initial_condition = child.names[condition]
+    _lower_region_statements(child, body)
+    outputs = {condition: initial_condition} if terminal else {name: child.names[name] for name in carried}
     body_spec = _lower_region_body(child, outputs=outputs)
     instance = _claim_name(state, f'loop_{len(state.tasks) + 1}')
     given: dict[str, _CapturedValue] = {}
     _route_region(state, child=child, instance=instance, given=given)
     state.tasks.append(LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition))
-    for name in assigned:
-        state.names[name] = _Reference(instance, port=name, shape=child.names[name].shape)
+    for name, ref in outputs.items():
+        state.names[name] = _Reference(instance, port=name, shape=ref.shape)
+
+
+def _loop_live_in(state: _LoweringState, body: list[ast.stmt]) -> set[str]:
+    """Return the body names read before any write on some path, excluding declarations.
+
+    Called names, dotted-module bases, and enum members in member tests resolve without
+    enclosing state, so they never count as loop-carried reads.
+    """
+    skipped = _callee_ids(state, body, state.names) | _member_test_skips(state, body) | _return_skips(state, body)
+    live: set[str] = set()
+    _collect_live(body, written=set(), live=live, skipped=skipped)
+    return live
+
+
+def _collect_loads(node: ast.AST, *, written: set[str], live: set[str], skipped: set[int]) -> None:
+    """Add the names a value expression reads before they are written."""
+    for child in ast.walk(node):
+        if (
+            isinstance(child, ast.Name)
+            and isinstance(child.ctx, ast.Load)
+            and child.id not in written
+            and id(child) not in skipped
+        ):
+            live.add(child.id)
+
+
+def _collect_live(statements: list[ast.stmt], *, written: set[str], live: set[str], skipped: set[int]) -> None:
+    """Accumulate read-before-write names in order, threading definite writes through branches."""
+    for statement in statements:
+        if isinstance(statement, ast.If):
+            _collect_loads(statement.test, written=written, live=live, skipped=skipped)
+            definite: set[str] | None = None
+            for arm in (statement.body, statement.orelse):
+                arm_written = set(written)
+                _collect_live(arm, written=arm_written, live=live, skipped=skipped)
+                if not _ends_in_return(arm):
+                    delta = arm_written - written
+                    definite = delta if definite is None else definite & delta
+            written |= definite or set()
+        elif isinstance(statement, ast.While):
+            _collect_loads(statement.test, written=written, live=live, skipped=skipped)
+            # Zero iterations are possible, so nested writes never count as definite here,
+            # but nested reads still observe the enclosing iteration state.
+            _collect_live(statement.body, written=set(written), live=live, skipped=skipped)
+        elif isinstance(statement, ast.Return):
+            _collect_loads(statement, written=written, live=live, skipped=skipped)
+            break
+        elif isinstance(statement, ast.AugAssign) and isinstance(statement.target, ast.Name):
+            if statement.target.id not in written and id(statement.target) not in skipped:
+                live.add(statement.target.id)
+            _collect_loads(statement.value, written=written, live=live, skipped=skipped)
+            written.add(statement.target.id)
+        elif isinstance(statement, ast.Assign):
+            _collect_loads(statement.value, written=written, live=live, skipped=skipped)
+            for target in statement.targets:
+                if isinstance(target, ast.Name):
+                    written.add(target.id)
+                elif isinstance(target, ast.Tuple):
+                    for element in target.elts:
+                        if isinstance(element, ast.Name):
+                            written.add(element.id)
 
 
 def _walk_region(statements: list[ast.stmt]) -> Iterator[ast.AST]:
@@ -1129,8 +2126,27 @@ def _assigned_names(statements: list[ast.stmt]) -> set[str]:
     }
 
 
-def _callee_ids(statements: list[ast.stmt], enclosing: Mapping[str, _Reference]) -> set[int]:
-    """Return the identities of called expressions and unshadowed module bases."""
+def _is_par_map_call(state: _LoweringState, node: ast.Call) -> bool:
+    """Recognize the map intrinsic during region collection without rejecting other calls."""
+    try:
+        target, _ = _resolve_base(state, node.func)
+    except GraphLanguageError:
+        return False
+    return target is par_map
+
+
+def _par_map_callable_expr(node: ast.Call) -> ast.expr | None:
+    """Return the mapped callable expression of a `par_map` call, without validating the collection."""
+    if node.args:
+        return node.args[0]
+    for keyword in node.keywords:
+        if keyword.arg == 'func':
+            return keyword.value
+    return None
+
+
+def _callee_ids(state: _LoweringState, statements: list[ast.stmt], enclosing: Mapping[str, _Reference]) -> set[int]:
+    """Return the identities of called expressions, unshadowed module bases, and mapped callables."""
     callees: set[int] = set()
     for node in _walk_region(statements):
         if not isinstance(node, ast.Call):
@@ -1143,7 +2159,78 @@ def _callee_ids(statements: list[ast.stmt], enclosing: Mapping[str, _Reference])
             func = func.value
         if isinstance(func, ast.Name) and func.id not in enclosing:
             callees.add(id(func))
+        if _is_par_map_call(state, node):
+            callable_expr = _par_map_callable_expr(node)
+            if isinstance(callable_expr, ast.Call) and _is_partial_call(state, callable_expr):
+                _add_partial_target_callees(state, callable_expr, enclosing, callees)
+            elif callable_expr is not None and _partial_alias_binding(state, callable_expr) is not None:
+                aliased = _partial_alias_binding(state, callable_expr)
+                assert aliased is not None
+                _add_partial_target_callees(state, aliased, enclosing, callees)
+            elif isinstance(callable_expr, ast.Call):
+                for inner in ast.walk(callable_expr):
+                    if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
+                        callees.add(id(inner))
+            elif isinstance(callable_expr, ast.Name):
+                callees.add(id(callable_expr))
+            elif isinstance(callable_expr, ast.Attribute):
+                for inner in ast.walk(callable_expr):
+                    if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
+                        callees.add(id(inner))
+        if _is_partial_call(state, node):
+            # Only the bound target resolves as a declaration; fixed values are
+            # ordinary wires and stay readable as region inputs.
+            _add_partial_target_callees(state, node, enclosing, callees)
+        aliased_binding = _partial_alias_binding(state, node)
+        if aliased_binding is not None:
+            _add_partial_target_callees(state, aliased_binding, enclosing, callees)
     return callees
+
+
+def _add_partial_target_callees(
+    state: _LoweringState, binding_call: ast.Call, enclosing: Mapping[str, _Reference], callees: set[int]
+) -> None:
+    """Mark only the declaration names behind a partial binding as callees.
+
+    Fixed values stay readable as region inputs, so only the ultimate target
+    chain counts; nested partial targets recurse without their fixed keywords.
+    """
+    target = _partial_target_expr(binding_call)
+    if target is None:
+        return
+    if isinstance(target, ast.Call) and _is_partial_call(state, target):
+        _add_partial_target_callees(state, target, enclosing, callees)
+        return
+    if (
+        isinstance(target, ast.Call)
+        and isinstance(target.func, ast.Attribute)
+        and target.func.attr == 'alias'
+        and isinstance(target.func.value, ast.Call)
+        and _is_partial_call(state, target.func.value)
+    ):
+        _add_partial_target_callees(state, target.func.value, enclosing, callees)
+        return
+    for inner in ast.walk(target):
+        if (
+            isinstance(inner, ast.Name)
+            and isinstance(inner.ctx, ast.Load)
+            and inner.id not in enclosing
+            and inner.id != 'partial'
+        ):
+            callees.add(id(inner))
+
+
+def _partial_alias_binding(state: _LoweringState, expression: ast.expr) -> ast.Call | None:
+    """Return the inline ``partial(...)`` behind an ``.alias(...)`` use, or ``None``."""
+    if (
+        isinstance(expression, ast.Call)
+        and isinstance(expression.func, ast.Attribute)
+        and expression.func.attr == 'alias'
+        and isinstance(expression.func.value, ast.Call)
+        and _is_partial_call(state, expression.func.value)
+    ):
+        return expression.func.value
+    return None
 
 
 def _member_test_skips(state: _LoweringState, statements: list[ast.stmt]) -> set[int]:
@@ -1168,12 +2255,25 @@ def _member_test_skips(state: _LoweringState, statements: list[ast.stmt]) -> set
     return skipped
 
 
+def _return_skips(state: _LoweringState, statements: list[ast.stmt]) -> set[int]:
+    """An Err argument is declaration syntax, not an input wire."""
+    return {
+        id(part)
+        for node in _walk_region(statements)
+        if isinstance(node, ast.Return)
+        and isinstance(node.value, ast.Call)
+        and _result_constructor(state, node.value) is Err
+        for part in ast.walk(node.value)
+        if isinstance(part, ast.Name)
+    }
+
+
 def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
     """Collect the enclosing values a nested body reads as region inputs."""
     # Names read in the body become inputs of the nested graph. Calls are not values.
     assigned = _assigned_names(statements)
-    callees = _callee_ids(statements, state.names)
-    skipped = _member_test_skips(state, statements)
+    callees = _callee_ids(state, statements, state.names)
+    skipped = _member_test_skips(state, statements) | _return_skips(state, statements)
     reads: dict[str, ast.Name] = {}
     for node in _walk_region(statements):
         if not isinstance(node, ast.Name) or not isinstance(node.ctx, ast.Load):
@@ -1181,7 +2281,12 @@ def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) ->
         if node.id in assigned or id(node) in callees or id(node) in skipped or node.id in reads:
             continue
         reads[node.id] = node
-    child = _LoweringState(state.definition, stack=state.stack)
+    child = _LoweringState(
+        state.definition, stack=state.stack, success_annotation=state.success_annotation, error_enums=state.error_enums
+    )
+    for partial_name, binding in state.partials.items():
+        if partial_name not in assigned:
+            child.partials[partial_name] = binding
     for name in sorted(reads):
         if name not in state.names:
             msg = (
@@ -1206,6 +2311,9 @@ def _route_region(
 ) -> None:
     """Route the enclosing values a nested region reads."""
     for name in child.inputs:
+        if name in child.synthetic_fixed:
+            _wire_fixed_value(state, instance, name, child.synthetic_fixed[name], given)
+            continue
         base, _, sub = name.partition('.')
         if base not in state.names:
             continue
@@ -1226,8 +2334,20 @@ def _select_subpath(value: _Reference, sub: str) -> _Reference:
     return _Reference(value.task, port=port, shape=shape)
 
 
-def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:
-    """Lower a call condition to a fresh binding."""
+def _is_bool_reference(value: _Reference | int | float | str | bool | None) -> bool:
+    """Return whether a lowered test statically reads as a boolean."""
+    if isinstance(value, bool):
+        return True
+    if not isinstance(value, _Reference) or not isinstance(value.shape, LeafShape):
+        return False
+    types = [kind for kind in value.shape.types or () if kind is not type(None)]
+    return bool(types) and all(kind is bool or kind is Bool for kind in types)
+
+
+def _bind_test_condition(
+    state: _LoweringState, test: ast.Call | ast.BinOp | ast.Compare | ast.UnaryOp | ast.BoolOp | ast.IfExp
+) -> ast.Name:
+    """Lower a call, inline comparison, boolean combination, or conditional test to a fresh binding."""
     name = 'condition'
     count = 2
     while name in state.names:
@@ -1237,6 +2357,12 @@ def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:
     ast.copy_location(bound, test)
     ast.copy_location(bound.targets[0], test)
     _lower_assignment(state, statement=bound)
+    if not isinstance(test, ast.Call) and not _is_bool_reference(state.names[name]):
+        msg = (
+            'conditions decide between two sides, so they must be true or false; '
+            + 'compare values or call a task returning a boolean instead'
+        )
+        _reject(state, node=test, reason=msg)
     return ast.Name(id=name, ctx=ast.Load())
 
 
@@ -1245,126 +2371,596 @@ def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) ->
     endpoints: dict[str, OutputTree] = {name: _endpoint_tree(value) for name, value in outputs.items()}
     return GraphIR(
         tasks=tuple(state.tasks),
-        dependencies=tuple(state.dependencies),
+        dependencies=_serial_dependencies(state),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=endpoints,
         input_shape=NamespaceShape(fields=tuple(state.input_shapes.items())),
+        return_outputs=state.return_outputs,
+        return_error=state.return_error,
+        return_typehints=state.return_typehints,
     )
 
 
-def _call_target_name(state: _LoweringState, expression: ast.expr) -> str:
-    """Return the placement name of a direct call, rejecting shadowed or indirect calls."""
-    if not isinstance(expression, ast.Call):
+def _invocation_receiver(call: ast.Call, method: str) -> ast.Call | None:
+    """Recognize a modifier on an invocation, not a module-qualified declaration call."""
+    func = call.func
+    if isinstance(func, ast.Attribute) and func.attr == method and isinstance(func.value, ast.Call):
+        return func.value
+    return None
+
+
+def _alias_name(state: _LoweringState, alias_call: ast.Call) -> str:
+    """Read a literal alias and validate it as a provenance link label."""
+    candidate: ast.expr | None = alias_call.args[0] if len(alias_call.args) == 1 else None
+    if (
+        candidate is None
+        or alias_call.keywords
+        or not isinstance(candidate, ast.Constant)
+        or not isinstance(candidate.value, str)
+    ):
         msg = (
-            'calls resolve by module-level name to importable declarations; '
-            + 'call tasks and graphs by their plain names instead'
+            'placement aliases name the stored placement, so they must be written out; '
+            + "call `.alias('name')` with one quoted name instead"
+        )
+        _reject(state, node=alias_call, reason=msg)
+    alias: str = candidate.value
+    try:
+        validate_link_label(alias)
+    except ValueError as exception:
+        msg = (
+            f'placement alias `{alias}` is invalid as a link label ({exception}); '
+            + 'use alphanumerics and underscores without leading or trailing underscores instead'
+        )
+        _reject(state, node=alias_call, reason=msg)
+    return alias
+
+
+def _resolve_base(state: _LoweringState, expression: ast.expr) -> tuple[t.Any, str]:
+    """Resolve a declaration reference through module namespaces, never arbitrary objects."""
+    base, parts = _attribute_path(expression)
+    if not isinstance(base, ast.Name):
+        msg = 'calls resolve by plain names to importable declarations; use a task or graph declaration instead'
+        _reject(state, node=expression, reason=msg)
+    if base.id in state.names:
+        msg = f'a name cannot be both a wire and a declaration; {base.id!r} is also used as a result name'
+        _reject(state, node=expression, reason=msg)
+    if base.id in state.partials:
+        msg = (
+            f'{base.id!r} binds a `partial`, not a task or graph; '
+            + 'call it with its remaining inputs, or pass it to `par_map` instead'
         )
         _reject(state, node=expression, reason=msg)
-    if isinstance(expression.func, ast.Name):
-        if expression.func.id in state.names:
+    symbols = state.definition.symbols
+    label = '.'.join([base.id, *parts])
+    name = base.id
+    for part in parts:
+        parent = symbols.values.get(name)
+        if parent is None:
+            msg = f'calls must name an importable declaration; unknown name {label!r}; check the spelling instead'
+            _reject(state, node=expression, reason=msg)
+        if not isinstance(parent, ModuleType):
+            msg = f'calls resolve through modules; {name!r} is not a module; import the module instead'
+            _reject(state, node=expression, reason=msg)
+        symbols = symbols.module(parent)
+        name = part
+    if name not in symbols.values and name not in vars(builtins):
+        msg = f'calls must name an importable declaration; unknown name {label!r}; check the spelling instead'
+        _reject(state, node=expression, reason=msg)
+    try:
+        return symbols.lookup(name), label
+    except GraphLanguageError as exception:
+        _reject(state, node=expression, reason=str(exception))
+
+
+def _resolve_callable(
+    state: _LoweringState, expression: ast.expr
+) -> tuple[
+    FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle | Callable[..., t.Any],
+    str,
+]:
+    """Resolve an importable declaration for a call or map."""
+    target, label = _resolve_base(state, expression)
+    if target is forward_outputs:
+        _reject(state, node=expression, reason='`forward_outputs` is only supported in the final graph return mapping')
+    if (
+        isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle))
+        or target is par_map
+    ):
+        return target, label.rsplit('.', 1)[-1]
+    if target is None and label in vars(builtins):
+        msg = f'only registered declarations carry provenance; built-in {label!r}: wrap it in a task instead'
+    else:
+        msg = f'only registered declarations carry port contracts; unregistered call {label!r}; add `@task` or `@graph`'
+    _reject(state, node=expression, reason=msg)
+
+
+def _partial_target_shape(
+    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle,
+    state: _LoweringState,
+) -> NamespaceShape:
+    """Return the input contract a partial target binds against."""
+    if isinstance(target, GraphHandle):
+        return _lower_graph(target, stack=state.stack).input_shape
+    return target._task_spec.input_shape
+
+
+def _is_partial_call(state: _LoweringState, node: ast.Call) -> bool:
+    """Return whether a call is the intrinsic bare ``partial(...)`` binding."""
+    if not isinstance(node.func, ast.Name) or node.func.id != 'partial':
+        return False
+    return 'partial' not in state.names and 'partial' not in state.partials and 'partial' not in state.input_shapes
+
+
+def _partial_target_expr(node: ast.Call) -> ast.expr | None:
+    """Return the bound target of a ``partial(...)`` call, or ``None`` when absent."""
+    if node.args:
+        return node.args[0]
+    return None
+
+
+def _resolve_partial_target(
+    state: _LoweringState, expression: ast.expr
+) -> tuple[
+    FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle,
+    str,
+    str | None,
+    dict[str, _CapturedValue],
+]:
+    """Resolve a partial target to its ultimate declaration, carrying composed bindings."""
+    if isinstance(expression, ast.Call) and _is_partial_call(state, expression):
+        nested = _build_partial_binding(state, expression)
+        return nested.target, nested.call_name, nested.explicit, dict(nested.fixed)
+    base: ast.expr = expression
+    explicit: str | None = None
+    if (
+        isinstance(expression, ast.Call)
+        and isinstance(expression.func, ast.Attribute)
+        and expression.func.attr == 'alias'
+    ):
+        assert isinstance(expression.func.value, ast.expr)
+        candidate_base: ast.expr = expression.func.value
+        if isinstance(candidate_base, ast.Call) and _is_partial_call(state, candidate_base):
+            nested = _build_partial_binding(state, candidate_base)
+            return nested.target, nested.call_name, _alias_name(state, expression), dict(nested.fixed)
+        base, explicit = candidate_base, _alias_name(state, expression)
+    if isinstance(base, ast.Name) and base.id in state.partials:
+        binding = state.partials[base.id]
+        return binding.target, binding.call_name, explicit or binding.explicit, dict(binding.fixed)
+    target, label = _resolve_base(state, base)
+    if target is par_map:
+        msg = '`par_map` fans out over a collection; it cannot be bound by `partial`; bind a task or graph instead'
+        _reject(state, node=expression, reason=msg)
+    if not isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle)):
+        if target is None and label in vars(builtins):
+            msg = f'only registered declarations carry provenance; built-in {label!r}: wrap it in a task instead'
+        else:
             msg = (
-                'a name cannot be both a wire and a declaration; '
-                + f'{expression.func.id!r} is also used as a result name; rename one of them instead'
+                f'only registered declarations carry port contracts; unregistered call {label!r}; '
+                + 'add `@task` or `@graph`'
+            )
+        _reject(state, node=expression, reason=msg)
+    return target, label.rsplit('.', 1)[-1], explicit, {}
+
+
+def _capture_fixed_value(state: _LoweringState, shape: Shape, expression: ast.expr) -> _CapturedValue:
+    """Lower one fixed input value, capturing declaration-time references."""
+    if isinstance(expression, ast.Call):
+        msg = (
+            'a `partial` fixes inputs without running anything, so fixed values cannot call; '
+            + 'pass a wire or literal instead'
+        )
+        _reject(state, node=expression, reason=msg)
+    if isinstance(expression, ast.Dict) and isinstance(shape, NamespaceShape):
+        seen = set()
+        nested = {}
+        for key, value in zip(expression.keys, expression.values, strict=True):
+            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                msg = (
+                    'dictionary syntax for fixed namespaces must be known before anything runs; '
+                    + 'namespace keys must be string literals without unpacking; compute dynamic keys in tasks'
+                )
+                _reject(state, node=expression, reason=msg)
+            name = key.value
+            if name in seen:
+                msg = 'one port takes one value; ' + f'duplicate input {name!r}; pass it once'
+                _reject(state, node=expression, reason=msg)
+            try:
+                child = shape.select(name)
+            except KeyError:
+                msg = (
+                    'namespaces wire against declared contracts; '
+                    + f'{name!r} is not a declared name here; check the spelling instead'
+                )
+                _reject(state, node=expression, reason=msg)
+            seen.add(name)
+            nested[name] = _capture_fixed_value(state, child, value)
+        return nested
+    if isinstance(expression, ast.Dict):
+        try:
+            value = ast.literal_eval(expression)
+        except (ValueError, TypeError):
+            msg = (
+                'a mapping here either spells out fixed inputs or points at a whole input, nothing in between; '
+                + 'dictionary-valued ports require a literal value or a reference to the whole port'
             )
             _reject(state, node=expression, reason=msg)
-        return expression.func.id
-    if isinstance(expression.func, ast.Attribute):
-        return _dotted_name(state, expression=expression)
-    msg = (
-        'calls resolve by module-level name to importable declarations; '
-        + 'call tasks and graphs by their plain names instead'
-    )
-    _reject(state, node=expression, reason=msg)
-
-
-def _split_dotted(expression: ast.Call) -> tuple[str, list[str]] | None:
-    """Split a dotted call target into its base name and attributes, innermost first."""
-    if not isinstance(expression.func, ast.Attribute):
-        return None
-    node: ast.expr = expression.func
-    parts: list[str] = []
-    while isinstance(node, ast.Attribute):
-        parts.append(node.attr)
-        node = node.value
-    if not isinstance(node, ast.Name):
-        return None
-    return node.id, parts
-
-
-def _dotted_name(state: _LoweringState, expression: ast.Call) -> str:
-    """Return the last attribute of a dotted call target like `my_module.add`."""
-    split = _split_dotted(expression)
-    if split is None:
-        msg = (
-            'calls resolve by module-level name to importable declarations; '
-            + 'call tasks and graphs by their plain names instead'
-        )
-        _reject(state, node=expression, reason=msg)
-    base, parts = split
-    if base in state.names:
-        msg = (
-            'a name cannot be both a wire and a declaration; '
-            + f'{base!r} is also used as a result name; rename one of them instead'
-        )
-        _reject(state, node=expression, reason=msg)
-    return parts[0]
-
-
-def _registered_target(
-    state: _LoweringState, expression: ast.expr, name: str
-) -> FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle:
-    """Return the task handle or graph behind a call target."""
-    namespace = state.definition.function.__globals__
-    label = name
-    if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Attribute):
-        target, label = _resolve_dotted(state, expression=expression)
-    else:
-        target = namespace.get(name)
-    if isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle)):
-        return target
-    if target is None and label in vars(builtins):
-        msg = (
-            'built-ins run as plain Python with no record kept; '
-            + f'built-in {label!r} cannot run here; wrap it in a task instead'
-        )
-        _reject(state, node=expression, reason=msg)
-    if target is None and label not in namespace:
-        msg = 'calls must name an importable declaration; ' + f'unknown name {label!r}; check the spelling instead'
-        _reject(state, node=expression, reason=msg)
-    msg = (
-        'only registered declarations carry input and output contracts; '
-        + f'unregistered call {label!r}; add `@task` or `@graph` above it instead'
-    )
-    _reject(state, node=expression, reason=msg)
-
-
-def _resolve_dotted(state: _LoweringState, expression: ast.Call) -> tuple[t.Any, str]:
-    """Resolve a dotted call target through modules, returning the declaration and its path."""
-    split = _split_dotted(expression)
-    assert split is not None, 'dotted targets are validated before resolution'
-    base, parts = split
-    namespace = state.definition.function.__globals__
-    dotted = '.'.join([base, *reversed(parts)])
-    target = namespace.get(base)
-    if target is None:
-        msg = 'calls must name an importable declaration; ' + f'unknown name {dotted!r}; check the spelling instead'
-        _reject(state, node=expression, reason=msg)
-    if not inspect.ismodule(target):
-        msg = (
-            'calls resolve through modules to registered declarations; '
-            + f'{base!r} is not a module; import the module instead'
-        )
-        _reject(state, node=expression, reason=msg)
-    for attr in reversed(parts):
-        target = getattr(target, attr, None)
-        if target is None:
-            msg = 'calls must name an importable declaration; ' + f'unknown name {dotted!r}; check the spelling instead'
+        try:
+            checked = json_default(value)
+        except GraphTypeCheckError:
+            msg = (
+                'stored inputs only hold finite JSON values; dictionary values must be finite JSON, '
+                + 'so compute non-finite values in tasks instead'
+            )
             _reject(state, node=expression, reason=msg)
-    return target, dotted
+        return t.cast('_CapturedValue', checked)
+    if isinstance(expression, ast.Constant) and expression.value is None and _drops_none_value(shape):
+        return {}
+    return _lower_value(state, expression)
+
+
+def _build_partial_binding(state: _LoweringState, node: ast.Call) -> _PartialBinding:
+    """Build an unnamed partial binding from a ``partial(...)`` call without storing it."""
+    if len(node.args) != 1:
+        msg = (
+            '`partial` binds one callable with its fixed inputs; '
+            + 'call `partial(target, fixed=value, ...)` with the target positionally and the rest by keyword instead'
+        )
+        _reject(state, node=node, reason=msg)
+    target_expr = _partial_target_expr(node)
+    if target_expr is None:
+        msg = (
+            '`partial` binds one callable with its fixed inputs; '
+            + 'call `partial(target, fixed=value, ...)` with the target positionally and the rest by keyword instead'
+        )
+        _reject(state, node=node, reason=msg)
+    target, call_name, explicit, composed = _resolve_partial_target(state, target_expr)
+    shape = _partial_target_shape(target, state)
+    fixed = dict(composed)
+    for keyword in node.keywords:
+        if keyword.arg is None:
+            msg = 'inputs wire by name, so spreading hides which is which; bind each fixed input by keyword instead'
+            _reject(state, node=keyword, reason=msg)
+        if keyword.arg in fixed:
+            msg = 'one port takes one value; ' + f'duplicate fixed input {keyword.arg!r}; pass it once'
+            _reject(state, node=keyword, reason=msg)
+        try:
+            child = shape.select(keyword.arg)
+        except KeyError:
+            msg = (
+                'calls wire against declared contracts; '
+                + f'{keyword.arg!r} is not an input of {call_name!r}; check the spelling instead'
+            )
+            _reject(state, node=keyword, reason=msg)
+        captured = _capture_fixed_value(state, child, keyword.value)
+        if isinstance(captured, dict) and not captured:
+            continue
+        fixed[keyword.arg] = captured
+    if not fixed:
+        msg = (
+            'a `partial` fixes inputs without running anything, so it needs at least one fixed input; '
+            + 'pass one by keyword instead'
+        )
+        _reject(state, node=node, reason=msg)
+    return _PartialBinding(target=target, call_name=call_name, explicit=explicit, fixed=fixed)
+
+
+def _bind_partial(state: _LoweringState, name: str, node: ast.Call) -> None:
+    """Store a named partial binding, capturing fixed values at declaration time."""
+    binding = _build_partial_binding(state, node)
+    state.partials[name] = binding
+
+
+def _partial_call_parts(state: _LoweringState, func: ast.expr) -> tuple[_PartialBinding, str | None] | None:
+    """Split a partial use into its binding and a use-site alias, or return ``None``."""
+    if isinstance(func, ast.Name) and func.id in state.partials:
+        return state.partials[func.id], None
+    if isinstance(func, ast.Call) and isinstance(func.func, ast.Attribute) and func.func.attr == 'alias':
+        base = func.func.value
+        binding: _PartialBinding | None = None
+        if isinstance(base, ast.Name) and base.id in state.partials:
+            binding = state.partials[base.id]
+        elif isinstance(base, ast.Call) and _is_partial_call(state, base):
+            binding = _build_partial_binding(state, base)
+        if binding is not None:
+            return binding, _alias_name(state, func)
+        return None
+    if isinstance(func, ast.Call) and _is_partial_call(state, func):
+        return _build_partial_binding(state, func), None
+    return None
+
+
+def _synthetic_name(state: _LoweringState, base: str) -> str:
+    """Return a valid branch/loop input name carrying one outer fixed value."""
+    cleaned = ''.join(character if character.isalnum() else '_' for character in base).strip('_') or 'partial'
+    if not cleaned[0].isalpha():
+        cleaned = f'partial_{cleaned}'
+    taken = {placed.name for placed in state.tasks} | set(state.used)
+    name = cleaned
+    count = 2
+    while name in state.inputs or name in state.input_shapes or name in state.names or name in taken:
+        name = f'{cleaned}_{count}'
+        count += 1
+    state.used[name] = 1
+    return name
+
+
+def _needs_synthetic(state: _LoweringState, captured: _CapturedValue) -> bool:
+    """Return whether a captured fixed value points outside the current template.
+
+    Task outputs of enclosing scopes cannot edge into a nested template, and neither
+    can graph inputs the region collection never saw because the binding hid them.
+    Both travel on synthetic region inputs; visible wires lower directly.
+    """
+    if isinstance(captured, dict):
+        return any(_needs_synthetic(state, item) for item in captured.values())
+    if not isinstance(captured, _Reference):
+        return False
+    if captured.task is not None:
+        return captured.task not in {placed.name for placed in state.tasks}
+    base = captured.port.split('.')[0] if captured.port else ''
+    return base not in state.names
+
+
+def _wire_fixed_value(
+    state: _LoweringState, instance: str, port: str, captured: _CapturedValue, given: dict[str, _CapturedValue]
+) -> None:
+    """Wire one captured fixed value, routing outer task outputs through region inputs."""
+    if isinstance(captured, dict):
+        for field, item in captured.items():
+            _wire_fixed_value(state, instance, f'{port}.{field}', item, given)
+        return
+    if _needs_synthetic(state, captured):
+        assert isinstance(captured, _Reference)
+        name = _synthetic_name(state, f'partial_{port.replace(".", "_")}')
+        if name not in state.inputs:
+            state.inputs[name] = []
+            state.input_shapes[name] = captured.shape
+            state.names[name] = _Reference(None, port=name, shape=captured.shape)
+            state.synthetic_fixed[name] = captured
+        elif state.synthetic_fixed.get(name) != captured:
+            # A different value (or a real input colliding with the deterministic
+            # name) needs its own region input rather than reusing this wire.
+            name = _synthetic_name(state, f'{name}_fixed')
+            state.inputs[name] = []
+            state.input_shapes[name] = captured.shape
+            state.names[name] = _Reference(None, port=name, shape=captured.shape)
+            state.synthetic_fixed[name] = captured
+        _wire(state, instance=instance, port=port, value=state.names[name], given=given)
+        return
+    _wire(state, instance=instance, port=port, value=captured, given=given)
+
+
+def _merge_given(
+    first: dict[str, _CapturedValue],
+    second: dict[str, _CapturedValue],
+    state: _LoweringState,
+    node: ast.AST,
+    *,
+    shape: NamespaceShape,
+) -> dict[str, _CapturedValue]:
+    """Merge fixed and call-time wirings, rejecting conflicting leaf paths.
+
+    Namespace inputs merge field by field, so a fixed ``config={'a': x}`` and a
+    call-time ``config={'b': y}`` combine while a repeated leaf still rejects.
+    """
+    merged = dict(first)
+    for path, value in second.items():
+        if path not in merged:
+            merged[path] = value
+            continue
+        try:
+            child = shape.select(path)
+        except KeyError:
+            child = None
+        merged[path] = _merge_values(merged[path], value, f'{path}', child, state, node)
+    return merged
+
+
+def _merge_values(
+    first: _CapturedValue,
+    second: _CapturedValue,
+    path: str,
+    shape: Shape | None,
+    state: _LoweringState,
+    node: ast.AST,
+) -> _CapturedValue:
+    """Merge two wirings at one input path, recursing only through namespaces."""
+    if isinstance(first, dict) and isinstance(second, dict) and isinstance(shape, NamespaceShape):
+        merged: dict[str, _CapturedValue] = dict(first)
+        for field, value in second.items():
+            if field not in merged:
+                merged[field] = value
+                continue
+            try:
+                child = shape.select(field)
+            except KeyError:
+                child = None
+            merged[field] = _merge_values(merged[field], value, f'{path}.{field}', child, state, node)
+        return merged
+    msg = f'{path!r} is already fixed by the `partial`; pass the remaining inputs instead'
+    _reject(state, node=node, reason=msg)
+
+
+def _fixed_leaf_paths(fixed: dict[str, _CapturedValue], shape: NamespaceShape) -> set[str]:
+    """Return the dotted leaf paths a partial binding already occupies."""
+    paths: set[str] = set()
+
+    def _collect(value: _CapturedValue, contract: Shape | None, prefix: str) -> None:
+        if isinstance(value, dict) and isinstance(contract, NamespaceShape):
+            if not value:
+                paths.add(prefix)
+                return
+            for field, item in value.items():
+                try:
+                    child = contract.select(field)
+                except KeyError:
+                    child = None
+                _collect(item, child, f'{prefix}.{field}')
+            return
+        paths.add(prefix)
+
+    for name, item in fixed.items():
+        try:
+            child = shape.select(name)
+        except KeyError:
+            child = None
+        _collect(item, child, name)
+    return paths
+
+
+def _call_leaf_paths(keyword: ast.keyword, shape: NamespaceShape) -> set[str]:
+    """Return the dotted leaf paths one call-time keyword would occupy."""
+    assert keyword.arg is not None
+    try:
+        child = shape.select(keyword.arg)
+    except KeyError:
+        return {keyword.arg}
+    return _expression_leaf_paths(keyword.value, child, keyword.arg)
+
+
+def _expression_leaf_paths(expression: ast.expr, contract: Shape, prefix: str) -> set[str]:
+    """Return the dotted paths a call-time expression would occupy under a contract."""
+    if isinstance(expression, ast.Dict) and isinstance(contract, NamespaceShape):
+        paths: set[str] = set()
+        for key, value in zip(expression.keys, expression.values, strict=True):
+            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                return {prefix}
+            try:
+                nested = contract.select(key.value)
+            except KeyError:
+                nested = contract
+            paths.update(_expression_leaf_paths(value, nested, f'{prefix}.{key.value}'))
+        return paths or {prefix}
+    return {prefix}
+
+
+def _check_partial_overlap(
+    state: _LoweringState,
+    binding: _PartialBinding,
+    call_keywords: list[ast.keyword],
+    shape: NamespaceShape,
+) -> None:
+    """Reject call-time inputs that repeat a leaf the partial already fixed."""
+    fixed = _fixed_leaf_paths(binding.fixed, shape)
+    for keyword in call_keywords:
+        assert keyword.arg is not None
+        for path in _call_leaf_paths(keyword, shape):
+            for taken in fixed:
+                if path == taken or path.startswith(f'{taken}.') or taken.startswith(f'{path}.'):
+                    msg = f'{path!r} is already fixed by the `partial`; pass the remaining inputs instead'
+                    _reject(state, node=keyword, reason=msg)
+
+
+def _lower_partial_call(
+    state: _LoweringState,
+    binding: _PartialBinding,
+    expression: ast.Call,
+    explicit_override: str | None,
+    *,
+    capture: bool,
+    unpack: bool,
+) -> _Reference:
+    """Place one partial use, merging fixed and call-time inputs into one ordinary placement."""
+    inputs = _partial_target_shape(binding.target, state)
+    positional = list(expression.args)
+    keywords = list(expression.keywords)
+    if any(keyword.arg is None for keyword in keywords):
+        keywords = _spread_keywords(
+            state, expression=expression, name=binding.call_name, inputs=inputs, keywords=keywords
+        )
+    remaining = [field for field, _ in inputs.fields if field not in binding.fixed]
+    bound_positional = []
+    if positional:
+        if len(positional) > len(remaining):
+            msg = (
+                'positional arguments follow declared input order, so extras map to nothing; '
+                + f'too many positional arguments for partial of `{binding.call_name}`; drop the extras'
+            )
+            _reject(state, node=expression, reason=msg)
+        for field, arg in zip(remaining, positional):
+            bound_positional.append(ast.keyword(arg=field, value=arg))
+    seen: set[str | None] = set()
+    call_keywords: list[ast.keyword] = []
+    for keyword in [*bound_positional, *keywords]:
+        if keyword.arg in seen:
+            msg = 'one port takes one value; ' + f'duplicate input {keyword.arg!r}; pass it once'
+            _reject(state, node=keyword, reason=msg)
+        seen.add(keyword.arg)
+        call_keywords.append(keyword)
+    _check_partial_overlap(state, binding, call_keywords, inputs)
+    explicit = explicit_override or binding.explicit
+    if explicit is not None:
+        instance = _claim_placement(state, explicit, node=expression)
+    else:
+        instance = _claim_placement(state, name=binding.call_name, node=expression)
+    task: ProcessTask | SubgraphTask
+    given: dict[str, _CapturedValue]
+    if isinstance(binding.target, GraphHandle):
+        body = _lower_graph(binding.target, stack=state.stack)
+        given = {}
+        for port, captured in binding.fixed.items():
+            _wire_fixed_value(state, instance, port, captured, given)
+        wired = _lower_keywords(
+            state, instance=instance, name=binding.call_name, inputs=body.input_shape, keywords=call_keywords
+        )
+        given = _merge_given(given, wired, state, expression, shape=body.input_shape)
+        task = SubgraphTask(name=instance, inputs=given, body=body)
+        shape_inputs = body.input_shape
+        result_port = body.result_port
+        result_shape = body.result_shape
+    else:
+        spec = binding.target._task_spec
+        narrowed = _solved_partial_spec(
+            binding.target, binding, call_keywords, state, spec=spec, result_port=spec.result_port
+        )
+        given = {}
+        for port, captured in binding.fixed.items():
+            _wire_fixed_value(state, instance, port, captured, given)
+        wired = _lower_keywords(
+            state, instance=instance, name=binding.call_name, inputs=narrowed.input_shape, keywords=call_keywords
+        )
+        given = _merge_given(given, wired, state, expression, shape=narrowed.input_shape)
+        task = ProcessTask(name=instance, inputs=given, spec=narrowed)
+        shape_inputs = narrowed.input_shape
+        result_port = narrowed.result_port
+        result_shape = narrowed.result_shape
+    if isinstance(task, ProcessTask):
+        runtime_paths = task.spec.runtime_input_paths()
+    else:
+        runtime_paths = frozenset()
+    missing = _missing_required_inputs(
+        state, instance=instance, shape=shape_inputs, given=task.inputs, runtime_paths=runtime_paths
+    )
+    if missing:
+        msg = (
+            'required inputs must be wired before the graph is stored; '
+            + f'partial of `{binding.call_name}` is missing required inputs: {missing}; pass them at the call'
+        )
+        _reject(state, node=expression, reason=msg)
+    return _place_invocation(state, expression, task, result_port, result_shape, capture=capture, unpack=unpack)
+
+
+def _claim_placement(state: _LoweringState, name: str, node: ast.AST, *, is_map: bool = False) -> str:
+    """Claim one authored placement name, rejecting reuse within the same static body."""
+    taken: set[str] = {placed.name for placed in state.tasks}
+    if name in taken or state.used.get(name, 0) > 0:
+        if is_map:
+            msg = (
+                f'map placement name `{name}` is already used in this graph; '
+                + "pass a unique name with `par_map(task.alias('name'), values)` instead"
+            )
+        else:
+            msg = (
+                f'placement name `{name}` is already used in this graph; '
+                + "pass a unique name with `.alias('unique_name')` on the call instead"
+            )
+        _reject(state, node=node, reason=msg)
+    state.used[name] = 1
+    return name
 
 
 def _claim_name(state: _LoweringState, name: str) -> str:
-    """Return a placement name unused by earlier placements."""
+    """Return an internal generated placement name, suffixing on collision."""
     state.used[name] += 1
     count = state.used[name]
     taken: set[str] = {placed.name for placed in state.tasks}
@@ -1376,18 +2972,93 @@ def _claim_name(state: _LoweringState, name: str) -> str:
     return instance
 
 
-def _wired_type(value: t.Any) -> type | None:
-    """Return the ORM type a wired value carries, or `None` without evidence."""
-    if isinstance(value, _Reference):
-        shape = value.shape
-        if not isinstance(shape, LeafShape) or not shape.types:
+def _probe_shape(state: _LoweringState, expression: ast.expr) -> Shape | None:
+    """Return the static contract of a generic-call argument without placing anything."""
+    if isinstance(expression, ast.Name):
+        reference = state.names.get(expression.id)
+        if reference is None:
             return None
-        mapped = [_node_type(kind) for kind in shape.types]
-        mapped = [kind for kind in mapped if kind is not None and kind is not type(None)]
-        return mapped[0] if len(mapped) == 1 else None
-    if value is None:
+        return reference.shape
+    if isinstance(expression, ast.Attribute):
+        field = _probe_field(state, expression.value, expression.attr)
+        return field if field is not None else _probe_expression_shape(state, expression)
+    if (
+        isinstance(expression, ast.Subscript)
+        and isinstance(expression.slice, ast.Constant)
+        and isinstance(expression.slice.value, str)
+    ):
+        field = _probe_field(state, expression.value, expression.slice.value)
+        return field if field is not None else _probe_expression_shape(state, expression)
+    if isinstance(expression, (ast.Subscript, ast.ListComp, ast.DictComp)):
+        return _probe_expression_shape(state, expression)
+    if isinstance(expression, (ast.Constant, ast.UnaryOp)):
+        try:
+            value = ast.literal_eval(expression)
+        except (ValueError, TypeError):
+            return _probe_operation_shape(state, expression) if isinstance(expression, ast.UnaryOp) else None
+        if value is None or isinstance(value, (int, float, str, bool)):
+            return LeafShape(types=(type(value),))
         return None
-    return _node_type(type(value))
+    if isinstance(expression, (ast.BinOp, ast.Compare, ast.UnaryOp)):
+        return _probe_operation_shape(state, expression)
+    return None
+
+
+def _probe_field(state: _LoweringState, parent: ast.expr, attr: str) -> Shape | None:
+    """Return the declared contract of a selected field, or `None` without evidence."""
+    shape = _probe_shape(state, parent)
+    if not isinstance(shape, NamespaceShape):
+        return None
+    try:
+        return shape.select(attr)
+    except KeyError:
+        return None
+
+
+def _probe_expression_shape(state: _LoweringState, node: ast.expr) -> Shape | None:
+    """Infer a collection expression without placing operations or binding locals."""
+
+    def resolve(expression: ast.expr) -> tuple[str, Shape]:
+        assert isinstance(expression, ast.Name)
+        shape = _probe_shape(state, expression)
+        if shape is None:
+            msg = f'unknown expression input `{expression.id}`.'
+            raise GraphTypeCheckError(msg)
+        return expression.id, shape
+
+    try:
+        expression, inputs = compile_expression(node, resolve)
+        return infer_expression_shape(expression, inputs)
+    except GraphTypeCheckError:
+        return None
+
+
+def _probe_operation_shape(state: _LoweringState, node: ast.BinOp | ast.Compare | ast.UnaryOp) -> Shape | None:
+    """Infer an operation result without placing it; `None` means solving stays generic."""
+    try:
+        operation, raw = _operation_parts(state, node=node)
+    except GraphLanguageError:
+        return None
+    shapes: list[Shape] = []
+    for item in raw:
+        probed = _probe_shape(state, item)
+        if probed is None:
+            return None
+        shapes.append(probed)
+    try:
+        return infer_operation_shape(operation, tuple(shapes))
+    except GraphTypeCheckError:
+        return None
+
+
+def _probe_wired_type(state: _LoweringState, expression: ast.expr) -> type | None:
+    """Return the ORM type a generic-call argument carries, or `None` without evidence."""
+    shape = _probe_shape(state, expression)
+    if not isinstance(shape, LeafShape) or not shape.types:
+        return None
+    mapped = [_node_type(kind) for kind in shape.types]
+    mapped = [kind for kind in mapped if kind is not None and kind is not type(None)]
+    return mapped[0] if len(mapped) == 1 else None
 
 
 def _solved_spec(
@@ -1400,7 +3071,7 @@ def _solved_spec(
 ) -> TaskIR:
     """Copy a generic task spec with solved output types, or return it unchanged.
 
-    Solving reads the argument expressions because wiring routes references
+    Solving probes the argument expressions because wiring routes references
     outside the placed inputs, so the placed mapping alone cannot solve.
     """
     typevars, output_var = _typevar_solution(target)
@@ -1412,7 +3083,7 @@ def _solved_spec(
         keyword = next((keyword for keyword in keywords if keyword.arg == name), None)
         if keyword is None:
             continue
-        kind = _wired_type(_lower_value(state, keyword.value))
+        kind = _probe_wired_type(state, keyword.value)
         if kind is None:
             tainted = True
         else:
@@ -1425,14 +3096,547 @@ def _solved_spec(
     return replace(spec, declared_outputs=narrowed)
 
 
-def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
-    """Place a task or graph call with wired graph inputs."""
-    name: str = _call_target_name(state, expression=expression)
-    assert isinstance(expression, ast.Call)
-    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle = (
-        _registered_target(state, expression=expression, name=name)
+def _lower_par_map(state: _LoweringState, expression: ast.Call) -> _Reference:
+    """Place a fan-out map over an owned container."""
+    func_expr, collection_expr = _bind_par_map_arguments(state, expression=expression)
+    partial_use = _partial_call_parts(state, func_expr)
+    if partial_use is not None:
+        return _lower_partial_map(state, partial_use[0], func_expr, collection_expr, partial_use[1])
+    explicit = None
+    base = func_expr
+    if isinstance(func_expr, ast.Call) and isinstance(func_expr.func, ast.Attribute) and func_expr.func.attr == 'alias':
+        explicit = _alias_name(state, func_expr)
+        base = func_expr.func.value
+    target, call_name = _resolve_callable(state, base)
+    if not isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle)):
+        msg = 'maps apply registered declarations per element; pass a task or graph instead'
+        _reject(state, node=func_expr, reason=msg)
+    if isinstance(target, CalcJobTaskHandle):
+        msg = (
+            'maps dispatch one child per element with shared inputs, so per-item launch metadata has no placement '
+            f'to key by; `CalcJob` task `{call_name}` cannot run under `par_map`; map a task function, '
+            'a `WorkChain`, or a nested graph instead'
+        )
+        _reject(state, node=func_expr, reason=msg)
+    mapped_body: GraphIR | None = None
+    mapped_spec: TaskIR | None = None
+    if explicit is not None:
+        instance = _claim_placement(state, explicit, node=func_expr, is_map=True)
+    else:
+        instance = _claim_placement(state, f'map_{call_name}', node=func_expr, is_map=True)
+    if isinstance(target, GraphHandle):
+        mapped_body = _lower_graph(target, stack=state.stack)
+        mapped_spec = None
+    else:
+        mapped_body = None
+        mapped_spec = target._task_spec
+    _check_par_map_callable(state, node=func_expr, label=call_name, spec=mapped_spec, body=mapped_body)
+    collection = _lower_value(state, collection_expr)
+    container = _check_par_map_collection(state, node=collection_expr, value=collection)
+    given: dict[str, _CapturedValue] = {}
+    _wire(state, instance=instance, port='collection', value=collection, given=given)
+    state.tasks.append(MapControl(name=instance, inputs=given, spec=mapped_spec, body=mapped_body, container=container))
+    collected = DataList if container == 'list' else DataDict
+    return _Reference(instance, port='result', shape=LeafShape(types=(collected,)))
+
+
+def _captured_kind(captured: _CapturedValue) -> type | None:
+    """Return the single ORM type a captured fixed value carries, or ``None`` without evidence."""
+    if isinstance(captured, _Reference):
+        shape = captured.shape
+        if not isinstance(shape, LeafShape) or not shape.types:
+            return None
+        mapped = [_node_type(kind) for kind in shape.types]
+        mapped = [kind for kind in mapped if kind is not None and kind is not type(None)]
+        return mapped[0] if len(mapped) == 1 else None
+    if isinstance(captured, bool):
+        return _node_type(bool)
+    if isinstance(captured, int):
+        return _node_type(int)
+    if isinstance(captured, float):
+        return _node_type(float)
+    if isinstance(captured, str):
+        return _node_type(str)
+    return None
+
+
+def _solved_partial_spec(
+    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle,
+    binding: _PartialBinding,
+    call_keywords: list[ast.keyword],
+    state: _LoweringState,
+    *,
+    spec: TaskIR,
+    result_port: str,
+) -> TaskIR:
+    """Solve a generic partial target combining call-time and fixed evidence.
+
+    Ordinary solving probes the call expressions; a type variable carried only by
+    fixed inputs would stay unsolved, so fixed captures contribute their stored
+    shapes alongside the call arguments. Conflicting evidence stays unsolved,
+    matching the plain-task contract for shared type variables.
+    """
+    typevars, output_var = _typevar_solution(target)
+    if output_var is None or not result_port:
+        return spec
+    kinds: list[type] = []
+    tainted = False
+    for name in typevars.get(output_var, []):
+        keyword = next((item for item in call_keywords if item.arg == name), None)
+        if keyword is not None:
+            kind = _probe_wired_type(state, keyword.value)
+            if kind is None:
+                tainted = True
+            else:
+                kinds.append(kind)
+        elif name in binding.fixed:
+            kind = _captured_kind(binding.fixed[name])
+            if kind is None:
+                tainted = True
+            else:
+                kinds.append(kind)
+    if tainted or not kinds or any(kind != kinds[0] for kind in kinds):
+        return spec
+    merged = dict(spec.declared_outputs.fields)
+    merged[result_port] = LeafShape(types=(kinds[0],))
+    narrowed_shape = NamespaceShape(fields=tuple(merged.items()))
+    return replace(spec, declared_outputs=narrowed_shape)
+
+
+def _lower_partial_map(
+    state: _LoweringState,
+    binding: _PartialBinding,
+    func_expr: ast.expr,
+    collection_expr: ast.expr,
+    explicit_override: str | None,
+) -> _Reference:
+    """Place a fan-out map over a partial, binding every input but the element."""
+    if isinstance(binding.target, CalcJobTaskHandle):
+        msg = (
+            'maps dispatch one child per element with shared inputs, so per-item launch metadata has no placement '
+            f'to key by; `CalcJob` task `{binding.call_name}` cannot run under `par_map`; map a task function, '
+            'a `WorkChain`, or a nested graph instead'
+        )
+        _reject(state, node=func_expr, reason=msg)
+    shape = _partial_target_shape(binding.target, state)
+    remaining = [field for field, _ in shape.fields if field not in binding.fixed]
+    if len(remaining) != 1:
+        msg = (
+            f'map `partial` of `{binding.call_name}` binds every input but one, naming the remaining input; '
+            + f'{len(remaining)} inputs remain unbound; fix all but one input instead'
+        )
+        _reject(state, node=func_expr, reason=msg)
+    element = remaining[0]
+    if 'collection' in binding.fixed and element != 'collection':
+        msg = (
+            f'map `{binding.call_name}` wires its collection under `collection`, '
+            'so a mapped input named `collection` cannot be bound; '
+            'map the `collection` input as the element instead'
+        )
+        _reject(state, node=func_expr, reason=msg)
+    mapped_body: GraphIR | None = None
+    mapped_spec: TaskIR | None = None
+    explicit = explicit_override or binding.explicit
+    if explicit is not None:
+        instance = _claim_placement(state, explicit, node=func_expr, is_map=True)
+    else:
+        instance = _claim_placement(state, f'map_{binding.call_name}', node=func_expr, is_map=True)
+    if isinstance(binding.target, GraphHandle):
+        mapped_body = _lower_graph(binding.target, stack=state.stack)
+        mapped_spec = None
+    else:
+        mapped_body = None
+        base_spec = binding.target._task_spec
+        mapped_spec = _solved_partial_spec(
+            binding.target, binding, [], state, spec=base_spec, result_port=base_spec.result_port
+        )
+    _check_partial_map_callable(state, node=func_expr, label=binding.call_name, spec=mapped_spec, body=mapped_body)
+    collection = _lower_value(state, collection_expr)
+    container = _check_par_map_collection(state, node=collection_expr, value=collection)
+    given: dict[str, _CapturedValue] = {}
+    for port, captured in binding.fixed.items():
+        _wire_fixed_value(state, instance, port, captured, given)
+    _wire(state, instance=instance, port='collection', value=collection, given=given)
+    state.tasks.append(
+        MapControl(
+            name=instance, inputs=given, spec=mapped_spec, body=mapped_body, container=container, element=element
+        )
     )
-    instance: str = _claim_name(state, name=name)
+    collected = DataList if container == 'list' else DataDict
+    return _Reference(instance, port='result', shape=LeafShape(types=(collected,)))
+
+
+def _check_partial_map_callable(
+    state: _LoweringState, node: ast.AST, label: str, spec: TaskIR | None, body: GraphIR | None
+) -> None:
+    """Reject partial-mapped callables without exactly one leaf output per element."""
+    if spec is not None:
+        result_port = spec.result_port
+        result_shape: Shape = spec.result_shape
+    elif body is not None:
+        result_port = body.result_port
+        result_shape = body.result_shape
+    else:
+        msg = (
+            'maps collect one output per element into the result container, so the callable returns exactly one value; '
+            + f'`{label}` must declare a single output; map a unary task or graph with one output instead'
+        )
+        _reject(state, node=node, reason=msg)
+    if not result_port or not isinstance(result_shape, LeafShape):
+        msg = (
+            'maps collect one output per element into the result container, so the callable returns exactly one value; '
+            + f'`{label}` must declare a single output; map a unary task or graph with one output instead'
+        )
+        _reject(state, node=node, reason=msg)
+
+
+def _bind_par_map_arguments(state: _LoweringState, expression: ast.Call) -> tuple[ast.expr, ast.expr]:
+    """Bind `par_map(func, values)` positionally or by keyword."""
+    positional: list[ast.expr] = list(expression.args)
+    named: dict[str, ast.expr] = {}
+    for keyword in expression.keywords:
+        if keyword.arg is None:
+            msg = 'inputs wire by name, so spreading hides which is which; pass `func` and `values` explicitly instead.'
+            _reject(state, node=keyword, reason=msg)
+        named[keyword.arg] = keyword.value
+    for key in ('func', 'values'):
+        if key in named and positional:
+            msg = f'`{key}` is given twice, positionally and by keyword; pass it once instead.'
+            _reject(state, node=expression, reason=msg)
+    if positional and named:
+        msg = 'pass the callable and the collection positionally as `par_map(func, values)`, or by keyword instead.'
+        _reject(state, node=expression, reason=msg)
+    if len(positional) == 2:
+        return positional[0], positional[1]
+    if len(positional) == 1 or len(positional) > 2 or set(named) != {'func', 'values'}:
+        msg = 'maps apply one callable to one collection; call `par_map(func, values)` with both instead.'
+        _reject(state, node=expression, reason=msg)
+    return named['func'], named['values']
+
+
+def _check_par_map_callable(
+    state: _LoweringState, node: ast.AST, label: str, spec: TaskIR | None, body: GraphIR | None
+) -> None:
+    """Reject mapped callables that are not unary with exactly one leaf output."""
+    shape = spec.input_shape if spec is not None else body.input_shape  # type: ignore[union-attr]
+    assert isinstance(shape, NamespaceShape)
+    if len(shape.fields) != 1:
+        msg = (
+            'maps wire one element into one input, so the callable takes exactly one input; '
+            + f'`{label}` declares {len(shape.fields)} inputs; map a unary task or graph instead'
+        )
+        _reject(state, node=node, reason=msg)
+    result_port = spec.result_port if spec is not None else body.result_port  # type: ignore[union-attr]
+    result_shape = spec.result_shape if spec is not None else body.result_shape  # type: ignore[union-attr]
+    if not result_port or not isinstance(result_shape, LeafShape):
+        msg = (
+            'maps collect one output per element into the result container, so the callable returns exactly one value; '
+            + f'`{label}` must declare a single output; map a unary task or graph with one output instead'
+        )
+        _reject(state, node=node, reason=msg)
+
+
+def _check_par_map_collection(
+    state: _LoweringState,
+    node: ast.AST,
+    value: _Reference | int | float | str | bool | dict[str, _CapturedValue] | None,
+) -> t.Literal['list', 'dict']:
+    """Reject collections that are not a `DataList`/`DataDict` wire, returning the container kind."""
+    if not isinstance(value, _Reference) or not isinstance(value.shape, LeafShape):
+        msg = (
+            'maps iterate a stored collection, so literals and namespaces cannot drive them; '
+            + 'pass a `DataList` or `DataDict` input or task output instead'
+        )
+        _reject(state, node=node, reason=msg)
+    kinds = value.shape.types
+    if kinds is not None and len(kinds) == 1 and issubclass(kinds[0], DataList):
+        return 'list'
+    if kinds is not None and len(kinds) == 1 and issubclass(kinds[0], DataDict):
+        return 'dict'
+    msg = (
+        'maps iterate owned containers element by element, so the collection contract must name its kind; '
+        + 'annotate the collection as `DataList` or `DataDict` instead'
+    )
+    _reject(state, node=node, reason=msg)
+
+
+def _unsupported_operation_reason() -> str:
+    """Explain that only the fixed scalar operators run inline."""
+    return (
+        'only `+`, `-`, `*`, `//`, `%`, comparisons, and unary `-`, `+`, `not` run inline; '
+        + 'put this calculation in a task instead'
+    )
+
+
+def _operation_parts(
+    state: _LoweringState, node: ast.BinOp | ast.Compare | ast.UnaryOp
+) -> tuple[OperationKind, tuple[ast.expr, ...]]:
+    """Split one operation node into its operator and operand expressions."""
+    if isinstance(node, ast.BinOp):
+        operation = _BINARY_OPERATIONS.get(type(node.op))
+        if operation is None:
+            _reject(state, node=node, reason=_unsupported_operation_reason())
+        return operation, (node.left, node.right)
+    if isinstance(node, ast.Compare):
+        if len(node.ops) != 1 or len(node.comparators) != 1:
+            msg = (
+                'comparisons compare two values at a time, so chained comparisons never run; '
+                + 'compare two values per line instead'
+            )
+            _reject(state, node=node, reason=msg)
+        if isinstance(node.ops[0], (ast.Is, ast.IsNot)):
+            msg = (
+                'only `is None`, `is not None`, and `is` against a declared error member are supported; '
+                + 'arbitrary `is` identity tests never run; '
+                + 'test presence or a declared member instead, or put the comparison in a task'
+            )
+            _reject(state, node=node, reason=msg)
+        operation = _COMPARISON_OPERATIONS.get(type(node.ops[0]))
+        if operation is None:
+            _reject(state, node=node, reason=_unsupported_operation_reason())
+        return operation, (node.left, node.comparators[0])
+    operation = _UNARY_OPERATIONS.get(type(node.op))
+    if operation is None:
+        _reject(state, node=node, reason=_unsupported_operation_reason())
+    return operation, (node.operand,)
+
+
+def _operand_shape(value: _Reference | int | float | str | bool | None) -> Shape:
+    """Return the static contract of a lowered operand."""
+    if isinstance(value, _Reference):
+        return value.shape
+    return LeafShape(types=(type(value),))
+
+
+def _lower_operand(state: _LoweringState, expression: ast.expr) -> _Reference | int | float | str | bool | None:
+    """Lower one operation operand, rejecting hidden placements."""
+    if isinstance(expression, ast.Call):
+        msg = 'nested calls hide a placement; put the inner call on its own line first'
+        _reject(state, node=expression, reason=msg)
+    # Signed literals fold in `_lower_value`; anything else unary places an operation there.
+    return _lower_value(state, expression)
+
+
+def _const_task(state: _LoweringState, reference: _Reference) -> InlineOperation | None:
+    """Return the `const` placement a reference resolves to, or `None` for other wires."""
+    if reference.task is None:
+        return None
+    for placed in state.tasks:
+        if placed.name == reference.task:
+            return placed if isinstance(placed, InlineOperation) and placed.operation == 'const' else None
+    return None
+
+
+def _reject_const_return(state: _LoweringState, reference: _Reference, node: ast.AST) -> None:
+    """Reject a bound scalar literal as a root graph output.
+
+    Constants are ephemeral orchestration state, never stored data: returning one would publish
+    a value with no creating task, breaking the rule that workflows return existing data while
+    only tasks create new data. Only the root return is rejected here: a nested graph lowers
+    through this same path with a deeper stack, and may thread constants as control state for
+    its caller to consume, with the runtime root boundary still guarding the final outputs.
+    """
+    if len(state.stack) != 1 or _const_task(state, reference) is None:
+        return
+    msg = (
+        'graphs return existing nodes rather than creating data; '
+        + 'this name binds a scalar constant held as orchestration state, not a stored node; '
+        + 'create the value in a `@task` and return the task output instead'
+    )
+    _reject(state, node=node, reason=msg)
+
+
+def _place_constant(state: _LoweringState, *, value: int | float | str | bool | None, node: ast.AST) -> _Reference:
+    """Bind one scalar literal as ephemeral orchestration state, returning its result.
+
+    The literal is finite JSON by the time it arrives here (`_lower_value` validates), so the
+    placement checkpoints with the scope and serializes with the template, but the runtime
+    evaluates it to a plain Python value that is never stored or linked.
+    """
+    try:
+        result_shape = const_result_shape(value)
+    except GraphTypeCheckError as exception:
+        _reject(state, node=node, reason=str(exception))
+    instance = _claim_name(state, f'constant_{len(state.tasks) + 1}')
+    state.tasks.append(
+        InlineOperation(
+            name=instance,
+            inputs={CONSTANT_PORT: value},
+            operation='const',
+            input_shape=NamespaceShape(fields=((CONSTANT_PORT, result_shape),)),
+            result_shape=result_shape,
+        )
+    )
+    return _Reference(instance, port=RESULT_PORT, shape=result_shape)
+
+
+def _place_operation(
+    state: _LoweringState,
+    *,
+    operation: OperationKind,
+    operands: tuple[_Reference | int | float | str | bool | None, ...],
+    node: ast.AST,
+) -> _Reference:
+    """Infer, place, and wire one inline operation, returning its result."""
+    shapes = tuple(_operand_shape(value) for value in operands)
+    try:
+        result_shape = infer_operation_shape(operation, shapes)
+    except GraphTypeCheckError as exception:
+        _reject(state, node=node, reason=str(exception))
+    ports = (LEFT_PORT, RIGHT_PORT) if len(operands) == 2 else (OPERAND_PORT,)
+    instance = _claim_name(state, f'operation_{len(state.tasks) + 1}')
+    given: dict[str, _CapturedValue] = {}
+    for port, value in zip(ports, operands, strict=True):
+        _wire(state, instance=instance, port=port, value=value, given=given)
+    state.tasks.append(
+        InlineOperation(
+            name=instance,
+            inputs=given,
+            operation=operation,
+            input_shape=NamespaceShape(fields=tuple(zip(ports, shapes, strict=True))),
+            result_shape=result_shape,
+        )
+    )
+    return _Reference(instance, port=RESULT_PORT, shape=result_shape)
+
+
+def _place_expression(state: _LoweringState, node: ast.expr) -> _Reference:
+    """Place a pure collection expression with captured wires and lexically scoped locals."""
+    references: dict[str, _Reference] = {}
+
+    def resolve(expression: ast.expr) -> tuple[str, Shape]:
+        assert isinstance(expression, ast.Name)
+        reference = _lower_value(state, expression)
+        assert isinstance(reference, _Reference)
+        references[expression.id] = reference
+        return expression.id, reference.shape
+
+    try:
+        expression, inputs = compile_expression(node, resolve)
+        result = infer_expression_shape(expression, inputs)
+        if not isinstance(result, LeafShape):
+            msg = 'inline collection expressions produce one value, not an output namespace.'
+            raise GraphTypeCheckError(msg)
+    except GraphTypeCheckError as exception:
+        _reject(state, node=node, reason=str(exception))
+    instance = _claim_name(state, f'expression_{len(state.tasks) + 1}')
+    given: dict[str, _CapturedValue] = {}
+    for port, reference in references.items():
+        _wire(state, instance=instance, port=port, value=reference, given=given)
+    state.tasks.append(
+        InlineOperation(
+            name=instance,
+            operation='expression',
+            expression=expression,
+            inputs=given,
+            input_shape=NamespaceShape(fields=tuple(inputs.items())),
+            result_shape=result,
+        )
+    )
+    return _Reference(instance, port=RESULT_PORT, shape=result)
+
+
+def _lower_operation(state: _LoweringState, node: ast.BinOp | ast.Compare | ast.UnaryOp) -> _Reference:
+    """Place one inline operation and return its result reference.
+
+    Supported presence and member tests lower to ephemeral boolean control values through the
+    branch machinery instead of computing inline, so `x is y` arbitrary identities still reject
+    below while `value is None` and declared members return booleans. Operands lower first, so
+    nested operations become their own placements with dependency wires into the outer one.
+    Primitive results are orchestration state, never `Data` nodes: the placement only records
+    the operator and its operand contracts for the engine.
+    """
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        predicate = _lower_predicate_value(state, node, node=node)
+        if predicate is not None:
+            return predicate
+    if isinstance(node, ast.Compare) and isinstance(node.ops[0], (ast.Is, ast.IsNot)):
+        predicate = _lower_predicate_value(state, node, node=node)
+        if predicate is not None:
+            return predicate
+    operation, raw = _operation_parts(state, node=node)
+    lowered = tuple(_lower_operand(state, item) for item in raw)
+    return _place_operation(state, operation=operation, operands=lowered, node=node)
+
+
+def _place_invocation(
+    state: _LoweringState,
+    expression: ast.Call,
+    task: ProcessTask | SubgraphTask,
+    result_port: str,
+    result_shape: Shape,
+    *,
+    capture: bool,
+    unpack: bool,
+) -> _Reference:
+    """Select the invocation's success shape or its explicitly captured pair."""
+    errors = task.spec.result_errors if isinstance(task, ProcessTask) else task.body.declared_errors
+    if capture:
+        if not errors:
+            _reject(state, node=expression, reason='`.catch()` requires an invocation with declared failures')
+        task = replace(task, capture_error=True)
+        if isinstance(task, ProcessTask):
+            assert isinstance(result_shape, NamespaceShape)
+            result_shape = result_shape.select('value')
+        result_port = ''
+        result_shape = NamespaceShape(
+            fields=(
+                ('value', replace(result_shape, required=False)),
+                ('error', LeafShape(types=(EnumData,), required=False, error_enums=frozenset(errors))),
+            )
+        )
+    elif isinstance(task, ProcessTask) and errors:
+        if unpack:
+            _reject(
+                state,
+                node=expression,
+                reason='bare Result calls expose only success; use `value, error = call(...).catch()` '
+                'to unpack or bind the success to one name and select its fields',
+            )
+        assert isinstance(result_shape, NamespaceShape)
+        result_shape = replace(result_shape.select('value'), required=not task.spec.result_nullable)
+        result_port = 'value'
+    state.tasks.append(task)
+    return _Reference(task.name, port=result_port, shape=result_shape)
+
+
+def _lower_call(state: _LoweringState, expression: ast.expr, *, unpack: bool = False) -> _Reference:
+    """Place a task or graph call with wired graph inputs."""
+    assert isinstance(expression, ast.Call)
+    caught = _invocation_receiver(expression, 'catch')
+    if caught is not None:
+        if not unpack:
+            _reject(state, node=expression, reason='use `value, error = call(...).catch()` in a tuple assignment')
+        if expression.args or expression.keywords:
+            _reject(state, node=expression, reason='`.catch()` takes no arguments')
+        expression = caught
+    explicit = None
+    aliased = _invocation_receiver(expression, 'alias')
+    if aliased is not None:
+        explicit = _alias_name(state, expression)
+        expression = aliased
+    if (
+        isinstance(expression.func, ast.Call)
+        and isinstance(expression.func.func, ast.Attribute)
+        and expression.func.func.attr == 'alias'
+    ):
+        _reject(state, node=expression, reason="name the invocation with `call(...).alias('name')` instead")
+    partial_use = _partial_call_parts(state, expression.func)
+    if partial_use is not None:
+        binding, _ = partial_use
+        return _lower_partial_call(state, binding, expression, explicit, capture=caught is not None, unpack=unpack)
+    target, name = _resolve_callable(state, expression.func)
+    if target is par_map:
+        if caught is not None:
+            _reject(state, node=expression, reason='`.catch()` captures only direct task or graph invocations')
+        if explicit is not None:
+            _reject(state, node=expression, reason="name the map with `par_map(task.alias('name'), values)` instead")
+        return _lower_par_map(state, expression)
+    assert isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle))
+    if explicit is not None:
+        instance = _claim_placement(state, explicit, node=expression)
+    else:
+        instance = _claim_placement(state, name=name, node=expression)
     if isinstance(target, GraphHandle):
         body: GraphIR = _lower_graph(target, stack=state.stack)
         task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)
@@ -1459,15 +3663,22 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         task = ProcessTask(name=instance, inputs=given, spec=narrowed)
         if narrowed is not spec:
             result_shape = narrowed.result_shape
-    missing: list[str] = _missing_required_inputs(state, instance=instance, shape=inputs, given=task.inputs)
+    if isinstance(task, ProcessTask):
+        runtime_paths = task.spec.runtime_input_paths()
+    else:
+        runtime_paths = frozenset()
+    missing: list[str] = _missing_required_inputs(
+        state, instance=instance, shape=inputs, given=task.inputs, runtime_paths=runtime_paths
+    )
     if missing:
         msg = (
             'required inputs must be wired before the graph is stored; '
             + f'task {name!r} is missing required inputs: {missing}; pass them as call arguments'
         )
         _reject(state, node=expression, reason=msg)
-    state.tasks.append(task)
-    return _Reference(instance, port=result_port, shape=result_shape)
+    return _place_invocation(
+        state, expression, task, result_port, result_shape, capture=caught is not None, unpack=unpack
+    )
 
 
 def _bind_positional(
@@ -1541,26 +3752,10 @@ def _spread_keywords(
     return expanded
 
 
-def _wire_after(state: _LoweringState, instance: str, keyword: ast.keyword) -> None:
-    """Wire ordering edges from an `after` argument."""
-    ordered: list[ast.expr] = (
-        keyword.value.elts if isinstance(keyword.value, (ast.Tuple, ast.List)) else [keyword.value]
-    )
-    for predecessor in ordered:
-        reference = _lower_value(state, expression=predecessor)
-        if not isinstance(reference, _Reference) or reference.task is None:
-            msg = (
-                'ordering edges run between placed tasks, not values; '
-                + 'after needs a task from an earlier line instead'
-            )
-            _reject(state, node=predecessor, reason=msg)
-        state.dependencies.append(Dependency(reference.task, target=instance))
-
-
 def _lower_keywords(
     state: _LoweringState, instance: str, name: str, inputs: NamespaceShape, keywords: list[ast.keyword]
 ) -> dict[str, _CapturedValue]:
-    """Wire one call's arguments to literals, references, and ordering edges."""
+    """Wire one call's arguments to literals and references."""
     given: dict[str, _CapturedValue] = {}
     seen: set[str] = set()
     for keyword in keywords:
@@ -1570,9 +3765,6 @@ def _lower_keywords(
             msg = 'one port takes one value; ' + f'duplicate input {port!r}; pass it once'
             _reject(state, node=keyword, reason=msg)
         seen.add(port)
-        if port == 'after':
-            _wire_after(state, instance=instance, keyword=keyword)
-            continue
         try:
             shape = inputs.select(port)
         except KeyError:
@@ -1586,9 +3778,19 @@ def _lower_keywords(
 
 
 def _missing_required_inputs(
-    state: _LoweringState, instance: str, shape: NamespaceShape, given: t.Any, prefix: str = ''
+    state: _LoweringState,
+    instance: str,
+    shape: NamespaceShape,
+    given: t.Any,
+    prefix: str = '',
+    runtime_paths: frozenset[str] = frozenset(),
 ) -> list[str]:
-    """Return the required task inputs that are neither wired nor routed from graph inputs."""
+    """Return the required task inputs that are neither wired nor routed from graph inputs.
+
+    Unwired configuration-capable inputs stay buildable: explicit wiring owns an
+    input, otherwise an externally bindable one may arrive through `runtime_config`,
+    so only workflow-owned inputs are reported here.
+    """
     missing: list[str] = []
     mapping = given if isinstance(given, Mapping) else {}
     for field_name, child in shape.fields:
@@ -1596,12 +3798,27 @@ def _missing_required_inputs(
         if isinstance(child, NamespaceShape):
             missing.extend(
                 _missing_required_inputs(
-                    state, instance=instance, shape=child, given=mapping.get(field_name), prefix=path
+                    state,
+                    instance=instance,
+                    shape=child,
+                    given=mapping.get(field_name),
+                    prefix=path,
+                    runtime_paths=runtime_paths,
                 )
             )
-        elif child.required and field_name not in mapping and not _is_routed(state, instance=instance, path=path):
+        elif (
+            child.required
+            and field_name not in mapping
+            and not _is_routed(state, instance=instance, path=path)
+            and not _covered_by_runtime(path, runtime_paths)
+        ):
             missing.append(path)
     return missing
+
+
+def _covered_by_runtime(path: str, runtime_paths: frozenset[str]) -> bool:
+    """Return whether an unwired input path sits at or beneath a runtime prefix."""
+    return any(path == prefix or path.startswith(f'{prefix}.') for prefix in runtime_paths)
 
 
 def _is_routed(state: _LoweringState, instance: str, path: str) -> bool:
@@ -1712,8 +3929,27 @@ def _lower_value(
     """Lower a value expression to a reference or literal."""
     if allow_call and isinstance(expression, ast.Call):
         return _lower_call(state, expression=expression)
+    if isinstance(expression, (ast.ListComp, ast.DictComp)):
+        return _place_expression(state, expression)
+    if isinstance(expression, ast.Subscript):
+        parent_shape = _probe_shape(state, expression.value)
+        if not isinstance(parent_shape, NamespaceShape):
+            return _place_expression(state, expression)
+    if isinstance(expression, ast.BoolOp):
+        return _lower_boolop(state, node=expression)
+    if isinstance(expression, ast.IfExp):
+        return _lower_ifexp(state, node=expression)
+    if isinstance(expression, (ast.BinOp, ast.Compare)):
+        return _lower_operation(state, node=expression)
     if isinstance(expression, ast.Name):
         if expression.id not in state.names:
+            namespace = state.definition.symbols.values
+            if expression.id in namespace:
+                msg = (
+                    'module-global values are not wires; '
+                    + f'{expression.id!r} lives outside the graph body; pass it as a graph input instead'
+                )
+                _reject(state, node=expression, reason=msg)
             msg = (
                 'names only exist after a call or an input introduces them; '
                 + f'{expression.id!r} is not known here; assign it on an earlier line instead'
@@ -1732,6 +3968,8 @@ def _lower_value(
         try:
             value = ast.literal_eval(expression)
         except (ValueError, TypeError):
+            if isinstance(expression, ast.UnaryOp):
+                return _lower_operation(state, node=expression)
             _reject(state, node=expression, reason=_unsupported_reason(expression))
         if value is None or isinstance(value, (int, float, str, bool)):
             try:
@@ -1768,8 +4006,8 @@ def _select_field(
     if not isinstance(reference.shape, NamespaceShape):
         if reference.task is not None and reference.port == attr:
             return reference
-        msg = 'a single stored value has no fields to select; use the value directly instead'
-        _reject(state, node=node, reason=msg)
+        assert isinstance(node, ast.expr)
+        return _place_expression(state, node)
     path = f'{reference.port}.{attr}' if reference.port else attr
     try:
         shape = reference.shape.select(attr)
@@ -1780,6 +4018,23 @@ def _select_field(
         )
         _reject(state, node=node, reason=msg)
     return _Reference(reference.task, port=path, shape=shape)
+
+
+def compile_graph(handle: GraphHandle) -> GraphIR:
+    """Lower a handle to its cached template without executing or storing anything.
+
+    Core-only compilation entrypoint for the engine, shapes, IR tooling, and
+    tests. Not re-exported through the user API: user code validates with
+    `GraphHandle.build`, which returns `None`, and launches with `run` or
+    `submit`. Compiling fabricates no `Data` nodes; it only reads declared
+    annotations and source.
+
+    :param handle: the graph handle to compile.
+    :return: the cached static template.
+    """
+    if handle._template is None:
+        handle._template = _lower_graph(handle, stack=())
+    return handle._template
 
 
 def _lower_graph(handle: GraphHandle, stack: tuple[str, ...]) -> GraphIR:

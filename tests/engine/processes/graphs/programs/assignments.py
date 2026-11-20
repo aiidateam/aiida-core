@@ -23,7 +23,7 @@ def tuple_assignment(x: int, y: int) -> int:
 def chained_assignment(value: int) -> int:
     """Assign two names in one statement to one placement."""
     first = second = add(x=value, y=1)
-    return add(x=first, y=second)
+    return add(x=first, y=second).alias('add_2')
 
 
 # rejected at lowering: each name binds one placement.

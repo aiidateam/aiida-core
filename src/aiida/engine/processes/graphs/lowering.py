@@ -996,7 +996,7 @@ def _check_return_agreement(
     if isinstance(declared, LeafShape):
         if declared.types is None or dict in declared.types:
             return  # unconstrained annotations and dynamic mappings declare no fields
-        if isinstance(tree, dict) or _is_namespace_endpoint(state, tree):
+        if isinstance(tree, dict) or _preserved_namespace(state, tree) is not None:
             produced = ', '.join(f'`{name}`' for name in tree) if isinstance(tree, dict) else 'a namespace'
             msg = (
                 f'the return annotation declares {where} as one value, so the return must produce one value there; '
@@ -1011,8 +1011,35 @@ def _check_return_agreement(
         return
     assert isinstance(declared, NamespaceShape)
     if isinstance(tree, Endpoint):
-        if _is_namespace_endpoint(state, tree):
-            # shortcut: an optional task namespace returns as one endpoint, so its keys are not compared here.
+        preserved = _preserved_namespace(state, tree)
+        if preserved is not None:
+            # Dynamic namespaces declare no fields to compare.
+            if preserved.dynamic:
+                return
+            if declared.required:
+                msg = (
+                    'a returned namespace may be absent at runtime, so the annotation must allow that; '
+                    + f'mark {where} `NotRequired` or nullable (`X | None`) instead'
+                )
+                _reject(state, node=node, reason=msg)
+            declared_names = {name for name, _ in declared.fields}
+            for name in preserved:
+                location = f'{path}.{name}' if path else name
+                if name not in declared_names:
+                    msg = (
+                        'the return annotation declares the graph outputs, so the return produces only those; '
+                        + f'`{location}` is not declared; declare `{location}` in the annotation,'
+                        + ' or drop it from the return'
+                    )
+                    _reject(state, node=node, reason=msg)
+            for name, shape in declared.fields:
+                location = f'{path}.{name}' if path else name
+                if name not in preserved and shape.required:
+                    msg = (
+                        f'the return annotation declares output `{location}`, so the return must produce it; '
+                        + f'the return omits `{location}`; return `{location}`, or mark it `NotRequired`'
+                    )
+                    _reject(state, node=node, reason=msg)
             return
         names = ', '.join(f'`{name}`' for name, _ in declared.fields)
         msg = (
@@ -1052,10 +1079,15 @@ def _check_return_leaf_types(state: _LoweringState, tree: OutputTree, declared: 
     _check_types(produced, OutputPort('declared', valid_type=declared.types), context)
 
 
-def _is_namespace_endpoint(state: _LoweringState, endpoint: Endpoint) -> bool:
-    """Return whether an endpoint regroups a whole task output namespace instead of naming one leaf."""
+def _preserved_namespace(state: _LoweringState, endpoint: Endpoint) -> PortNamespace | None:
+    """Return the task output namespace a preserved endpoint regroups, or `None`."""
+    if endpoint.task is None:
+        return None
     task = next((task for task in state.tasks if task.name == endpoint.task), None)
-    return task is not None and isinstance(_port_at(task.output_ports(), endpoint.port), PortNamespace)
+    if task is None:
+        return None
+    namespace = _port_at(task.output_ports(), endpoint.port)
+    return namespace if isinstance(namespace, PortNamespace) else None
 
 
 def _endpoint_tree(reference: _Reference, *, preserve_optional_namespaces: bool = False) -> OutputTree:

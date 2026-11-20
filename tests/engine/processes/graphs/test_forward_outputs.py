@@ -149,6 +149,41 @@ def captured(mode: int) -> Captured:
     return {'value': result, 'error': error}
 
 
+class ShortReport(TypedDict):
+    """A `Report` without its `report` field."""
+
+    details: Details
+    score: float
+
+
+class CapturedShort(TypedDict):
+    """Both arms of a captured call with a short value selection."""
+
+    value: NotRequired[ShortReport]
+    error: NotRequired[Errors]
+
+
+@graph
+def captured_short(mode: int) -> CapturedShort:
+    """Return both arms while declaring fewer value fields than produced."""
+    result, error = produce(mode=mode).catch()
+    return {'value': result, 'error': error}
+
+
+class CapturedRequired(TypedDict):
+    """Both arms of a captured call with a required value arm."""
+
+    value: Report
+    error: NotRequired[Errors]
+
+
+@graph
+def captured_required(mode: int) -> CapturedRequired:
+    """Return both arms while declaring the optional value arm required."""
+    result, error = produce(mode=mode).catch()
+    return {'value': result, 'error': error}
+
+
 @graph
 def select_with_optional_child(mode: int) -> SelectedChild:
     """Keep an optional child inside a required output namespace."""
@@ -318,5 +353,18 @@ def assigned() -> Selected:
 )
 def test_forward_outputs_rejects_invalid_selection(declaration, message):
     """Invalid selection syntax cannot become part of a built graph."""
+    with pytest.raises(GraphLanguageError, match=message):
+        declaration.build()
+
+
+@pytest.mark.parametrize(
+    'declaration, message',
+    [
+        (captured_short, '`value.report` is not declared'),
+        (captured_required, 'mark `value` `NotRequired`'),
+    ],
+)
+def test_forward_outputs_rejects_mismatched_optional_namespace(declaration, message):
+    """Preserved optional namespaces check keys and requiredness against the annotation."""
     with pytest.raises(GraphLanguageError, match=message):
         declaration.build()

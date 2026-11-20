@@ -64,6 +64,7 @@ __all__ = (
     'InlineOperation',
     'LoopControl',
     'MapControl',
+    'OptionalOutputNamespace',
     'OutputTree',
     'ProcessTask',
     'Route',
@@ -72,8 +73,8 @@ __all__ = (
 )
 
 _GRAPH_IR_EXPRESSION_VERSION: t.Final = '0.3'
+_GRAPH_IR_OUTPUT_TREE_VERSION: t.Final = '0.5'
 _GRAPH_IR_RESULT_VERSION: t.Final = '0.4'
-_GRAPH_IR_RETURN_VERSION: t.Final = '0.5'
 _GRAPH_IR_VERSION: t.Final = '0.2'
 _GRAPH_IR_LEGACY_VERSION: t.Final = '0.1'
 _TASK_IR_VERSION: t.Final = '0.1'
@@ -623,6 +624,8 @@ def _dump_output_tree(source: OutputTree) -> dict[str, t.Any]:
     """Serialize one output leaf or nested mapping, preserving the endpoint shape."""
     if isinstance(source, dict):
         return {'nested': {name: _dump_output_tree(child) for name, child in source.items()}}
+    if isinstance(source, OptionalOutputNamespace):
+        return {'presence': source.presence.to_dict(), **_dump_output_tree(source.fields)}
     return source.to_dict()
 
 
@@ -634,7 +637,10 @@ def _load_output_tree(data: Mapping[str, t.Any]) -> OutputTree:
             msg = 'malformed graph declaration; nested outputs must form a mapping.'
             raise GraphTypeCheckError(msg)
         children: Mapping[str, t.Any] = nested
-        return {name: _load_output_tree(child) for name, child in children.items()}
+        fields = {name: _load_output_tree(child) for name, child in children.items()}
+        if 'presence' in data:
+            return OptionalOutputNamespace(Endpoint.from_dict(data['presence']), fields)
+        return fields
     return Endpoint.from_dict(data)
 
 
@@ -1154,7 +1160,24 @@ class ProcessTask(GraphTask):
         return data
 
 
-OutputTree: t.TypeAlias = 'Endpoint | dict[str, OutputTree]'
+@dataclass(frozen=True)
+class OptionalOutputNamespace:
+    """A group of output endpoints emitted only if its source namespace is present."""
+
+    presence: Endpoint
+    fields: dict[str, OutputTree]
+
+
+OutputTree: t.TypeAlias = 'Endpoint | OptionalOutputNamespace | dict[str, OutputTree]'
+
+
+def _has_optional_output_namespace(tree: OutputTree) -> bool:
+    """Check whether the output needs a namespace presence guard."""
+    return isinstance(tree, OptionalOutputNamespace) or (
+        isinstance(tree, dict) and any(_has_optional_output_namespace(child) for child in tree.values())
+    )
+
+
 """A leaf endpoint or a nested mapping of those regrouping existing nodes."""
 
 
@@ -1415,8 +1438,12 @@ class GraphIR:
         from aiida.engine.processes.graphs.validate import validate_graph
 
         validate_graph(self)
-        if self.has_return or any(body.version == _GRAPH_IR_RETURN_VERSION for body in self._child_templates()):
-            version = _GRAPH_IR_RETURN_VERSION
+        if (
+            self.has_return
+            or any(_has_optional_output_namespace(tree) for tree in self.outputs.values())
+            or any(body.version == _GRAPH_IR_OUTPUT_TREE_VERSION for body in self._child_templates())
+        ):
+            version = _GRAPH_IR_OUTPUT_TREE_VERSION
         elif self._uses_result_policy:
             version = _GRAPH_IR_RESULT_VERSION
         elif _graph_contains_operation(self, expression_only=True):
@@ -1600,17 +1627,21 @@ class GraphIR:
         return namespace
 
     def _build_output_port(
-        self, name: str, source: OutputTree, *, hint: tuple[type, ...] | None
+        self, name: str, source: OutputTree, *, hint: tuple[type, ...] | None, present: Endpoint | None = None
     ) -> OutputPort | PortNamespace:
         """Return one output leaf or namespace, preserving the stored node types.
 
         Outputs regroup their source nodes instead of creating data, so a leaf
         whose source accepts `None` or stays unwired is optional downstream.
         """
-        if isinstance(source, dict):
-            nested = PortNamespace(name)
+        if isinstance(source, (dict, OptionalOutputNamespace)):
+            optional = isinstance(source, OptionalOutputNamespace)
+            if isinstance(source, OptionalOutputNamespace):
+                present = source.presence
+                source = source.fields
+            nested = PortNamespace(name, required=not optional)
             for field, child in source.items():
-                nested[field] = self._build_output_port(field, child, hint=hint)
+                nested[field] = self._build_output_port(field, child, hint=hint, present=present)
             return nested
         if source.task is None:
             ports = self.build_input_namespace()
@@ -1630,8 +1661,14 @@ class GraphIR:
             msg = f'graph output `{name}` must reference a declared leaf or task namespace.'
             raise GraphTypeCheckError(msg)
         valid_type = self._output_types(origin, hint) or (DataNode,)
-        # A required leaf under an optional namespace, such as a `Result` success, may be absent with it.
-        required = _output_required(origin) and _ancestry_required(ports, source.port)
+        # A guard already represents the optionality of its source and ancestors.
+        relative = source.port
+        if present is not None and source.task == present.task and source.port.startswith(f'{present.port}.'):
+            ancestor = _port_at(ports, present.port)
+            assert isinstance(ancestor, PortNamespace)
+            ports = ancestor
+            relative = source.port[len(present.port) + 1 :]
+        required = _output_required(origin) and _ancestry_required(ports, relative)
         return OutputPort(name, valid_type=valid_type, required=required)
 
     def _output_types(
@@ -1694,7 +1731,7 @@ class GraphIR:
             _GRAPH_IR_VERSION,
             _GRAPH_IR_EXPRESSION_VERSION,
             _GRAPH_IR_RESULT_VERSION,
-            _GRAPH_IR_RETURN_VERSION,
+            _GRAPH_IR_OUTPUT_TREE_VERSION,
         )
         if version not in supported:
             msg = f'cannot read a graph declaration of version `{version}`; supported versions are {supported}.'

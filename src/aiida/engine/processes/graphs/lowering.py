@@ -44,11 +44,13 @@ from aiida.engine.processes.graphs.ir import (
     InlineOperation,
     LoopControl,
     MapControl,
+    OptionalOutputNamespace,
     OutputTree,
     ProcessTask,
     Route,
     SubgraphTask,
     TaskIR,
+    _ancestry_required,
     merge_branch_shape,
 )
 from aiida.engine.processes.graphs.operations import (
@@ -86,7 +88,7 @@ from aiida.engine.processes.ports import _node_type
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.orm import Bool, DataDict, DataList, EnumData
 
-__all__ = ('Forward', 'GraphHandle', 'graph', 'par_map', 'task')
+__all__ = ('Forward', 'GraphHandle', 'forward_outputs', 'graph', 'par_map', 'task')
 
 # `compile_graph` is intentionally absent from `__all__` and from the
 # `aiida.engine.processes.graphs` and `aiida.engine` re-exports: it is the
@@ -399,7 +401,6 @@ class _Reference:
 
 
 _CapturedValue: t.TypeAlias = '_Reference | int | float | str | bool | dict[str, _CapturedValue] | None'
-_ReferenceTree: t.TypeAlias = '_Reference | dict[str, _ReferenceTree]'
 
 
 @dataclass
@@ -880,15 +881,24 @@ def _lower_early_return(state: _LoweringState, statement: ast.Return) -> None:
         state.return_outputs, state.return_typehints = _lower_outputs(state, result=value)
 
 
+def forward_outputs(source: object, /, *, exclude: tuple[str, ...]) -> dict[str, t.Any]:
+    """Forward selected fields from a static output namespace in a graph return mapping.
+
+    :param source: A reference to a task or nested graph's declared output namespace.
+    :param exclude: A tuple of literal names of immediate fields to omit.
+    :return: The remaining fields, referring to the original stored nodes.
+    :raises GraphLanguageError: If called outside a graph return mapping.
+    """
+    msg = '`forward_outputs` is only supported as a value in the final graph return mapping.'
+    raise GraphLanguageError(msg)
+
+
 def _lower_outputs(
     state: _LoweringState, result: ast.expr
 ) -> tuple[dict[str, OutputTree], dict[str, tuple[type, ...]]]:
     """Lower the return statement to named endpoints and their type hints."""
-    references = _lower_return(state, expression=result)
+    outputs = _lower_return(state, expression=result)
     returned = shape_for_annotation(state.success_annotation)
-    outputs: dict[str, OutputTree] = {
-        name: _endpoint_tree(reference, preserve_optional_namespaces=True) for name, reference in references.items()
-    }
     if len(outputs) == 1 and not isinstance(result, ast.Dict):
         outputs = {'result': next(iter(outputs.values()))}
     typehints: dict[str, tuple[type, ...]] = (
@@ -903,17 +913,12 @@ def _lower_outputs(
     return outputs, typehints
 
 
-def _endpoint_tree(reference: _ReferenceTree, *, preserve_optional_namespaces: bool = False) -> OutputTree:
+def _endpoint_tree(reference: _Reference, *, preserve_optional_namespaces: bool = False) -> OutputTree:
     """Expand a leaf or namespace reference to endpoints regrouping existing nodes.
 
     Namespaces regroup their existing leaves instead of creating data; every leaf
     keeps its stored node, so workflows return but never create data.
     """
-    if isinstance(reference, dict):
-        return {
-            name: _endpoint_tree(item, preserve_optional_namespaces=preserve_optional_namespaces)
-            for name, item in reference.items()
-        }
     if isinstance(reference.shape, NamespaceShape):
         if preserve_optional_namespaces and not reference.shape.required and reference.task and reference.port:
             # A missing whole arm must not turn into an empty mapping at an invocation boundary.
@@ -931,7 +936,7 @@ def _fields(reference: _Reference) -> dict[str, _Reference]:
     }
 
 
-def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _ReferenceTree]:
+def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, OutputTree]:
     """Return a leaf reference, a namespace reference, or a nested mapping of those."""
     if isinstance(expression, ast.Dict):
         lowered = _lower_return_value(state, expression)
@@ -946,15 +951,15 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
     assert isinstance(reference, _Reference)
     _reject_const_return(state, reference, node=expression)
     if isinstance(reference.shape, NamespaceShape):
-        return {'result': reference}
+        return {'result': _endpoint_tree(reference, preserve_optional_namespaces=True)}
     port = reference.port.split('.')[-1]
-    return {port: reference}
+    return {port: _endpoint_tree(reference)}
 
 
-def _lower_return_value(state: _LoweringState, expression: ast.expr) -> _ReferenceTree:
+def _lower_return_value(state: _LoweringState, expression: ast.expr) -> OutputTree:
     """Lower one output mapping value to a leaf, a namespace, or a nested mapping."""
     if isinstance(expression, ast.Dict):
-        nested: dict[str, _ReferenceTree] = {}
+        nested: dict[str, OutputTree] = {}
         for key, value in zip(expression.keys, expression.values, strict=True):
             if not isinstance(key, ast.Constant) or not isinstance(key.value, str) or not key.value.isidentifier():
                 msg = (
@@ -967,13 +972,69 @@ def _lower_return_value(state: _LoweringState, expression: ast.expr) -> _Referen
                 _reject(state, node=expression, reason=msg)
             nested[key.value] = _lower_return_value(state, value)
         return nested
+    if isinstance(expression, ast.Call) and _calls_intrinsic(state, expression, forward_outputs):
+        return _lower_forward_outputs(state, expression)
     reference = _lower_value(state, expression, allow_call=True)
     if not isinstance(reference, _Reference):
         msg = 'graphs return existing nodes rather than creating data; ' + 'return a task output or graph input instead'
         _reject(state, node=expression, reason=msg)
     assert isinstance(reference, _Reference)
     _reject_const_return(state, reference, node=expression)
-    return reference
+    return _endpoint_tree(reference, preserve_optional_namespaces=True)
+
+
+def _calls_intrinsic(state: _LoweringState, node: ast.Call, intrinsic: object) -> bool:
+    """Recognize a graph intrinsic by declaration identity, also through a module."""
+    try:
+        target, _ = _resolve_base(state, node.func)
+    except GraphLanguageError:
+        return False
+    return target is intrinsic
+
+
+def _lower_forward_outputs(state: _LoweringState, call: ast.Call) -> OutputTree:
+    """Resolve a static selection to the original fields' output endpoints."""
+    if len(call.args) != 1 or len(call.keywords) != 1 or call.keywords[0].arg != 'exclude':
+        _reject(state, node=call, reason='use `forward_outputs(source, exclude=(...))`')
+    excluded = call.keywords[0].value
+    if not isinstance(excluded, ast.Tuple):
+        _reject(state, node=excluded, reason='`exclude` must be a tuple of literal field names')
+    if not isinstance(call.args[0], (ast.Name, ast.Attribute, ast.Subscript)):
+        _reject(state, node=call, reason='`forward_outputs` requires a reference to a static output namespace')
+    source = _lower_value(state, call.args[0])
+    if not isinstance(source, _Reference) or source.task is None or not isinstance(source.shape, NamespaceShape):
+        _reject(state, node=call, reason='`forward_outputs` requires a reference to a static output namespace')
+    fields = _fields(source)
+    names: set[str] = set()
+    for item in excluded.elts:
+        if not isinstance(item, ast.Constant) or not isinstance(item.value, str):
+            _reject(state, node=item, reason='`exclude` must be a tuple of literal field names')
+        name = item.value
+        if name in names:
+            _reject(state, node=item, reason=f'duplicate exclusion {name!r}')
+        if name not in fields:
+            _reject(state, node=item, reason=f'unknown immediate output field {name!r}')
+        names.add(name)
+    selected = {name: field for name, field in fields.items() if name not in names}
+    if not selected:
+        _reject(state, node=call, reason='`forward_outputs` must retain at least one field')
+    ports = next(task.output_ports() for task in state.tasks if task.name == source.task)
+    return _forwarded_namespace(source, selected, optional=not _ancestry_required(ports, source.port))
+
+
+def _forwarded_namespace(source: _Reference, fields: dict[str, _Reference], *, optional: bool = False) -> OutputTree:
+    """Regroup selected endpoints, retaining the presence of each optional namespace."""
+    nested = {
+        name: (
+            _forwarded_namespace(field, _fields(field))
+            if isinstance(field.shape, NamespaceShape)
+            else Endpoint(task=field.task, port=field.port)
+        )
+        for name, field in fields.items()
+    }
+    if optional or not source.shape.required:
+        return OptionalOutputNamespace(Endpoint(task=source.task, port=source.port), nested)
+    return nested
 
 
 def _is_inline_operation(value: ast.expr) -> bool:
@@ -2336,6 +2397,8 @@ def _resolve_callable(
     ):
         base, explicit = _alias_call_parts(state, expression)
     target, label = _resolve_base(state, base)
+    if target is forward_outputs:
+        _reject(state, node=expression, reason='`forward_outputs` is only supported in the final graph return mapping')
     if (
         isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle))
         or target is par_map

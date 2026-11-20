@@ -67,6 +67,7 @@ __all__ = (
     'calcfunction',
     'catch_error',
     'construct_awaitable',
+    'forward_outputs',
     'graph',
     'if_',
     'par_map',

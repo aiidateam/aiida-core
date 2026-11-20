@@ -911,6 +911,23 @@ A graph returning one value declares one output named ``result``, and a graph re
 A nested ``dict`` declares nested outputs, and returning a whole namespace regroups its existing leaves under one output without creating data.
 A leaf without a node, such as a ``None`` value for a nullable field, stays out of the emitted outputs.
 
+Use ``forward_outputs`` in the final return mapping to forward a static output namespace without listing every field:
+
+.. code-block:: python
+
+    from aiida.engine import forward_outputs, graph
+
+    @graph
+    def summarize(x: int, y: int):
+        pair = arithmetic(x=x, y=y)
+        return {'arithmetic': forward_outputs(pair, exclude=('product',))}
+
+Exclusions must be a literal tuple of distinct immediate field names.
+Excluding a namespace removes its entire subtree; at least one field must remain.
+An empty tuple excludes nothing.
+The compiler wires the remaining fields directly to their existing nodes and preserves absent optional fields and namespaces.
+The selection also works in a return mapping wrapped in ``Ok``.
+
 A ``TypeVar`` annotation, such as ``def scale(value: T, factor: T) -> T`` with ``T = TypeVar('T', int, float)``, accepts any of its constraints.
 When all values wired to ``T`` share one type, the output takes that type at this call.
 

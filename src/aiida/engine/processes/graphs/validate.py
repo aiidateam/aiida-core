@@ -19,6 +19,7 @@ from aiida.engine.processes.graphs.ir import (
     InlineOperation,
     LoopControl,
     MapControl,
+    OptionalOutputNamespace,
     OutputTree,
     _input_ports_at,
     _port_at,
@@ -286,6 +287,17 @@ def _validate_output_tree(
     graph: GraphIR, boundary: PortNamespace, tree: OutputTree, port: OutputPort | PortNamespace, context: str
 ) -> None:
     """Check one output leaf or nested mapping against its declared contracts."""
+    if isinstance(tree, OptionalOutputNamespace):
+        source = tree.presence
+        origin = (
+            _port_at(boundary, source.port)
+            if source.task is None
+            else _port_at(_task_at(graph, source.task, context).output_ports(), source.port)
+        )
+        if not isinstance(origin, PortNamespace) or origin.dynamic:
+            msg = f'{context} requires a declared static namespace to check for presence.'
+            raise GraphTypeCheckError(msg)
+        tree = tree.fields
     if isinstance(tree, dict):
         assert isinstance(port, PortNamespace)  # `build_output_namespace` mirrors the output tree
         for field, child in tree.items():

@@ -78,6 +78,7 @@ __all__ = (
     'calcfunction',
     'catch_error',
     'construct_awaitable',
+    'forward_outputs',
     'get_daemon_client',
     'get_object_loader',
     'graph',

@@ -1,0 +1,257 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Selective forwarding of existing graph output nodes."""
+
+import json
+
+import pytest
+
+from aiida.common.exceptions import GraphLanguageError
+from aiida.common.links import LinkType
+from aiida.engine import (
+    Err,
+    ExitCodeEnum,
+    Ok,
+    PortModel,
+    Result,
+    catch_error,
+    forward_outputs,
+    graph,
+    run_get_node,
+    task,
+)
+from aiida.engine.processes.graphs.ir import GraphIR
+from aiida.engine.processes.graphs.lowering import compile_graph
+from aiida.engine.processes.graphs.process import GraphProcess
+from aiida.orm import Float, Int, Str
+
+pytestmark = pytest.mark.presto
+
+
+class Details(PortModel):
+    """A static namespace with an optional leaf."""
+
+    value: int
+    note: str | None = None
+
+
+class Report(PortModel):
+    """A producer contract with both namespaces and leaves to select."""
+
+    details: Details
+    score: float
+    report: str
+
+
+class Errors(ExitCodeEnum):
+    """Failure declared by the producer."""
+
+    MISSING = (460, 'Report unavailable.')
+
+
+@task
+def produce(mode: int) -> Result[Report, Errors]:
+    """Produce no report, a report without a note, or a complete report."""
+    if mode == 0:
+        return Err(Errors.MISSING)
+    return Ok(Report(details=Details(value=2, note='kept' if mode == 2 else None), score=0.5, report='excluded'))
+
+
+@graph
+def select(mode: int):
+    """Exclude an immediate leaf, keeping the nested fields."""
+    result = produce(mode=mode)
+    return {'summary': forward_outputs(result, exclude=('report',))}
+
+
+@graph
+def explicit(mode: int):
+    """Spell out the same wiring without a selection."""
+    result = produce(mode=mode)
+    return {'summary': {'details': {'value': result.details.value, 'note': result.details.note}, 'score': result.score}}
+
+
+@graph
+def select_optional(mode: int):
+    """Filter an optional namespace from a captured result."""
+    result, error = catch_error(produce(mode=mode))
+    return {'summary': forward_outputs(result, exclude=('report',)), 'error': error}
+
+
+@graph
+def captured(mode: int):
+    """Expose both arms of the invocation as one namespace."""
+    result, error = catch_error(produce(mode=mode))
+    return {'value': result, 'error': error}
+
+
+@graph
+def select_with_optional_child(mode: int):
+    """Keep an optional child inside a required output namespace."""
+    result = captured(mode=mode)
+    return {'summary': forward_outputs(result, exclude=('error',))}
+
+
+@graph
+def select_subtree(mode: int):
+    """Exclude an entire subtree in an Ok-wrapped output mapping."""
+    result = produce(mode=mode)
+    return Ok({'summary': forward_outputs(result, exclude=('details',))})
+
+
+@graph
+def select_all(mode: int):
+    """Keep every field."""
+    result = produce(mode=mode)
+    return {'summary': forward_outputs(result, exclude=())}
+
+
+@graph
+def whole(mode: int):
+    """Forward the same namespace without using the intrinsic."""
+    result = produce(mode=mode)
+    return {'summary': result}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_forward_outputs_round_trip_and_provenance():
+    """The selected endpoints match explicit wiring and return the original nodes."""
+    assert select.build() is None
+    template = compile_graph(select)
+    restored = GraphIR.from_dict(json.loads(json.dumps(template.to_dict())))
+    assert restored.outputs == compile_graph(explicit).outputs
+    ports = restored.build_output_namespace()['summary']
+    assert set(ports) == {'details', 'score'}
+    assert ports['details']['value'].valid_type == (Int,)
+    assert ports['details']['note'].valid_type == (Str, type(None))
+    assert not ports['details']['note'].required
+    assert ports['score'].valid_type == (Float,)
+
+    outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(restored, {'mode': 2}))
+    assert node.is_finished_ok
+    (child,) = node.called
+    assert set(outputs['summary']) == {'details', 'score'}
+    for path, data in {
+        'details__value': outputs['summary']['details']['value'],
+        'details__note': outputs['summary']['details']['note'],
+        'score': outputs['summary']['score'],
+    }.items():
+        assert (
+            data.uuid
+            == child.base.links.get_outgoing(link_type=LinkType.CREATE).get_node_by_label(f'value__{path}').uuid
+        )
+    assert not node.base.links.get_outgoing(link_type=LinkType.CREATE).all()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('mode', [0, 1, 2])
+@pytest.mark.parametrize('declaration', [select_optional, select_with_optional_child])
+def test_forward_outputs_optional(mode, declaration):
+    """Missing namespaces and leaves stay absent across the compiled template round trip."""
+    restored = GraphIR.from_dict(json.loads(json.dumps(compile_graph(declaration).to_dict())))
+    outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(restored, {'mode': mode}))
+    assert node.is_finished_ok
+    if declaration is select_optional:
+        parent, key = outputs, 'summary'
+        port = restored.build_output_namespace()['summary']
+    else:
+        parent, key = outputs['summary'], 'value'
+        port = restored.build_output_namespace()['summary']['value']
+    assert not port.required
+    assert port['score'].required
+    if mode == 0:
+        assert key not in parent
+    else:
+        assert parent[key]['details']['value'].value == 2
+        assert ('note' in parent[key]['details']) is (mode == 2)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_forward_outputs_subtree_in_ok():
+    """Ok wraps a graph return mapping without introducing another output namespace."""
+    assert select_subtree.build() is None
+    outputs, node = run_get_node(select_subtree, mode=2)
+    assert node.is_finished_ok
+    assert {name: output.value for name, output in outputs['summary'].items()} == {'score': 0.5, 'report': 'excluded'}
+
+
+def test_forward_outputs_empty_exclusions():
+    """An empty exclusion tuple lowers to the unfiltered wiring."""
+    assert compile_graph(select_all).outputs == compile_graph(whole).outputs
+
+
+EXCLUDED = ('report',)
+
+
+@graph
+def unknown():
+    result = produce(mode=2)
+    return {'summary': forward_outputs(result, exclude=('details.note',))}
+
+
+@graph
+def duplicate():
+    result = produce(mode=2)
+    return {'summary': forward_outputs(result, exclude=('report', 'report'))}
+
+
+@graph
+def nonliteral():
+    result = produce(mode=2)
+    return {'summary': forward_outputs(result, exclude=EXCLUDED)}
+
+
+@graph
+def literal_list():
+    result = produce(mode=2)
+    return {'summary': forward_outputs(result, exclude=['report'])}  # type: ignore[arg-type]
+
+
+@graph
+def nonstring():
+    result = produce(mode=2)
+    return {'summary': forward_outputs(result, exclude=(1,))}  # type: ignore[arg-type]
+
+
+@graph
+def none_left():
+    result = produce(mode=2)
+    return {'summary': forward_outputs(result, exclude=('details', 'score', 'report'))}
+
+
+@graph
+def scalar():
+    result = produce(mode=2)
+    return {'summary': forward_outputs(result.score, exclude=())}
+
+
+@graph
+def assigned():
+    result = produce(mode=2)
+    outputs = forward_outputs(result, exclude=('report',))
+    return outputs
+
+
+@pytest.mark.parametrize(
+    'declaration, message',
+    [
+        (unknown, 'unknown immediate output field'),
+        (duplicate, 'duplicate exclusion'),
+        (nonliteral, 'tuple of literal field names'),
+        (literal_list, 'tuple of literal field names'),
+        (nonstring, 'tuple of literal field names'),
+        (none_left, 'retain at least one field'),
+        (scalar, 'reference to a static output namespace'),
+        (assigned, 'final graph return mapping'),
+    ],
+)
+def test_forward_outputs_rejects_invalid_selection(declaration, message):
+    """Invalid selection syntax cannot become part of a built graph."""
+    with pytest.raises(GraphLanguageError, match=message):
+        declaration.build()

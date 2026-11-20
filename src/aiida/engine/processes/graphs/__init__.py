@@ -12,7 +12,7 @@ See :func:`graph` for inline orchestration and retry examples, and :func:`task`
 for provenance-bearing calculations.
 """
 
-from aiida.engine.processes.graphs.lowering import GraphHandle, expose, forward_outputs, graph, par_map, task
+from aiida.engine.processes.graphs.lowering import GraphHandle, dataflow, expose, forward_outputs, graph, par_map, task
 from aiida.engine.processes.graphs.results import Err, Ok, RestartErrors, Result
 
 __all__ = (
@@ -21,6 +21,7 @@ __all__ = (
     'Ok',
     'RestartErrors',
     'Result',
+    'dataflow',
     'expose',
     'forward_outputs',
     'graph',

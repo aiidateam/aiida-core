@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Opt-in graph parallelism
+
+Use `with dataflow():` in a graph body to run independent placements concurrently within that block. Placements outside the block still run in source order and wait for the whole block before continuing.
+
 ### Early returns in graphs
 
 Graphs can return from nested branches and loops, either with existing output nodes or a declared ``Err``.

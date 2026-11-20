@@ -259,12 +259,36 @@ The graph body supports:
 * field and namespace selection (``.key``, ``['key']``, ``.result``; ``.result`` on a single-output call is optional) and multi-output unpacking (``first, second = step(...)``);
 * module-qualified calls (``my_module.add(...)``) and explicitly aliased placements (``decl(...).alias('name')``), required whenever one task or graph is placed twice in the same body;
 * namespace ``dict`` literals (``nodes={'text': text}``) and ``**bundle`` spreading (:ref:`topics:workflows:graphs:spreading`);
-* placements execute one at a time in graph-body order, including those that do not use each other's outputs; ``par_map`` can run items within one placement in parallel;
+* placements execute one at a time in graph-body order by default; use ``with dataflow():`` to let independent placements overlap (:ref:`topics:workflows:graphs:dataflow`), or ``par_map`` to run items within one placement in parallel;
 * ``partial`` bindings: ``configured = partial(add, y=y)`` fixes some inputs of a task or graph once and reuses the binding for ordinary calls and maps (:ref:`topics:workflows:graphs:partial`); ``partial`` needs no import and cannot name an input, wire, or binding;
 
 Each call is assigned to a name, including calls to tasks without outputs; ``return`` and the tests of ``if`` and ``while`` also take inline expressions and calls directly.
 Each name is bound once; only ``if`` arms and ``while`` bodies rebind names bound before them.
 Anything else fails when the graph is validated with ``build()``, naming its source line.
+
+.. _topics:workflows:graphs:dataflow:
+
+Scoped parallelism
+^^^^^^^^^^^^^^^^^^
+
+Use ``with dataflow():`` to let independent placements run concurrently without changing the default source order for the rest of the graph.
+
+.. code:: python
+
+    from aiida.engine import dataflow, graph
+
+    @graph
+    def analyze(nscf: NscfOutputs) -> dict:
+        with dataflow():
+            dos = dos_calc(parent_folder=nscf.remote_folder)
+            projwfc = projwfc_calc(parent_folder=nscf.remote_folder)
+            dos_summary = summarize_dos(dos=dos.output_dos)
+        return {'summary': dos_summary, 'projections': projwfc.projections}
+
+Here ``dos_calc`` and ``projwfc_calc`` can start together, and ``summarize_dos`` waits for ``dos_calc`` but not for ``projwfc_calc``.
+The block starts after preceding placements finish, and all its placements must finish successfully before later placements can start.
+Only use this block for placements that are safe to run concurrently; source order within the block does not order side effects.
+Bindings remain available after the block, and any return must be outside it.
 
 .. _topics:workflows:graphs:inline:
 

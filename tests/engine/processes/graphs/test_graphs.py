@@ -25,7 +25,7 @@ from aiida.common.exceptions import (
     MissingRequiredInputsError,
 )
 from aiida.common.links import LinkType
-from aiida.engine import expose, task
+from aiida.engine import dataflow, expose, task
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import Endpoint, GraphIR, InlineOperation, LoopControl, Route
 from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
@@ -76,6 +76,8 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(call_programs.multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 10}, id='multiply-add'),
         pytest.param(call_programs.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
         pytest.param(call_programs.diamond, {'x': 2}, {'result': 7}, id='diamond'),
+        pytest.param(call_programs.scoped_fanout, {'x': 2}, {'result': 10}, id='scoped-fanout'),
+        pytest.param(call_programs.loop_dataflow, {'x': 3, 'n': 2}, {'result': 5}, id='loop-dataflow'),
         pytest.param(call_programs.passes_after_input, {'x': 2}, {'result': 4}, id='after-as-data-input'),
         pytest.param(call_programs.chain, {'x': 2, 'y': 3}, {'result': 8}, id='chain'),
         pytest.param(call_programs.spread_bundle, {'bundle': {'x': 2, 'y': 3}}, {'result': 5}, id='spread'),
@@ -902,6 +904,49 @@ def test_data_independent_placements_dispatch_in_source_order() -> None:
     state.started('prepare', completed.pk)
     state.completed('prepare', completed.pk)
     assert [start.instance for start in state.step().starts] == ['add']
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_dataflow_forks_after_preparation_and_joins_before_continuing() -> None:
+    state = GraphRun(_roundtrip(call_programs.scoped_fanout), given={'x': Int(2)})
+
+    def complete(label: str, node: ProcessNode) -> None:
+        assert node.pk is not None
+        state.started(label, node.pk)
+        state.completed(label, node.pk)
+
+    assert [start.instance for start in state.step().starts] == ['prepare']
+    _, prepared = tasks.prepare.run_get_node(value=2)
+    complete('prepare', prepared)
+    assert [start.instance for start in state.step().starts] == ['left', 'right']
+
+    _, left = tasks.add.run_get_node(x=2, y=1)
+    complete('left', left)
+    assert [start.instance for start in state.step().starts] == ['summary']
+
+    _, summary = tasks.add.run_get_node(x=3, y=3)
+    complete('summary', summary)
+    assert state.step().starts == []
+    _, right = tasks.add.run_get_node(x=2, y=2)
+    complete('right', right)
+    assert [start.instance for start in state.step().starts] == ['finish']
+
+
+@pytest.mark.parametrize(
+    'declaration, message',
+    [
+        (call_programs.dataflow_as, 'only `with dataflow'),
+        (call_programs.dataflow_return, 'cannot return'),
+    ],
+)
+def test_invalid_dataflow_blocks(declaration: GraphHandle, message: str) -> None:
+    with pytest.raises(GraphLanguageError, match=message):
+        declaration.build()
+
+
+def test_dataflow_only_runs_as_graph_source() -> None:
+    with pytest.raises(GraphLanguageError, match='inside a `@graph` body'):
+        dataflow()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

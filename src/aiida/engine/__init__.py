@@ -76,6 +76,7 @@ __all__ = (
     'await_processes',
     'calcfunction',
     'construct_awaitable',
+    'dataflow',
     'expose',
     'forward_outputs',
     'get_daemon_client',

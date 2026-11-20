@@ -65,6 +65,7 @@ __all__ = (
     'assign_',
     'calcfunction',
     'construct_awaitable',
+    'dataflow',
     'expose',
     'forward_outputs',
     'graph',

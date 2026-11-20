@@ -10,7 +10,7 @@
 
 import typing as t
 
-from aiida.engine import PortField, expose
+from aiida.engine import PortField, dataflow, expose
 from aiida.engine.processes.graphs.lowering import graph
 from tests.engine.processes.graphs.programs import tasks
 from tests.engine.processes.graphs.programs.port_models import AddBundle, ConfigBundle, PartialBundle
@@ -60,6 +60,46 @@ def ordered(x: int) -> int:
     """Run two placements in source order without passing a value between them."""
     _prepared = prepare(value=x)
     return add(x=x, y=1)
+
+
+@graph
+def scoped_fanout(x: int) -> int:
+    """Fork after preparation and join before the final placement."""
+    _prepared = prepare(value=x)
+    with dataflow():
+        left = add(x=x, y=1).alias('left')
+        _right = add(x=x, y=2).alias('right')
+        summary = add(x=left, y=3).alias('summary')
+    return add(x=summary, y=4).alias('finish')
+
+
+@graph
+def loop_dataflow(x: int, n: int) -> int:
+    """Rebind loop state through a dataflow block."""
+    result = add(x=x, y=0)
+    while n > 0:
+        with dataflow():
+            result = add(x=result, y=1)
+            _checked = prepare(value=n)
+            n = n - 1
+    return result
+
+
+@graph
+def dataflow_return(x: int) -> int:
+    """Reject a nonlocal return inside a parallel block."""
+    with dataflow():
+        if x > 0:
+            return x
+    return x
+
+
+@graph
+def dataflow_as(x: int) -> int:
+    """Reject binding the declaration as a context manager."""
+    with dataflow() as _scope:
+        result = add(x=x, y=1)
+    return result
 
 
 @graph

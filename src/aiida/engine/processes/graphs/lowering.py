@@ -24,6 +24,7 @@ import textwrap
 import typing as t
 from collections import Counter
 from collections.abc import Callable, Iterator, Mapping
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, field, replace
 from itertools import pairwise
 from types import ModuleType, UnionType
@@ -92,7 +93,7 @@ from aiida.engine.processes.ports import PortNamespace, _node_type
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.orm import Bool, DataDict, DataList, EnumData
 
-__all__ = ('GraphHandle', 'expose', 'forward_outputs', 'graph', 'par_map', 'task')
+__all__ = ('GraphHandle', 'dataflow', 'expose', 'forward_outputs', 'graph', 'par_map', 'task')
 
 # `compile_graph` is intentionally absent from `__all__` and from the
 # `aiida.engine.processes.graphs` and `aiida.engine` re-exports: it is the
@@ -435,6 +436,7 @@ class _LoweringState:
         default_factory=list
     )
     dependencies: list[Dependency] = field(default_factory=list)
+    dataflow_ends: dict[int, int] = field(default_factory=dict)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     input_shapes: dict[str, Shape] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
@@ -536,6 +538,18 @@ def task(
         return decorate(function)
 
     return decorate
+
+
+def dataflow() -> AbstractContextManager[None]:
+    """Declare a block of placements that may run in parallel in a `@graph` body.
+
+    Placements in the block wait for their inputs rather than for source order.
+    Placements before and after the block remain ordered relative to the entire block.
+
+    :raises GraphLanguageError: if called directly rather than compiled as graph source.
+    """
+    msg = '`dataflow` is a graph declaration; use `with dataflow():` inside a `@graph` body.'
+    raise GraphLanguageError(msg)
 
 
 @t.overload
@@ -785,7 +799,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             + 'end the graph with a return declaring its outputs'
         )
         raise GraphLanguageError(msg)
-    for statement in statements[:-1] if has_final else statements:
+    for statement in _scoped_statements(state, statements[:-1] if has_final else statements):
         if isinstance(statement, (ast.If, ast.While)):
             _lower_control(state, statement)
         elif isinstance(statement, (ast.For, ast.AsyncFor)):
@@ -830,7 +844,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             outputs, output_typehints = _lower_outputs(state, result=result)
     return GraphIR(
         tasks=tuple(state.tasks),
-        dependencies=_serial_dependencies(state),
+        dependencies=_ordered_dependencies(state),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=outputs,
         identifier=state.key,
@@ -1865,7 +1879,7 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
             assigned.add(node.target.id)
         elif isinstance(node, ast.If):
             assigned.update(_body_state_names([*node.body, *node.orelse]))
-        elif isinstance(node, ast.While):
+        elif isinstance(node, (ast.While, ast.With)):
             assigned.update(_body_state_names(node.body))
     return assigned
 
@@ -1875,6 +1889,7 @@ def _has_region_return(statements: list[ast.stmt]) -> bool:
     return any(
         isinstance(node, ast.Return)
         or (isinstance(node, (ast.If, ast.While)) and _has_region_return([*node.body, *node.orelse]))
+        or (isinstance(node, ast.With) and _has_region_return(node.body))
         for node in statements
     )
 
@@ -1888,15 +1903,50 @@ def _ends_in_return(statements: list[ast.stmt]) -> bool:
     )
 
 
-def _serial_dependencies(state: _LoweringState) -> tuple[Dependency, ...]:
-    """Order consecutive placements that aren't already connected by a value wire."""
+def _scoped_statements(state: _LoweringState, statements: list[ast.stmt]) -> Iterator[ast.stmt]:
+    """Yield statements for lowering in the current scope, recording each dataflow placement span."""
+    for statement in statements:
+        if not isinstance(statement, ast.With):
+            yield statement
+            continue
+        item = statement.items[0]
+        call = item.context_expr
+        if (
+            len(statement.items) != 1
+            or item.optional_vars is not None
+            or not isinstance(call, ast.Call)
+            or call.args
+            or call.keywords
+            or _resolve_base(state, call.func)[0] is not dataflow
+        ):
+            msg = 'only `with dataflow():` is supported here; for any other context manager, move it into a task'
+            _reject(state, node=statement, reason=msg)
+        if _has_region_return(statement.body):
+            _reject(state, node=statement, reason='a `dataflow` block cannot return; move the return outside it')
+        start = len(state.tasks)
+        yield from _scoped_statements(state, statement.body)
+        # A nested block in the same template is subsumed by the enclosing span.
+        if len(state.tasks) > start:
+            state.dataflow_ends[start] = len(state.tasks)
+
+
+def _ordered_dependencies(state: _LoweringState) -> tuple[Dependency, ...]:
+    """Order adjacent stages, with only value dependencies inside each dataflow stage."""
+    stages: list[list[str]] = []
+    start = 0
+    while start < len(state.tasks):
+        end = state.dataflow_ends.get(start, start + 1)
+        stages.append([task.name for task in state.tasks[start:end]])
+        start = end
     connected = {(edge.source, edge.target) for edge in state.dependencies}
     return (
         *state.dependencies,
         *(
-            Dependency(prior.name, target=following.name)
-            for prior, following in pairwise(state.tasks)
-            if (prior.name, following.name) not in connected
+            Dependency(source, target=target)
+            for prior, following in pairwise(stages)
+            for source in prior
+            for target in following
+            if (source, target) not in connected
         ),
     )
 
@@ -1914,7 +1964,7 @@ def _lower_control(state: _LoweringState, statement: ast.If | ast.While) -> None
 def _lower_region_statements(state: _LoweringState, statements: list[ast.stmt]) -> set[str]:
     """Lower a region sequence, tracking bindings reaching its end."""
     written: set[str] = set()
-    for statement in statements:
+    for statement in _scoped_statements(state, statements):
         if isinstance(statement, (ast.If, ast.While)):
             prior = dict(state.names)
             _lower_control(state, statement)
@@ -2079,7 +2129,9 @@ def _collect_loads(node: ast.AST, *, written: set[str], live: set[str], skipped:
 def _collect_live(statements: list[ast.stmt], *, written: set[str], live: set[str], skipped: set[int]) -> None:
     """Accumulate read-before-write names in order, threading definite writes through branches."""
     for statement in statements:
-        if isinstance(statement, ast.If):
+        if isinstance(statement, ast.With):
+            _collect_live(statement.body, written=written, live=live, skipped=skipped)
+        elif isinstance(statement, ast.If):
             _collect_loads(statement.test, written=written, live=live, skipped=skipped)
             definite: set[str] | None = None
             for arm in (statement.body, statement.orelse):
@@ -2371,7 +2423,7 @@ def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) ->
     endpoints: dict[str, OutputTree] = {name: _endpoint_tree(value) for name, value in outputs.items()}
     return GraphIR(
         tasks=tuple(state.tasks),
-        dependencies=_serial_dependencies(state),
+        dependencies=_ordered_dependencies(state),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=endpoints,
         input_shape=NamespaceShape(fields=tuple(state.input_shapes.items())),

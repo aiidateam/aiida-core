@@ -12,6 +12,7 @@ import pytest
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.common.exceptions import GraphLanguageError, GraphValidationError
+from aiida.common.links import LinkType
 from aiida.engine import PortModel, WorkChain, graph, par_map, run_get_node, submit, task
 from aiida.engine.processes.graphs.ir import TaskIR
 from aiida.engine.processes.graphs.process import GraphProcess
@@ -287,7 +288,11 @@ def test_nested_scoped_config(executable, aiida_code_installed):
     )
     assert node.is_finished_ok
     assert outputs['result'].value == 7
-    assert [child.inputs.executable.uuid for child in node.called] == [executable.uuid, other.uuid]
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()
+    assert {call.link_label: call.node.inputs.executable.uuid for call in calls} == {
+        'first__configured_chain': executable.uuid,
+        'second__configured_chain': other.uuid,
+    }
 
 
 @pytest.mark.parametrize('flag', [False, True])

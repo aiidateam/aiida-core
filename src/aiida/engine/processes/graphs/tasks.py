@@ -33,7 +33,7 @@ from aiida.engine.processes.graphs.shapes import (
     LeafShape,
     NamespaceShape,
     _expanded_annotation,
-    _forward_marker,
+    _exposed_inputs,
     _is_type_var,
 )
 from aiida.engine.processes.port_model import (
@@ -166,8 +166,8 @@ def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
     """
     if return_annotation is None or return_annotation is type(None):
         return
-    if _forward_marker(return_annotation) is not None:
-        msg = 'forward declarations mirror inputs for graph inputs; return a task output instead.'
+    if _exposed_inputs(return_annotation) is not None:
+        msg = 'exposed inputs declare graph inputs, not task outputs; return a task output instead.'
         raise GraphTypeCheckError(msg)
     return_annotation = _expanded_annotation(return_annotation)
     if is_typeddict(return_annotation):

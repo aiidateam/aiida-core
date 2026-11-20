@@ -10,7 +10,7 @@
 
 import typing as t
 
-from aiida.engine import Forward
+from aiida.engine import PortField, expose
 from aiida.engine.processes.graphs.lowering import graph
 from tests.engine.processes.graphs.programs import tasks
 from tests.engine.processes.graphs.programs.port_models import AddBundle, ConfigBundle, PartialBundle
@@ -135,19 +135,19 @@ def spread_nested(bundle: ConfigBundle) -> int:
 
 
 @graph
-def forwarded_add(bundle: t.Annotated[t.Any, Forward(add)]) -> int:
+def forwarded_add(bundle: expose(add)) -> int:
     """Mirror a task's inputs as one group input."""
     return add(**bundle)
 
 
 @graph
-def forwarded_nested(bundle: t.Annotated[t.Any, Forward(nested_multiply_add)]) -> int:
+def forwarded_nested(bundle: expose(nested_multiply_add)) -> int:
     """Mirror a nested graph's inputs as one group input."""
     return nested_multiply_add(**bundle)
 
 
 @graph
-def forwarded_exclude(bundle: t.Annotated[t.Any, Forward(add, exclude=('y',))]) -> int:
+def forwarded_exclude(bundle: expose(add, exclude=('y',))) -> int:
     """Mirror a task's inputs minus excluded ports."""
     return add(**bundle, y=2)
 
@@ -244,16 +244,16 @@ def spread_extra(bundle: ConfigBundle) -> int:
     return add(**bundle)
 
 
-# rejected at lowering: only tasks and graphs forward.
+# rejected at lowering: only tasks and graphs can be exposed.
 @graph
-def forwarded_unknown(bundle: t.Annotated[t.Any, Forward(int)]) -> int:
-    """Forward a non-task; only tasks and graphs forward."""
+def forwarded_unknown(bundle: expose(int)) -> int:
+    """Expose a non-task; only tasks and graphs can be exposed."""
     return add(**bundle)
 
 
 # rejected at lowering: exclusions name declared input paths.
 @graph
-def forwarded_exclude_unknown(bundle: t.Annotated[t.Any, Forward(add, exclude=('z',))]) -> int:
+def forwarded_exclude_unknown(bundle: expose(add, exclude=('z',))) -> int:
     """Exclude an unknown input; exclusions name declared paths."""
     return add(**bundle)
 
@@ -309,10 +309,16 @@ def daemon_proving(x: int, flag: bool) -> int:
     return total
 
 
-AddInputs = t.Annotated[t.Any, Forward(add)]
+AddInputs = expose(add)
 
 
 @graph
 def forwarded_alias(bundle: AddInputs) -> int:
     """Mirror a task's inputs through a module-level alias."""
+    return add(**bundle)
+
+
+@graph
+def forwarded_annotated(bundle: t.Annotated[AddInputs, PortField(help='The inputs of `add`.')]) -> int:
+    """Mirror a task's inputs through an `expose` class wrapped in `Annotated` metadata."""
     return add(**bundle)

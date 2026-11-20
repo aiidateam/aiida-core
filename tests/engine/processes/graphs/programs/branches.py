@@ -361,7 +361,7 @@ def alias_namespace_mixed(value: int, flag: bool) -> ArithmeticPair:
 
 # rejected at lowering: branch outputs must agree on namespace shapes.
 @graph
-def alias_namespace_mismatched(value: int, flag: bool) -> int:
+def alias_namespace_mismatched(value: int, flag: bool) -> ArithmeticPair:
     """Alias a namespace on one arm and a leaf on the other; arms must agree."""
     pair = arithmetic_pair(x=value, y=3)
     single = add(x=value, y=1)
@@ -374,7 +374,7 @@ def alias_namespace_mismatched(value: int, flag: bool) -> int:
 
 # rejected at lowering: branch outputs must agree on namespace shapes.
 @graph
-def alias_namespace_call_mismatched(value: int, flag: bool) -> int:
+def alias_namespace_call_mismatched(value: int, flag: bool) -> ArithmeticPair:
     """Alias a namespace on one arm and call a leaf on the other; arms must agree."""
     pair = arithmetic_pair(x=value, y=3)
     if flag:

@@ -136,6 +136,7 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(ports.input_passthrough, {'value': 4}, {'result': 4}, id='input-passthrough'),
         pytest.param(ports.single_named_scalar, {'value': 2}, {'only': 2}, id='single-named-scalar'),
         pytest.param(ports.single_named_mapping, {'value': 2}, {'only': 2}, id='single-named-mapping'),
+        pytest.param(ports.optional_output_absent, {'x': 2, 'y': 3}, {'total': 5}, id='optional-output-absent'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-true'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-false'),
         pytest.param(

@@ -28,6 +28,8 @@ from dataclasses import dataclass, field, replace
 from itertools import pairwise
 from types import ModuleType, UnionType
 
+from typing_extensions import get_type_hints, is_typeddict
+
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
 from aiida.common.loaders import get_object_loader
@@ -52,6 +54,7 @@ from aiida.engine.processes.graphs.ir import (
     SubgraphTask,
     TaskIR,
     _ancestry_required,
+    _port_at,
     merge_branch_shape,
 )
 from aiida.engine.processes.graphs.operations import (
@@ -85,7 +88,7 @@ from aiida.engine.processes.graphs.tasks import (
     _build_task,
     _typevar_solution,
 )
-from aiida.engine.processes.ports import _node_type
+from aiida.engine.processes.ports import PortNamespace, _node_type
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.orm import Bool, DataDict, DataList, EnumData
 
@@ -752,6 +755,12 @@ def _lower_function(state: _LoweringState) -> GraphIR:
     """Lower one registered graph definition to a static template."""
     function = _parse_function(state.definition)
     _check_signature(state, function=function)
+    if 'return' not in state.definition.hints:
+        msg = (
+            'graph outputs are checked against the return annotation, so every graph declares one; '
+            + 'annotate the return, such as `-> int` or a `TypedDict`'
+        )
+        _reject(state, node=function, reason=msg)
     boundary = _declare_graph_inputs(state, function=function)
     statements = function.body
     if statements and isinstance(statements[0], ast.Expr) and isinstance(statements[0].value, ast.Constant):
@@ -759,6 +768,12 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             statements = statements[1:]
     annotation = state.definition.hints.get('return')
     state.success_annotation, errors = _result_contract(annotation)
+    if state.success_annotation is t.Any:
+        msg = (
+            '`Any` declares no outputs, so the return cannot be checked against it; '
+            + 'annotate the outputs, such as `-> int` or a `TypedDict`'
+        )
+        _reject(state, node=function, reason=msg)
     if errors:
         state.error_enums = frozenset(
             get_object_loader().identify_object(kind) for kind in _error_types(t.get_args(annotation)[1])
@@ -894,11 +909,21 @@ def forward_outputs(source: object, /, *, exclude: tuple[str, ...]) -> dict[str,
 def _lower_outputs(
     state: _LoweringState, result: ast.expr
 ) -> tuple[dict[str, OutputTree], dict[str, tuple[type, ...]]]:
-    """Lower the return statement to named endpoints and their type hints."""
+    """Lower the return statement to named endpoints and their type hints, checked against the annotation."""
     outputs = _lower_return(state, expression=result)
-    returned = shape_for_annotation(state.success_annotation)
-    if len(outputs) == 1 and not isinstance(result, ast.Dict):
+    returned = _declared_return_shape(state.success_annotation)
+    mapping = isinstance(result, ast.Dict)
+    if len(outputs) == 1 and not mapping:
         outputs = {'result': next(iter(outputs.values()))}
+    _check_return_agreement(state, returned, outputs if mapping else outputs['result'], node=result, path='')
+    if mapping and isinstance(returned, NamespaceShape):
+        # One hint per top-level leaf, so `validate` checks each declared field type.
+        fields = dict(returned.fields)
+        return outputs, {
+            name: shape.types
+            for name, tree in outputs.items()
+            if isinstance(tree, Endpoint) and isinstance(shape := fields[name], LeafShape) and shape.types
+        }
     typehints: dict[str, tuple[type, ...]] = (
         {next(iter(outputs)): returned.types}
         if len(outputs) == 1
@@ -909,6 +934,84 @@ def _lower_outputs(
         else {}
     )
     return outputs, typehints
+
+
+def _declared_return_shape(annotation: object, *, required: bool = True) -> Shape:
+    """Return the output contract of a graph return annotation.
+
+    A `TypedDict` declares one field per key, also when nested, and `X | None` declares
+    `X` as optional, so structured annotations compare field by field with the return.
+    """
+    # `is_typeddict` narrows nothing for type checkers, so the TypedDict attributes read through `Any`.
+    bare: t.Any = t.get_args(annotation)[0] if t.get_origin(annotation) is t.Annotated else annotation
+    if is_typeddict(bare):
+        keys = bare.__required_keys__
+        hints = get_type_hints(bare)
+        return NamespaceShape(
+            fields=tuple((key, _declared_return_shape(hint, required=key in keys)) for key, hint in hints.items()),
+            required=required,
+        )
+    members = t.get_args(bare) if t.get_origin(bare) in (t.Union, UnionType) else ()
+    if type(None) in members and len(members) == 2:
+        declared = _declared_return_shape(next(member for member in members if member is not type(None)))
+        if isinstance(declared, NamespaceShape):
+            return replace(declared, required=False)
+    return shape_for_annotation(annotation, required=required)
+
+
+def _check_return_agreement(
+    state: _LoweringState, declared: Shape, tree: OutputTree, *, node: ast.AST, path: str
+) -> None:
+    """Reject a return whose outputs disagree with the fields its return annotation declares."""
+    if isinstance(tree, OptionalOutputNamespace):
+        tree = tree.fields
+    where = f'`{path}`' if path else 'the graph output'
+    if isinstance(declared, LeafShape):
+        if declared.types is None or dict in declared.types:
+            return  # unconstrained annotations and dynamic mappings declare no fields
+        if isinstance(tree, dict) or _is_namespace_endpoint(state, tree):
+            produced = ', '.join(f'`{name}`' for name in tree) if isinstance(tree, dict) else 'a namespace'
+            msg = (
+                f'the return annotation declares {where} as one value, so the return must produce one value there; '
+                + f'the return produces {produced}; return one value, or annotate those outputs with a `TypedDict`'
+            )
+            _reject(state, node=node, reason=msg)
+        return
+    assert isinstance(declared, NamespaceShape)
+    if isinstance(tree, Endpoint):
+        if _is_namespace_endpoint(state, tree):
+            # shortcut: an optional task namespace returns as one endpoint, so its keys are not compared here.
+            return
+        names = ', '.join(f'`{name}`' for name, _ in declared.fields)
+        msg = (
+            f'the return annotation declares {where} as outputs {names}, so the return must produce them; '
+            + 'the return produces one value; return a mapping of those outputs, or annotate one value'
+        )
+        _reject(state, node=node, reason=msg)
+    fields = dict(declared.fields)
+    for name, child in tree.items():
+        location = f'{path}.{name}' if path else name
+        if name not in fields:
+            msg = (
+                'the return annotation declares the graph outputs, so the return produces only those; '
+                + f'`{location}` is not declared; declare `{location}` in the annotation, or drop it from the return'
+            )
+            _reject(state, node=node, reason=msg)
+        _check_return_agreement(state, fields[name], child, node=node, path=location)
+    for name, shape in declared.fields:
+        location = f'{path}.{name}' if path else name
+        if name not in tree and shape.required:
+            msg = (
+                f'the return annotation declares output `{location}`, so the return must produce it; '
+                + f'the return omits `{location}`; return `{location}`, or mark it `NotRequired`'
+            )
+            _reject(state, node=node, reason=msg)
+
+
+def _is_namespace_endpoint(state: _LoweringState, endpoint: Endpoint) -> bool:
+    """Return whether an endpoint regroups a whole task output namespace instead of naming one leaf."""
+    task = next((task for task in state.tasks if task.name == endpoint.task), None)
+    return task is not None and isinstance(_port_at(task.output_ports(), endpoint.port), PortNamespace)
 
 
 def _endpoint_tree(reference: _Reference, *, preserve_optional_namespaces: bool = False) -> OutputTree:

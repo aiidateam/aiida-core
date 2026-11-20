@@ -18,6 +18,13 @@ Graph bodies accept a general `partial(...)` input binding that needs no import:
 
 ### Breaking changes
 
+#### Graph return annotations are required
+
+Every `@graph` now declares a return annotation, and its final return and every early return must agree with it when the graph is built.
+Previously the annotation was optional and only typed a single returned value, so a `TypedDict` annotation could name keys the return never produced.
+A single-value annotation requires one returned value; a `TypedDict` or `PortModel` annotation requires exactly its fields, with `NotRequired`, defaulted, and `X | None` fields allowed to be absent; `dict[str, T]` leaves the keys free, and `typing.Any` is rejected.
+Add the annotation to existing graphs; stored declarations and checkpoints need no migration.
+
 #### Inline collection expressions in source graphs
 
 Graph bodies now accept inline collection expressions over typed `list[T]`/`dict[str, T]` collections: integer indexing of lists with negatives, string-key lookup of mappings with runtime keys, public annotated item reads such as `item.value`, one-type list/dict literals within collection expressions, and filtered, nested list/dict comprehensions with `mapping.items()` pair iteration.

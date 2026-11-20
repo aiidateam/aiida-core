@@ -1744,7 +1744,8 @@ class TestWorkChainEvents:
             async def run_async():
                 await run_until_waiting(workflow)
 
-                assert await controller.kill_process(workflow.pid)
+                # The parent is killed, but without a broker the child kill cannot be confirmed.
+                assert await controller.kill_process(workflow.pid) is False
 
                 with pytest.raises(KilledError):
                     await workflow.future()

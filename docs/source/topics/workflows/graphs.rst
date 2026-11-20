@@ -257,7 +257,7 @@ The graph body supports:
 * collection expressions over typed lists and mappings: integer indexing with negatives, string-key lookup with runtime keys, public annotated item reads such as ``item.value``, and filtered, nested list and dict comprehensions with ``mapping.items()`` pair iteration (:ref:`topics:workflows:graphs:inline_collections`);
 * an explicit ``return`` on every path, either at the end or from inside an ``if``, ``elif``, ``else``, or ``while`` region; return a name, a field, a call, or a ``dict`` of those with literal string keys (``return {}`` for no outputs);
 * field and namespace selection (``.key``, ``['key']``, ``.result``; ``.result`` on a single-output call is optional) and multi-output unpacking (``first, second = step(...)``);
-* module-qualified calls (``my_module.add(...)``) and explicitly aliased placements (``decl.alias('name')(...)``), required whenever one task or graph is placed twice in the same body;
+* module-qualified calls (``my_module.add(...)``) and explicitly aliased placements (``decl(...).alias('name')``), required whenever one task or graph is placed twice in the same body;
 * namespace ``dict`` literals (``nodes={'text': text}``) and ``**bundle`` spreading (:ref:`topics:workflows:graphs:spreading`);
 * ``after=`` ordering: ``add(x=x, y=1, after=prepared)`` waits for the ``prepared`` placement without using its outputs; ``after=(first, second)`` waits for both; ``after`` is reserved and cannot be a task parameter;
 * ``partial`` bindings: ``configured = partial(add, y=y)`` fixes some inputs of a task or graph once and reuses the binding for ordinary calls and maps (:ref:`topics:workflows:graphs:partial`); ``partial`` needs no import and cannot name an input, wire, or binding;
@@ -383,7 +383,7 @@ A return from a branch or loop exits the current graph invocation, and only cont
 All successful returns must provide compatible graph outputs.
 A taken return blocks later placements, including subsequent loop iterations, but does not cancel work that already started.
 In a ``Result``-annotated graph, use ``Ok(...)`` for success or ``Err(Errors.MEMBER)`` for a declared failure.
-A caller can handle the latter with ``catch_error``.
+A caller can handle the latter with ``.catch()``.
 Whole-namespace arms on both sides must share the same fields.
 The branch reserves the name ``condition`` for its test, so the arms cannot read a value of that name.
 A conditional expression ``x if condition else y`` selects one value the same way, without running the unselected side:
@@ -538,7 +538,7 @@ Calls resolve by declaration name, not by what a module-global variable happens 
 * a plain ``add(...)`` resolves because ``add`` is the declared ``@task`` name;
 * a ``task(ArithmeticAddCalculation)`` factory variable such as ``add_calc`` resolves under its assigned variable name;
 * rebinding either under another module-global name does not declare a new task: ``alias = add`` and ``alias = nested_graph`` fail when the graph is built, as does a stored ``alias = add.alias('scf')`` handle or a renamed import.
-  Name repeated placements inline at the call site with ``add.alias('scf')(...)`` instead;
+  Name repeated placements inline at the call site with ``add(...).alias('scf')`` instead;
 * enum members in member tests, module-qualified targets such as ``tasks.add``, and the callable mapped with ``par_map`` keep their existing resolution;
 * values that are not declarations (module-global numbers, nodes, mappings, or attributes) are not wires.
   Pass them as graph inputs instead of reading a global, which the build reports as a missing graph input rather than a name to assign on an earlier line.
@@ -554,10 +554,10 @@ A task or graph called through ``.alias('scf')`` names its placement explicitly 
 
     @graph
     def two_steps(x: int, y: int) -> int:
-        first = add.alias('scf')(x=x, y=y)
-        return add.alias('nscf')(x=first, y=y)
+        first = add(x=x, y=y).alias('scf')
+        return add(x=first, y=y).alias('nscf')
 
-* The constructor works for function tasks, ``CalcJob`` and ``WorkChain`` tasks, nested graphs, generic tasks, dotted and module call targets such as ``tasks.add.alias('scf')``, and the callable mapped with ``par_map``.
+* This syntax works for function tasks, ``CalcJob`` and ``WorkChain`` tasks, nested graphs, generic tasks, and module-qualified calls such as ``tasks.add(...).alias('scf')``.
 * Each placement in one graph body needs its own name: calling one task or graph twice without aliases fails when the graph is built, as does reusing one alias for two placements or mixing a bare call with an alias on the same name.
 * The same rule covers maps: two default ``par_map`` placements over one callable share one map name and fail, so pass the alias on the callable (``par_map(task.alias('name'), values)``), which names the map placement exactly.
 * Names are scoped to their body: branch arms, loop bodies, and nested graphs each keep their own placements, so both arms of an ``if`` or a loop body may reuse an outer alias.
@@ -942,7 +942,7 @@ The body returns ``Ok`` with the outputs, or ``Err`` with the declared member:
 
 .. code:: python
 
-    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, PortModel, Result, catch_error, graph, task
+    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, PortModel, Result, graph, task
 
     class DivisionErrors(ExitCodeEnum):
         ZERO_DENOMINATOR = ExitCode(410, 'The denominator is zero.')
@@ -968,7 +968,7 @@ The body returns ``Ok`` with the outputs, or ``Err`` with the declared member:
 
     @graph
     def ratio_signed(numerator: float, denominator: float) -> float:
-        value, error = catch_error(divide_signed(numerator=numerator, denominator=denominator))
+        value, error = divide_signed(numerator=numerator, denominator=denominator).catch()
         if error is None:
             selected = value
         elif error is DivisionErrors.ZERO_DENOMINATOR:
@@ -978,13 +978,15 @@ The body returns ``Ok`` with the outputs, or ``Err`` with the declared member:
         return selected
 
 A bare call such as ``value = divide_signed(...)`` binds only the success value and propagates declared failures, retaining the child's original status and formatted message.
-Use ``value, error = catch_error(divide_signed(...))`` to handle a failure instead.
+Use ``value, error = divide_signed(...).catch()`` to handle a failure instead.
 On success, ``error`` is ``None``; on declared failure, ``value`` is ``None`` and ``error`` is the declared member.
 For a nullable success type, check ``error`` to distinguish a successful ``None`` from failure.
-``catch_error`` also accepts a direct nested graph call if that graph can propagate declared failures.
+Use ``.catch()`` on a direct nested graph call if that graph can propagate declared failures.
+To name and catch the same placement, write ``value, error = step(...).alias('name').catch()``.
 A graph return annotation describes its successful value, not whether it can fail.
 
-Standard Python type checkers see the bare call's success type but cannot infer the context-sensitive capture types.
+``.alias()`` and ``.catch()`` are graph-body syntax, not methods on ordinary task outputs.
+Standard Python type checkers see the bare call's success type; the graph compiler checks these modifiers.
 The intrinsic's Python signature uses ``Any`` for the captured success arm and ``ExitCodeEnum | None`` for the captured error arm.
 Use a checker suppression where needed; ``build()`` remains authoritative for graph wiring.
 The success type may be structured: a ``PortModel``, a pydantic model, or a named tuple declares a ``value`` namespace, stored field by field, and consuming tasks take the model as their input type:
@@ -1063,11 +1065,11 @@ Only declared arms the run did not store read as ``None`` downstream, like the m
 Retrying declared failures
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A ``while`` loop retries a fallible task: its body uses ``catch_error`` on every iteration, and the condition reads the latest error arm.
+A ``while`` loop retries a fallible task: its body uses ``.catch()`` on every iteration, and the condition reads the latest error arm.
 
 .. code:: python
 
-    from aiida.engine import RestartErrors, catch_error
+    from aiida.engine import RestartErrors
     from aiida.orm import StructureData
 
     class StepErrors(ExitCodeEnum):
@@ -1086,11 +1088,11 @@ A ``while`` loop retries a fallible task: its body uses ``catch_error`` on every
 
     @graph
     def restartable(structure: StructureData, max_attempts: int, attempt: int = 0) -> float:
-        value, error = catch_error(run_step(structure=structure, attempt=attempt))
+        value, error = run_step(structure=structure, attempt=attempt).catch()
         retry = error is not None and attempt < max_attempts
         while retry:
             attempt = attempt + 1
-            value, error = catch_error(run_step(structure=structure, attempt=attempt))
+            value, error = run_step(structure=structure, attempt=attempt).catch()
             retry = error is not None and attempt < max_attempts
         checked = ensure(value=value)  # noqa: F841 - the guard validates without feeding the return
         return value
@@ -1124,11 +1126,11 @@ Only the error member differs from the budget example above:
 
     @graph
     def restart_on_walltime(structure: StructureData, max_attempts: int, attempt: int = 0) -> float:
-        value, error = catch_error(run_scf(structure=structure, attempt=attempt))
+        value, error = run_scf(structure=structure, attempt=attempt).catch()
         retry = error is StepErrors.OUT_OF_WALLTIME and attempt < max_attempts
         while retry:
             attempt = attempt + 1
-            value, error = catch_error(run_scf(structure=structure, attempt=attempt))
+            value, error = run_scf(structure=structure, attempt=attempt).catch()
             retry = error is StepErrors.OUT_OF_WALLTIME and attempt < max_attempts
         checked = ensure(value=value)
         return value
@@ -1177,15 +1179,15 @@ Each use merges the fixed values with its own arguments into one ordinary placem
     def calibrated(x: int, y: int, z: int) -> int:
         configured = partial(add, y=y)
         first = configured(x=x)
-        second = configured.alias('second_add')(x=z)
-        return add.alias('total_add')(x=first, y=second)
+        second = configured(x=z).alias('second_add')
+        return add(x=first, y=second).alias('total_add')
 
 A use takes the remaining inputs by keyword or, positionally, in the declared order of the inputs the binding leaves open: ``configured(item)`` and ``configured(x=item)`` both wire ``x``.
 Bindings compose (``partial(configured, more=wire)``), nest inline (``partial(add, y=y)(x=x)``), and work in branch arms and loop bodies.
 Fixed values capture the declaration-time references, so a later rebinding of the same name cannot change them.
 Fixed inputs bind by keyword only; a positional fixed input, a duplicate or unknown fixed input, a missing required input at the call, or an illegal target (anything that is not a task or graph) fails when the graph is built.
 A namespaced input merges field by field: fixing ``config={'first': a}`` and calling with ``config={'second': b}`` combines the disjoint leaves, while repeating a leaf still fails.
-A use-site alias applies generically, including to inline bindings: ``partial(add, y=y).alias('named')(x=x)`` and ``par_map(partial(add, y=y).alias('named'), values)`` place under ``named``.
+A use-site alias applies generically, including to inline bindings: ``partial(add, y=y)(x=x).alias('named')`` and ``par_map(partial(add, y=y).alias('named'), values)`` place under ``named``.
 A graph partial used on its own inlines exactly like the graph.
 
 Mapping over a partial is one consumer of the same mechanism: ``par_map`` over a partial binds every input but one, and each element wires into the single remaining input:
@@ -1236,7 +1238,7 @@ The mapped callable can also be a multi-step graph:
     @graph
     def increment_twice(value: int) -> int:
         first = increment(value=value)
-        return increment.alias('increment_2')(value=first)
+        return increment(value=first).alias('increment_2')
 
     @graph
     def apply_graph(values: orm.DataList) -> orm.DataList:
@@ -1340,10 +1342,10 @@ Retry a declared failure with a budget
 
     @graph
     def restartable(x: int, max_retries: int, attempt: int = 0) -> int:
-        value, error = catch_error(run_step(x=x, attempt=attempt))
+        value, error = run_step(x=x, attempt=attempt).catch()
         while error is not None and attempt < max_retries:
             attempt = attempt + 1
-            value, error = catch_error(run_step(x=x, attempt=attempt))
+            value, error = run_step(x=x, attempt=attempt).catch()
         checked = ensure(value=value)
         return value
 
@@ -1392,7 +1394,7 @@ Handle a declared error without retrying
 
 .. code:: python
 
-    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result, catch_error
+    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result
 
     class DivisionErrors(ExitCodeEnum):
         ZERO_DENOMINATOR = ExitCode(410, 'The denominator is zero.')
@@ -1409,7 +1411,7 @@ Handle a declared error without retrying
 
     @graph
     def ratio_or_zero(numerator: float, denominator: float) -> float:
-        value, error = catch_error(divide(numerator=numerator, denominator=denominator))
+        value, error = divide(numerator=numerator, denominator=denominator).catch()
         if error is None:
             selected = value
         else:
@@ -1506,8 +1508,8 @@ Submit a ``WorkChain`` on its own
 
     @graph
     def add_twice(x: int, y: int) -> int:
-        first = add_chain.alias('first')(x=x, y=y)
-        return add_chain.alias('second')(x=first.result, y=y)
+        first = add_chain(x=x, y=y).alias('first')
+        return add_chain(x=first.result, y=y).alias('second')
 
 The work chain keeps its outline and children.
 Each placement runs as a child workflow process under the graph.
@@ -1573,8 +1575,8 @@ Bind shared inputs once with ``partial``:
     @graph
     def add_shifted(x: int, y: int, z: int) -> int:
         add_y = partial(add, y=y)
-        first = add_y.alias('first')(x=x)
-        return add_y.alias('second')(x=first)
+        first = add_y(x=x).alias('first')
+        return add_y(x=first).alias('second')
 
 ``partial`` needs no import and binds nothing by itself; each call site places independently. See :ref:`topics:workflows:graphs:partial`.
 

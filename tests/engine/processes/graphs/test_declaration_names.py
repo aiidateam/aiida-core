@@ -14,7 +14,7 @@ or a ``task(CalcJob)``/``task(WorkChain)`` factory variable under its assigned
 variable name. A module-global rebinding of a handle (``alias = add``,
 ``alias = nested_graph``), a stored ``alias = decl.alias('name')`` handle, or
 a renamed import is not a declaration: name the placement inline with
-``decl.alias('name')(...)`` at the call site instead. Module-global scalars,
+``decl(...).alias('name')`` at the call site instead. Module-global scalars,
 nodes, and other values are not wires either; pass them as graph inputs.
 """
 
@@ -99,7 +99,7 @@ def test_module_qualified_targets_still_resolve() -> None:
 
 
 def test_inline_alias_still_resolves() -> None:
-    """An inline `decl.alias('name')(...)` placement names the call locally."""
+    """An inline `decl(...).alias('name')` placement names the call locally."""
     assert compile_graph(declaration_aliases.calls_inline_alias).task_names == ('scf',)
     assert compile_graph(declaration_aliases.maps_inline_alias).task_names == ('step',)
 

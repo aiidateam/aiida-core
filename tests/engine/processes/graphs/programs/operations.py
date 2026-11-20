@@ -79,7 +79,7 @@ def compared_equality(x: int, y: int) -> int:
     same = x == y
     different = x != y
     chosen = pick(flag=same, when_true=x, when_false=y)
-    return pick.alias('pick_2')(flag=different, when_true=chosen, when_false=x)
+    return pick(flag=different, when_true=chosen, when_false=x).alias('pick_2')
 
 
 @graph
@@ -93,7 +93,7 @@ def materialized_flag(value: int, cutoff: int) -> int:
 def task_output_arithmetic(x: int, y: int) -> int:
     """Compute inline over task outputs; calls still lower to tasks, not into operations."""
     total = add(x=x, y=y)
-    return add.alias('add_2')(x=total - 1, y=total + 1)
+    return add(x=total - 1, y=total + 1).alias('add_2')
 
 
 @graph

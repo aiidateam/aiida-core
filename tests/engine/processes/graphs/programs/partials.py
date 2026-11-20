@@ -105,7 +105,7 @@ add_chain = task(AddChain)
 def scaled(x: int, factor: int) -> int:
     """Scale in two steps, so graph partials inline more than one placement."""
     grown = add(x=x, y=x)
-    return add.alias('scaled_add')(x=grown, y=factor)
+    return add(x=grown, y=factor).alias('scaled_add')
 
 
 @graph
@@ -127,8 +127,8 @@ def partial_reused(x: int, y: int, z: int) -> int:
     """Reuse one task partial for two placements, aliasing the second."""
     configured = partial(add, y=y)  # noqa: F821
     first = configured(x=x)
-    second = configured.alias('second_add')(x=z)
-    return add.alias('total_add')(x=first, y=second)
+    second = configured(x=z).alias('second_add')
+    return add(x=first, y=second).alias('total_add')
 
 
 @graph
@@ -159,7 +159,7 @@ def partial_branch(x: int, y: int, flag: bool) -> int:
     if flag:
         result = configured(x=x)
     else:
-        result = configured.alias('else_add')(x=y)
+        result = configured(x=y).alias('else_add')
     return result
 
 
@@ -177,7 +177,7 @@ def partial_loop(start: int, step: int, limit: int, count: int = 0) -> int:
 @graph
 def partial_rebound(start: int, step: int, limit: int, count: int = 0) -> int:
     """Fix loop state before the loop rebinds it; the fixed value must not follow."""
-    seed = add.alias('seed_add')(x=start, y=0)
+    seed = add(x=start, y=0).alias('seed_add')
     configured = partial(add, y=seed)  # noqa: F821
     value = seed
     while count < limit:
@@ -408,7 +408,7 @@ def partial_map_collection_element(values: DataList, other: int) -> DataList:
 @graph
 def partial_inline_alias(x: int, y: int) -> int:
     """Call an inline partial with a use-site alias."""
-    return partial(add, y=y).alias('inline_add')(x=x)  # noqa: F821
+    return partial(add, y=y)(x=x).alias('inline_add')  # noqa: F821
 
 
 @graph
@@ -474,9 +474,9 @@ def partial_branch_upstream(a: int, b: int, flag: bool) -> int:
     shared = add(x=a, y=b)
     configured = partial(add, y=shared)  # noqa: F821
     if flag:
-        result = configured.alias('take_add')(x=a)
+        result = configured(x=a).alias('take_add')
     else:
-        result = configured.alias('else_add')(x=b)
+        result = configured(x=b).alias('else_add')
     return result
 
 
@@ -497,7 +497,7 @@ def partial_after_direct(x: int, y: int, z: int) -> int:
     """Order a direct partial use after an earlier placement."""
     first = add(x=x, y=y)
     configured = partial(add, y=z)  # noqa: F821
-    return configured.alias('second_add')(x=first, after=first)
+    return configured(x=first, after=first).alias('second_add')
 
 
 @graph

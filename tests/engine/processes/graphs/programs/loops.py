@@ -15,7 +15,7 @@ The remaining declarations are task-based regression fixtures.
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph, task
-from aiida.engine.processes.graphs.results import Err, Ok, Result, catch_error
+from aiida.engine.processes.graphs.results import Err, Ok, Result
 from tests.engine.processes.graphs.programs import tasks as task_module
 from tests.engine.processes.graphs.programs.port_models import Settings
 from tests.engine.processes.graphs.programs.ports import nullable_return
@@ -74,11 +74,11 @@ def retry_until_present(start: int, limit: int, attempt: int = 0) -> int | None:
     :param attempt: the zero-based attempt the first run steps from.
     :return: the first present step output; the guard fails if none succeeded.
     """
-    value, error = catch_error(try_step(x=start, attempt=attempt))
+    value, error = try_step(x=start, attempt=attempt).catch()
     retry = error is TryErrors.RETRYABLE and attempt < limit
     while retry:
         attempt = attempt + 1
-        value, error = catch_error(try_step(x=start, attempt=attempt))
+        value, error = try_step(x=start, attempt=attempt).catch()
         retry = error is TryErrors.RETRYABLE and attempt < limit
     checked = check_present(value=value)  # noqa: F841 - the guard validates without feeding the return
     return value
@@ -129,7 +129,7 @@ def nested_branch_in_loop(value: int) -> int:
     """Branch inside a loop; arms rebind loop state like assignments do."""
     total = add(x=value, y=1)
     while is_positive(value=total):
-        if is_positive.alias('is_positive_2')(value=total):
+        if is_positive(value=total).alias('is_positive_2'):
             total = decrement(value=total)
         total = decrement(value=total)
     return total
@@ -200,7 +200,7 @@ def branch_local_join(value: int, flag: bool) -> int:
         else:
             step = add(x=total, y=0)
         total = add(x=step, y=0)
-        flag = is_positive.alias('is_positive_2')(value=total)
+        flag = is_positive(value=total).alias('is_positive_2')
     return total
 
 
@@ -213,7 +213,7 @@ def nested_local_loop(value: int, flag: bool) -> int:
         while is_positive(value=step):
             step = decrement(value=step)
         total = add(x=step, y=0)
-        flag = is_positive.alias('is_positive_2')(value=total)
+        flag = is_positive(value=total).alias('is_positive_2')
     return total
 
 
@@ -249,7 +249,7 @@ def local_leaks_after_loop(value: int, flag: bool) -> int:
     total = add(x=value, y=0)
     while flag:
         step = add(x=total, y=1)
-        total = add.alias('add_2')(x=step, y=1)
+        total = add(x=step, y=1).alias('add_2')
         flag = is_positive(value=total)
     return step
 
@@ -274,8 +274,8 @@ def nested_loops(value: int) -> int:
         while is_positive(value=step):
             step = decrement(value=step)
         total = decrement(value=step)
-        step = decrement.alias('decrement_2')(value=total)
-        rough = is_positive.alias('is_positive_2')(value=total)
+        step = decrement(value=total).alias('decrement_2')
+        rough = is_positive(value=total).alias('is_positive_2')
     return total
 
 
@@ -305,7 +305,7 @@ def loop_nullable_namespace(first: Settings, second: Settings, rounds: int) -> i
     """Carry a namespace with a `None` leaf across loop iterations."""
     count = add(x=rounds, y=0)
     while is_positive(value=count):
-        if is_positive.alias('is_positive_2')(value=count):
+        if is_positive(value=count).alias('is_positive_2'):
             first = second
         count = decrement(value=count)
     return first.count

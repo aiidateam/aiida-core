@@ -27,6 +27,7 @@ from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.inputs import _at, _prepare_graph_inputs
 from aiida.engine.processes.graphs.ir import GraphIR, InlineOperation, MapControl, ProcessTask, _input_ports_at
 from aiida.engine.processes.graphs.par_map import _collect_dict, _collect_list
+from aiida.engine.processes.graphs.preview import GraphLaunchPreview, _preview
 from aiida.engine.processes.graphs.recovery import (
     _OOM,
     _at_placement,
@@ -211,6 +212,12 @@ class GraphProcess(Process):
             ),
             cls._PROTOCOL_RECORD: _snapshot_protocol(protocol_record or {}),
         }
+
+    @classmethod
+    def preview_launch(cls, body: GraphIR, launch: Mapping[str, t.Any]) -> GraphLaunchPreview:
+        """Validate graph inputs and inspect a prepared launch without creating a process."""
+        inputs = _serialize_graph_inputs(body, launch[cls._GRAPH_INPUTS])
+        return _preview(body, inputs, launch[cls._RUNTIME_CONFIG], launch[cls._EXECUTION_POLICY])
 
     @property
     @override

@@ -663,7 +663,22 @@ Branch, loop and mapped-graph bodies introduce no configuration level; iteration
 Aliases name placements in the template.
 Labels the engine generates at runtime (loop iterations, map items) keep their automatic names.
 
-``workflow.build()`` needs no runtime configuration.
+``workflow.build()`` needs no runtime configuration and returns ``None``.
+To validate a particular launch without starting it, pass the same arguments as for ``run`` or ``submit``:
+
+.. code-block:: python
+
+    preview = workflow.build(prepared_run=prepared)
+    print(preview)
+    for placement in preview.placements:
+        print(placement.address, placement.regions, placement.inputs)
+
+The preview lists static process and map placements, including branches that may not execute.
+Bindings marked ``resolved`` are known before launch; bindings marked ``deferred`` give the source of a value produced during execution.
+An input not listed has no explicit preview binding and may receive a child process default.
+The preview never evaluates conditions, runs placements, or stores nodes.
+Pass ``inputs={}`` explicitly to preview a graph that needs no scientific arguments.
+
 Launch validates supplied addresses, ownership and independently complete execution namespaces across all static branches, including bodies that may never execute.
 Validation requiring scientific task outputs occurs when the complete child inputs are available, through the normal process launch machinery.
 Missing required execution inputs fail validation; an omitted or empty placement entry is otherwise allowed.

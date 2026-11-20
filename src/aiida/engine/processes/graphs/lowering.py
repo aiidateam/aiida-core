@@ -69,6 +69,7 @@ from aiida.engine.processes.graphs.operations import (
     infer_operation_shape,
 )
 from aiida.engine.processes.graphs.par_map import par_map
+from aiida.engine.processes.graphs.preview import GraphLaunchPreview
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.results import Err, Ok, _error_types, _result_contract
 from aiida.engine.processes.graphs.shapes import (
@@ -187,15 +188,26 @@ class GraphHandle(t.Generic[P, R]):
         """Return the declared function for the lowering pipeline."""
         return self._definition.function
 
-    def build(self) -> None:
-        """Validate the declaration without executing it.
+    @t.overload
+    def build(self) -> None: ...
 
-        Checking raises the declaration diagnostics early. It runs no placement, stores no node, and creates no data;
-        use `run` or `submit` to execute. The validated template stays private to the implementation.
+    @t.overload
+    def build(self, **inputs: t.Any) -> GraphLaunchPreview: ...
 
-        :return: `None`.
+    def build(self, **inputs: t.Any) -> GraphLaunchPreview | None:
+        """Validate the graph definition, optionally previewing a concrete launch.
+
+        With launch arguments, validate known inputs and execution configuration without
+        starting placements or storing nodes. The preview does not evaluate branches or
+        predict outputs. Use `inputs={}` to preview a launch without scientific arguments.
+
+        :param inputs: Optional arguments accepted by `run` or `submit`.
+        :return: A static launch preview if arguments were supplied, otherwise `None`.
         """
-        compile_graph(self)
+        template = compile_graph(self)
+        if not inputs:
+            return None
+        return GraphProcess.preview_launch(template, self.get_launch_inputs(**inputs))
 
     @property
     def process_class(self) -> type[GraphProcess]:

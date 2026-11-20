@@ -27,7 +27,7 @@ from aiida.engine import (
     task,
 )
 from aiida.engine.processes.persistence import CheckpointPayload
-from aiida.orm import FolderData, Int
+from aiida.orm import FolderData, Int, Node, QueryBuilder
 
 pytestmark = pytest.mark.presto
 
@@ -227,6 +227,48 @@ def test_protocol_preparation_and_restart(code):
     outputs, restarted = run_get_node(node.get_builder_restart())
     assert outputs['result'].value == 4096
     assert restarted.base.attributes.get(node.PROTOCOL_KEY) == node.base.attributes.get(node.PROTOCOL_KEY)
+
+
+def test_build_with_prepared_run_previews_known_and_deferred_inputs(code):
+    """Preview resolves bound launch inputs, without running any placement or storing nodes."""
+    count = QueryBuilder().append(Node).count()
+    prepared = PreparedRun(
+        inputs={'x': 1, 'threshold': 4096},
+        execution_environment=environment(code),
+        protocol='example:relax',
+        version='2',
+    )
+    assert workflow.build() is None
+    preview = workflow.build(prepared_run=prepared)
+    assert QueryBuilder().append(Node).count() == count
+    assert [placement.address for placement in preview.placements] == ['preprocess', 'stage.solver', 'consume']
+    solver = preview.placements[1]
+    assert solver.inputs['code'].state == 'resolved'
+    assert solver.inputs['code'].value.uuid == code.uuid
+    assert solver.inputs['metadata.options.max_memory_kb'].value == 2048
+    assert solver.inputs['y'].value == 4096
+    assert solver.inputs['x'].state == 'deferred'
+    assert solver.inputs['x'].source == 'preprocess.result'
+    assert solver.retry_policy.max_attempts == 3
+    assert 'deferred — preprocess.result' in str(preview)
+
+
+def test_build_preview_does_not_predict_loop_iterations(code):
+    """Show one static description of a loop placement even if it may never run."""
+    preview = iterated.build(x=1, threshold=4096, count=0, execution_environment=environment(code, nested=False))
+    [solver] = preview.placements
+    assert solver.address == 'solver'
+    assert solver.regions[0].endswith(':loop')
+    assert solver.inputs['x'].state == 'deferred'
+    assert solver.inputs['y'].value == 4096
+
+
+def test_build_preview_validates_launch_inputs(code):
+    """Reject invalid placement configuration instead of treating it as deferred."""
+    with pytest.raises(GraphValidationError, match='unknown placement path'):
+        workflow.build(x=1, threshold=4096, runtime_config={'misspelled': {}})
+    with pytest.raises(GraphValidationError, match='not of the right type'):
+        workflow.build(x='wrong type', threshold=4096, execution_environment=environment(code))
 
 
 @pytest.mark.parametrize('cut', ['before_initial_dispatch', 'waiting_for_retry'])

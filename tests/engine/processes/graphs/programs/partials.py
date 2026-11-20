@@ -270,9 +270,9 @@ def partial_map_chained(values: DataList, y: int) -> int:
 @graph
 def partial_map_after(x: int, values: DataList, y: int) -> DataList:
     """Map a task partial ordered after an earlier placement."""
-    first = inc(value=x)
+    _first = inc(value=x)
     configured = partial(add, y=y)  # noqa: F821
-    return par_map(configured, values, after=first)
+    return par_map(configured, values)
 
 
 @graph
@@ -319,7 +319,7 @@ def partial_illegal_target(values: DataList) -> DataList:
 
 @graph
 def partial_after_binding(x: int, y: int) -> int:
-    """Order a binding; rejected because `after` waits for the eventual call."""
+    """Try to bind `after` on a task that does not declare it."""
     configured = partial(add, y=y, after=x)  # type: ignore[call-arg]  # noqa: F821
     return configured(x=x)
 
@@ -497,7 +497,7 @@ def partial_after_direct(x: int, y: int, z: int) -> int:
     """Order a direct partial use after an earlier placement."""
     first = add(x=x, y=y)
     configured = partial(add, y=z)  # noqa: F821
-    return configured(x=first, after=first).alias('second_add')
+    return configured(x=first).alias('second_add')
 
 
 @graph

@@ -116,13 +116,6 @@ def aliased_loop(value: int, count: int) -> int:
 
 
 @graph
-def aliased_ordered(x: int) -> int:
-    """Order an aliased placement with `after`."""
-    first = add(x=x, y=0).alias('prepare')
-    return add(x=x, y=1, after=first).alias('scf')
-
-
-@graph
 def aliased_generic(x: int, y: int) -> int:
     """Place a generic task under an explicit name; constraints still check."""
     return generic_add(a=x, b=y).alias('scf')

@@ -90,13 +90,6 @@ def test_aliased_loop_body_builds() -> None:
     assert GraphIR.from_dict(json.loads(json.dumps(spec.to_dict()))).to_dict() == spec.to_dict()
 
 
-def test_aliased_after_orders_without_value() -> None:
-    """An `after` edge between aliases orders placements without wiring a value."""
-    spec = compile_graph(aliases.aliased_ordered)
-    assert spec.task_names == ('prepare', 'scf')
-    assert [(edge.source, edge.target) for edge in spec.dependencies] == [('prepare', 'scf')]
-
-
 def test_aliased_generic_builds() -> None:
     """A generic task alias compiles; constraints still solve at the alias."""
     spec = compile_graph(aliases.aliased_generic)

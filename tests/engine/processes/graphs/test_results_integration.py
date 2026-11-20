@@ -450,31 +450,6 @@ def test_nested_capture_survives_checkpoint_before_and_after_failure():
 
 
 @graph
-def concurrent_failures(first: int, second: int) -> int:
-    value = flaky_increment(x=first).alias('first_call')
-    _other = flaky_increment(x=second).alias('second_call')
-    return value
-
-
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_first_observed_failure_stays_latched_after_resume():
-    template = compile_graph(concurrent_failures)
-    state = GraphRun(template, given={'first': Int(1), 'second': Int(11)})
-    first, second = state.step().starts
-    assert (first.instance, second.instance) == ('first_call', 'second_call')
-    _, first_child = run_get_node(flaky_increment, x=1)
-    _, second_child = run_get_node(flaky_increment, x=11)
-    state.started(first.instance, first_child.pk)
-    state.started(second.instance, second_child.pk)
-    state.completed(second.instance, second_child.pk)
-
-    restored = GraphRun.from_dict(template, state.given, state.to_dict())
-    restored.completed(first.instance, first_child.pk)
-    assert not restored.step().starts
-    assert restored.propagated_exit_code == FlakyErrors.TOO_BIG.value
-
-
-@graph
 def capture_value(x: int) -> int:
     value = flaky_increment(x=x)
     result, _ = value.catch()

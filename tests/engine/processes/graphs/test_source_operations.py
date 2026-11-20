@@ -125,6 +125,7 @@ def test_task_outputs_feed_operations() -> None:
         Dependency('operation_2', 'add_2', 'result', 'x'),
         Dependency('add', 'operation_3', 'result', 'left'),
         Dependency('operation_3', 'add_2', 'result', 'y'),
+        Dependency('operation_2', 'operation_3'),
     )
 
 

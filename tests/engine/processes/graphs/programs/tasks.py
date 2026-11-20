@@ -280,9 +280,10 @@ def args_function(*args: int) -> int:  # rejected at decoration
     return args[0]
 
 
-def after_parameter(x: int, after: int = 0) -> int:  # rejected at decoration
-    """Reserve `after` for ordering; it cannot be a task parameter."""
-    return x
+@task
+def after_parameter(x: int, after: int = 0) -> int:
+    """Use `after` as an ordinary input."""
+    return x + after
 
 
 @task

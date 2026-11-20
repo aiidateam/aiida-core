@@ -98,9 +98,6 @@ class PlacementHandle(t.Generic[P, R]):
     @t.overload
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
-    @t.overload
-    def __call__(self: PlacementHandle[P, R], *args: t.Any, after: t.Any = ..., **kwargs: t.Any) -> R: ...
-
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         """Delegate direct calls without changing the declaration's execution contract."""
         return self.target(*args, **kwargs)
@@ -455,14 +452,8 @@ class FunctionTaskHandle(t.Generic[P, R]):
     @t.overload
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
-    @t.overload
-    def __call__(self: FunctionTaskHandle[P, R], *args: t.Any, after: t.Any = ..., **kwargs: t.Any) -> R: ...
-
-    def __call__(self, *args: t.Any, after: t.Any = None, **kwargs: t.Any) -> t.Any:
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         """Reject direct calls; tasks run as `@graph` placements or through `run` and `run_get_node`."""
-        if after is not None:
-            msg = '`after` orders placements in a `@graph` body; it is not a task input.'
-            raise GraphError(msg)
         name = getattr(self._function, '__name__', 'task')
         msg = (
             f'`{name}` declares a task for `@graph` bodies and never runs standalone; '
@@ -535,11 +526,8 @@ class CalcJobTaskHandle:
         # Copy name and docstring, not the class state: the handle owns its task spec.
         functools.update_wrapper(self, process_class, updated=())
 
-    def __call__(self, *args: t.Any, after: t.Any = None, **kwargs: t.Any) -> t.Any:
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         """Execute the task and return its node."""
-        if after is not None:
-            msg = '`after` orders placements in a `@graph` body; it is not a task input.'
-            raise GraphError(msg)
         if args:
             msg = 'CalcJob tasks take named inputs only; pass each input by name instead.'
             raise GraphError(msg)
@@ -596,11 +584,8 @@ class WorkChainTaskHandle:
         # Copy name and docstring, not the class state: the handle owns its task spec.
         functools.update_wrapper(self, process_class, updated=())
 
-    def __call__(self, *args: t.Any, after: t.Any = None, **kwargs: t.Any) -> t.Any:
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         """Execute the task and return its node."""
-        if after is not None:
-            msg = '`after` orders placements in a `@graph` body; it is not a task input.'
-            raise GraphError(msg)
         if args:
             msg = 'WorkChain tasks take named inputs only; pass each input by name instead.'
             raise GraphError(msg)
@@ -682,9 +667,6 @@ def _check_task_contract(
         msg = 'tasks accept functions, a `CalcJob` subclass, or a `WorkChain` subclass; not other process classes.'
         raise GraphTypeCheckError(msg)
     signature = inspect.signature(function)
-    if 'after' in signature.parameters:
-        msg = '`after` is reserved for source graph ordering dependencies.'
-        raise GraphTypeCheckError(msg)
     missing = [
         f'`{name}`'
         for name, parameter in signature.parameters.items()

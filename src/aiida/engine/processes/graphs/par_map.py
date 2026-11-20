@@ -39,20 +39,18 @@ _OutputNode = t.TypeVar('_OutputNode', bound=Node)
 
 
 @t.overload
-def par_map(
-    func: Callable[[_InputNode], _OutputNode], values: DataList[_InputNode], *, after: t.Any = None
-) -> DataList[_OutputNode]: ...
+def par_map(func: Callable[[_InputNode], _OutputNode], values: DataList[_InputNode]) -> DataList[_OutputNode]: ...
 
 
 @t.overload
-def par_map(func: Callable[[T], R], values: DataList, *, after: t.Any = None) -> DataList: ...
+def par_map(func: Callable[[T], R], values: DataList) -> DataList: ...
 
 
 @t.overload
-def par_map(func: Callable[[T], R], values: DataDict, *, after: t.Any = None) -> DataDict: ...
+def par_map(func: Callable[[T], R], values: DataDict) -> DataDict: ...
 
 
-def par_map(func: t.Any, values: t.Any, *, after: t.Any = None) -> t.Any:
+def par_map(func: t.Any, values: t.Any) -> t.Any:
     """Map a unary task or graph over an owned container.
 
     This is an authoring operation, not a runtime function: call it inside a
@@ -62,7 +60,6 @@ def par_map(func: t.Any, values: t.Any, *, after: t.Any = None) -> t.Any:
     :param func: a unary ``@task`` or ``@graph`` with exactly one input and one output.
     :param values: a :class:`~aiida.orm.DataList` or :class:`~aiida.orm.DataDict` wire;
         lists iterate elements in order, mappings iterate values keeping keys.
-    :param after: ordering dependency on earlier placements, like task calls.
     :return: a container of the same kind holding one child output per element.
     """
     msg = (

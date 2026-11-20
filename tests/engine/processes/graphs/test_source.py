@@ -400,12 +400,9 @@ def test_mismatched_branch_types_fail_during_build() -> None:
         branches.mismatched_type_branches.build()
 
 
-def test_ordering_dependency_carries_no_value() -> None:
-    """An `after` dependency orders placements without wiring an output value."""
-    specification = compile_graph(calls.ordered_named)
-    assert [(edge.source, edge.target, edge.source_port, edge.target_port) for edge in specification.dependencies] == [
-        ('prepare', 'add', None, None)
-    ]
+def test_after_is_not_an_ordering_keyword() -> None:
+    with pytest.raises(GraphLanguageError, match="'after' is not an input"):
+        calls.obsolete_after.build()
 
 
 def test_incompatible_boundary_types_fail_during_build() -> None:
@@ -600,7 +597,6 @@ def test_dunder_main_task_round_trips_through_pickle() -> None:
         pytest.param(tasks.args_function, GraphTypeCheckError, 'fixed inputs', id='args'),
         pytest.param(DummyProcess, GraphTypeCheckError, 'a `CalcJob` subclass', id='process-class'),
         pytest.param(tasks.calc_addition, GraphTypeCheckError, 'undecorated function', id='process-function'),
-        pytest.param(tasks.after_parameter, GraphTypeCheckError, 'reserved for source graph', id='after-parameter'),
     ],
 )
 def test_task_registration_rejects_excluded_contracts(target, exception, message) -> None:

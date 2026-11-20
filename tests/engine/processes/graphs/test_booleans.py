@@ -609,17 +609,12 @@ def test_while_present_restores_mid_loop() -> None:
         state.started(start.instance, node.pk)
         state.completed(start.instance, node.pk)
     second = state.step()
-    assert {start.instance for start in second.starts} == {
-        'loop_4_iteration_0__add',
-        'loop_4_iteration_0__add_2',
-    }
-    for start in second.starts:
-        assert isinstance(start.task, ProcessTask)
-        from aiida.engine import run_get_node as launch
-
-        _, node = launch(start.task.spec.process_class, **start.inputs)
-        assert node.pk is not None
-        state.started(start.instance, node.pk)
+    (start,) = second.starts
+    assert start.instance == 'loop_4_iteration_0__add'
+    assert isinstance(start.task, ProcessTask)
+    _, node = launch(start.task.spec.process_class, **start.inputs)
+    assert node.pk is not None
+    state.started(start.instance, node.pk)
     saved = deepcopy(state.to_dict())
     restored = run_mod.GraphRun.from_dict(spec, dict(state.given), saved)
     assert restored.to_dict() == saved

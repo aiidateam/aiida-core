@@ -25,6 +25,7 @@ import typing as t
 from collections import Counter
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
+from itertools import pairwise
 from types import ModuleType, UnionType
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
@@ -769,12 +770,9 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             + 'end the graph with a return declaring its outputs'
         )
         raise GraphLanguageError(msg)
-    barrier: str | None = None
     for statement in statements[:-1] if has_final else statements:
-        start = len(state.tasks)
-        guard = None
         if isinstance(statement, (ast.If, ast.While)):
-            guard = _lower_control(state, statement)
+            _lower_control(state, statement)
         elif isinstance(statement, (ast.For, ast.AsyncFor)):
             msg = (
                 'the list of placements is fixed before anything runs, '
@@ -804,8 +802,6 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             _lower_early_return(state, statement)
         else:
             _lower_assignment(state, statement=statement)
-        _order_after_guard(state, barrier, start)
-        barrier = guard or barrier
         if _ends_in_return([statement]):
             has_final = False
             break
@@ -814,14 +810,12 @@ def _lower_function(state: _LoweringState) -> GraphIR:
     if has_final:
         returned = statements[-1]
         assert isinstance(returned, ast.Return)
-        start = len(state.tasks)
         result = _return_expression(state, returned)
         if result is not None:
             outputs, output_typehints = _lower_outputs(state, result=result)
-        _order_after_guard(state, barrier, start)
     return GraphIR(
         tasks=tuple(state.tasks),
-        dependencies=tuple(state.dependencies),
+        dependencies=_serial_dependencies(state),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=outputs,
         identifier=state.key,
@@ -854,9 +848,13 @@ def _return_expression(state: _LoweringState, statement: ast.Return) -> ast.expr
             + 'return must name a task or graph input; return placements, input leaves, or mappings'
         )
         _reject(state, node=statement, reason=msg)
-    if not state.error_enums:
-        return result
     constructor = _result_constructor(state, result)
+    if not state.error_enums:
+        if constructor is Ok and isinstance(result, ast.Call):
+            if len(result.args) != 1 or result.keywords or not isinstance(result.args[0], ast.Dict):
+                _reject(state, node=result, reason='`Ok` graph returns must wrap an output mapping')
+            return result.args[0]
+        return result
     if (
         not isinstance(result, ast.Call)
         or (constructor is not Ok and constructor is not Err)
@@ -1787,35 +1785,36 @@ def _ends_in_return(statements: list[ast.stmt]) -> bool:
     )
 
 
-def _order_after_guard(state: _LoweringState, guard: str | None, start: int) -> None:
-    """Do not start later placements until the prior return decision has settled."""
-    if guard is not None:
-        state.dependencies.extend(Dependency(guard, target=task.name) for task in state.tasks[start:])
+def _serial_dependencies(state: _LoweringState) -> tuple[Dependency, ...]:
+    """Order consecutive placements that aren't already connected by a value wire."""
+    connected = {(edge.source, edge.target) for edge in state.dependencies}
+    return (
+        *state.dependencies,
+        *(
+            Dependency(prior.name, target=following.name)
+            for prior, following in pairwise(state.tasks)
+            if (prior.name, following.name) not in connected
+        ),
+    )
 
 
-def _lower_control(state: _LoweringState, statement: ast.If | ast.While) -> str | None:
-    """Lower a control statement and identify any return barrier it introduces."""
-    may_return = _has_region_return([statement])
+def _lower_control(state: _LoweringState, statement: ast.If | ast.While) -> None:
+    """Lower a control statement to a placement."""
     if isinstance(statement, ast.While):
-        placement = _lower_loop(state, statement)
-    elif may_return:
-        placement = _lower_returning_branch(state, statement)
+        _lower_loop(state, statement)
+    elif _has_region_return([statement]):
+        _lower_returning_branch(state, statement)
     else:
         _lower_branch(state, statement)
-        return None
-    return placement if may_return else None
 
 
 def _lower_region_statements(state: _LoweringState, statements: list[ast.stmt]) -> set[str]:
     """Lower a region sequence, tracking bindings reaching its end."""
-    barrier: str | None = None
     written: set[str] = set()
     for statement in statements:
-        start = len(state.tasks)
-        guard = None
         if isinstance(statement, (ast.If, ast.While)):
             prior = dict(state.names)
-            guard = _lower_control(state, statement)
+            _lower_control(state, statement)
             written.update(
                 name for name in _body_state_names([statement]) if prior.get(name) is not state.names.get(name)
             )
@@ -1831,14 +1830,12 @@ def _lower_region_statements(state: _LoweringState, statements: list[ast.stmt]) 
         else:
             _lower_assignment(state, statement, rebind=True)
             written.update(_body_state_names([statement]))
-        _order_after_guard(state, barrier, start)
-        barrier = guard or barrier
         if _ends_in_return([statement]):
             break
     return written
 
 
-def _lower_returning_branch(state: _LoweringState, statement: ast.If) -> str:
+def _lower_returning_branch(state: _LoweringState, statement: ast.If) -> None:
     """Lower a branch with nonlocal returns, merging only the continuing arms."""
     test, condition_test, condition_member = _lower_branch_condition(state, statement.test)
     children = [_collect_region_inputs(state, arm) for arm in (statement.body, statement.orelse)]
@@ -1882,10 +1879,9 @@ def _lower_returning_branch(state: _LoweringState, statement: ast.If) -> str:
         )
     )
     state.names.update(bindings)
-    return instance
 
 
-def _lower_loop(state: _LoweringState, statement: ast.While) -> str:
+def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     """Lower a while statement to a resumable loop control task."""
     body: list[ast.stmt] = list(statement.body)
     terminal = _ends_in_return(body)
@@ -1951,7 +1947,6 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> str:
     state.tasks.append(LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition))
     for name, ref in outputs.items():
         state.names[name] = _Reference(instance, port=name, shape=ref.shape)
-    return instance
 
 
 def _loop_live_in(state: _LoweringState, body: list[ast.stmt]) -> set[str]:
@@ -2273,7 +2268,7 @@ def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) ->
     endpoints: dict[str, OutputTree] = {name: _endpoint_tree(value) for name, value in outputs.items()}
     return GraphIR(
         tasks=tuple(state.tasks),
-        dependencies=tuple(state.dependencies),
+        dependencies=_serial_dependencies(state),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=endpoints,
         input_shape=NamespaceShape(fields=tuple(state.input_shapes.items())),
@@ -2522,9 +2517,6 @@ def _build_partial_binding(state: _LoweringState, node: ast.Call) -> _PartialBin
         if keyword.arg is None:
             msg = 'inputs wire by name, so spreading hides which is which; bind each fixed input by keyword instead'
             _reject(state, node=keyword, reason=msg)
-        if keyword.arg == 'after':
-            msg = 'a `partial` fixes inputs without running anything, so ordering waits for the eventual call instead'
-            _reject(state, node=keyword, reason=msg)
         if keyword.arg in fixed:
             msg = 'one port takes one value; ' + f'duplicate fixed input {keyword.arg!r}; pass it once'
             _reject(state, node=keyword, reason=msg)
@@ -2767,17 +2759,8 @@ def _lower_partial_call(
 ) -> _Reference:
     """Place one partial use, merging fixed and call-time inputs into one ordinary placement."""
     inputs = _partial_target_shape(binding.target, state)
-    after = None
     positional = list(expression.args)
-    keywords = []
-    for keyword in expression.keywords:
-        if keyword.arg == 'after':
-            if after is not None:
-                msg = 'one port takes one value; duplicate input `after`; pass it once.'
-                _reject(state, node=keyword, reason=msg)
-            after = keyword
-            continue
-        keywords.append(keyword)
+    keywords = list(expression.keywords)
     if any(keyword.arg is None for keyword in keywords):
         keywords = _spread_keywords(
             state, expression=expression, name=binding.call_name, inputs=inputs, keywords=keywords
@@ -2851,10 +2834,7 @@ def _lower_partial_call(
             + f'partial of `{binding.call_name}` is missing required inputs: {missing}; pass them at the call'
         )
         _reject(state, node=expression, reason=msg)
-    reference = _place_invocation(state, expression, task, result_port, result_shape, capture=capture, unpack=unpack)
-    if after is not None:
-        _wire_after(state, instance=instance, keyword=after)
-    return reference
+    return _place_invocation(state, expression, task, result_port, result_shape, capture=capture, unpack=unpack)
 
 
 def _claim_placement(state: _LoweringState, name: str, node: ast.AST, *, is_map: bool = False) -> str:
@@ -3015,12 +2995,10 @@ def _solved_spec(
 
 def _lower_par_map(state: _LoweringState, expression: ast.Call) -> _Reference:
     """Place a fan-out map over an owned container."""
-    func_expr, collection_expr, after_keyword = _bind_par_map_arguments(state, expression=expression)
+    func_expr, collection_expr = _bind_par_map_arguments(state, expression=expression)
     partial_use = _partial_call_parts(state, func_expr)
     if partial_use is not None:
-        return _lower_partial_map(
-            state, partial_use[0], expression, func_expr, collection_expr, after_keyword, partial_use[1]
-        )
+        return _lower_partial_map(state, partial_use[0], func_expr, collection_expr, partial_use[1])
     explicit = None
     base = func_expr
     if isinstance(func_expr, ast.Call) and isinstance(func_expr.func, ast.Attribute) and func_expr.func.attr == 'alias':
@@ -3055,8 +3033,6 @@ def _lower_par_map(state: _LoweringState, expression: ast.Call) -> _Reference:
     given: dict[str, _CapturedValue] = {}
     _wire(state, instance=instance, port='collection', value=collection, given=given)
     state.tasks.append(MapControl(name=instance, inputs=given, spec=mapped_spec, body=mapped_body, container=container))
-    if after_keyword is not None:
-        _wire_after(state, instance=instance, keyword=after_keyword)
     collected = DataList if container == 'list' else DataDict
     return _Reference(instance, port='result', shape=LeafShape(types=(collected,)))
 
@@ -3127,10 +3103,8 @@ def _solved_partial_spec(
 def _lower_partial_map(
     state: _LoweringState,
     binding: _PartialBinding,
-    expression: ast.Call,
     func_expr: ast.expr,
     collection_expr: ast.expr,
-    after_keyword: ast.keyword | None,
     explicit_override: str | None,
 ) -> _Reference:
     """Place a fan-out map over a partial, binding every input but the element."""
@@ -3185,8 +3159,6 @@ def _lower_partial_map(
             name=instance, inputs=given, spec=mapped_spec, body=mapped_body, container=container, element=element
         )
     )
-    if after_keyword is not None:
-        _wire_after(state, instance=instance, keyword=after_keyword)
     collected = DataList if container == 'list' else DataDict
     return _Reference(instance, port='result', shape=LeafShape(types=(collected,)))
 
@@ -3215,23 +3187,14 @@ def _check_partial_map_callable(
         _reject(state, node=node, reason=msg)
 
 
-def _bind_par_map_arguments(
-    state: _LoweringState, expression: ast.Call
-) -> tuple[ast.expr, ast.expr, ast.keyword | None]:
-    """Bind `par_map(func, values)` positionally or by keyword, separating `after` ordering."""
-    after: ast.keyword | None = None
+def _bind_par_map_arguments(state: _LoweringState, expression: ast.Call) -> tuple[ast.expr, ast.expr]:
+    """Bind `par_map(func, values)` positionally or by keyword."""
     positional: list[ast.expr] = list(expression.args)
     named: dict[str, ast.expr] = {}
     for keyword in expression.keywords:
         if keyword.arg is None:
             msg = 'inputs wire by name, so spreading hides which is which; pass `func` and `values` explicitly instead.'
             _reject(state, node=keyword, reason=msg)
-        if keyword.arg == 'after':
-            if after is not None:
-                msg = 'one port takes one value; duplicate input `after`; pass it once.'
-                _reject(state, node=keyword, reason=msg)
-            after = keyword
-            continue
         named[keyword.arg] = keyword.value
     for key in ('func', 'values'):
         if key in named and positional:
@@ -3241,11 +3204,11 @@ def _bind_par_map_arguments(
         msg = 'pass the callable and the collection positionally as `par_map(func, values)`, or by keyword instead.'
         _reject(state, node=expression, reason=msg)
     if len(positional) == 2:
-        return positional[0], positional[1], after
+        return positional[0], positional[1]
     if len(positional) == 1 or len(positional) > 2 or set(named) != {'func', 'values'}:
         msg = 'maps apply one callable to one collection; call `par_map(func, values)` with both instead.'
         _reject(state, node=expression, reason=msg)
-    return named['func'], named['values'], after
+    return named['func'], named['values']
 
 
 def _check_par_map_callable(
@@ -3686,26 +3649,10 @@ def _spread_keywords(
     return expanded
 
 
-def _wire_after(state: _LoweringState, instance: str, keyword: ast.keyword) -> None:
-    """Wire ordering edges from an `after` argument."""
-    ordered: list[ast.expr] = (
-        keyword.value.elts if isinstance(keyword.value, (ast.Tuple, ast.List)) else [keyword.value]
-    )
-    for predecessor in ordered:
-        reference = _lower_value(state, expression=predecessor)
-        if not isinstance(reference, _Reference) or reference.task is None:
-            msg = (
-                'ordering edges run between placed tasks, not values; '
-                + 'after needs a task from an earlier line instead'
-            )
-            _reject(state, node=predecessor, reason=msg)
-        state.dependencies.append(Dependency(reference.task, target=instance))
-
-
 def _lower_keywords(
     state: _LoweringState, instance: str, name: str, inputs: NamespaceShape, keywords: list[ast.keyword]
 ) -> dict[str, _CapturedValue]:
-    """Wire one call's arguments to literals, references, and ordering edges."""
+    """Wire one call's arguments to literals and references."""
     given: dict[str, _CapturedValue] = {}
     seen: set[str] = set()
     for keyword in keywords:
@@ -3715,9 +3662,6 @@ def _lower_keywords(
             msg = 'one port takes one value; ' + f'duplicate input {port!r}; pass it once'
             _reject(state, node=keyword, reason=msg)
         seen.add(port)
-        if port == 'after':
-            _wire_after(state, instance=instance, keyword=keyword)
-            continue
         try:
             shape = inputs.select(port)
         except KeyError:

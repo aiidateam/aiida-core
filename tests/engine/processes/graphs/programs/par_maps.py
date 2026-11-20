@@ -247,8 +247,8 @@ def map_fails(values: DataList) -> DataList:
 def map_avoids_placement_names(values: DataList, x: int) -> DataList:
     """Map beside ordinary placements named like the default item and collector labels."""
     first = map_increment_0(x=x)
-    second = map_increment_collect(x=first, after=first)
-    return par_map(increment, values, after=second)
+    _second = map_increment_collect(x=first)
+    return par_map(increment, values)
 
 
 @graph
@@ -270,8 +270,8 @@ def map_keyword(values: DataList) -> DataList:
 
 
 @graph
-def map_after(x: int, values: DataList) -> DataList:
-    """Map ordered after an earlier placement."""
+def map_obsolete_after(x: int, values: DataList) -> DataList:
+    """Reject the removed ordering keyword."""
     first = increment(x=x)
     return par_map(increment, values, after=first)
 

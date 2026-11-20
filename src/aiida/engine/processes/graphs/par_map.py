@@ -22,8 +22,9 @@ import typing as t
 from collections.abc import Callable
 
 from aiida.common.exceptions import GraphLanguageError
-from aiida.engine.processes.functions import calcfunction
-from aiida.orm import DataDict, DataList, Node
+from aiida.engine.processes.functions import process_function
+from aiida.engine.processes.graphs.tasks import TaskProcess
+from aiida.orm import CalcFunctionNode, DataDict, DataList, Node
 from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
@@ -70,13 +71,14 @@ def par_map(func: t.Any, values: t.Any) -> t.Any:
     raise GraphLanguageError(msg)
 
 
-@calcfunction
+# Use checkpointable task processes so daemon workers can submit these collectors.
+@process_function(node_class=CalcFunctionNode, base_class=TaskProcess)
 def _collect_list(**items: DataNode) -> DataList:
     """Create the result list from one child output per element, in order."""
     return DataList([items[f'item_{index}'] for index in range(len(items))])
 
 
-@calcfunction
+@process_function(node_class=CalcFunctionNode, base_class=TaskProcess)
 def _collect_dict(keys: list[str], **items: DataNode) -> DataDict:
     """Create the result mapping from one child output per value, keeping keys."""
     return DataDict(dict(zip(keys, [items[f'item_{index}'] for index in range(len(keys))], strict=True)))

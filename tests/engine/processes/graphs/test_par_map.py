@@ -22,7 +22,7 @@ import pytest
 
 from aiida.common.exceptions import GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import LinkType
-from aiida.engine.launch import run_get_node
+from aiida.engine.launch import run_get_node, submit
 from aiida.engine.processes.graphs.ir import GraphIR
 from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
 from aiida.engine.processes.graphs.process import GraphProcess
@@ -129,6 +129,29 @@ def test_map_computed_collection_executes() -> None:
     outputs, node = run_get_node(par_maps.map_computed, a=1, b=2, c=3)
     assert node.is_finished_ok
     assert [member.value for member in outputs['result']] == [2, 4, 6]
+
+
+@pytest.mark.requires_broker
+@pytest.mark.parametrize('container', [pytest.param('list', id='list'), pytest.param('dict', id='dict')])
+def test_map_runs_on_daemon(submit_and_await, container: t.Literal['list', 'dict']) -> None:
+    """A daemon worker dispatches the mapped tasks and collects their outputs."""
+    values: DataList | DataDict
+    if container == 'list':
+        declaration = par_maps.map_list
+        values = DataList([Int(1), Int(2)])
+    else:
+        declaration = par_maps.map_mapping
+        values = DataDict({'zeta': Int(1), 'alpha': Int(2)})
+
+    node = submit_and_await(submit(declaration, values=values))
+    assert node.is_finished_ok
+    result = node.outputs.result
+    if container == 'list':
+        assert isinstance(result, DataList)
+        assert [member.value for member in result] == [2, 3]
+    else:
+        assert isinstance(result, DataDict)
+        assert [(key, member.value) for key, member in result.items()] == [('zeta', 2), ('alpha', 3)]
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

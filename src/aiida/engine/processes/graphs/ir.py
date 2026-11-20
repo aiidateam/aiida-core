@@ -73,6 +73,7 @@ __all__ = (
 
 _GRAPH_IR_EXPRESSION_VERSION: t.Final = '0.3'
 _GRAPH_IR_RESULT_VERSION: t.Final = '0.4'
+_GRAPH_IR_RETURN_VERSION: t.Final = '0.5'
 _GRAPH_IR_VERSION: t.Final = '0.2'
 _GRAPH_IR_LEGACY_VERSION: t.Final = '0.1'
 _TASK_IR_VERSION: t.Final = '0.1'
@@ -975,12 +976,9 @@ class BranchControl(BodyTask):
 
     @override
     def output_ports(self) -> PortNamespace:
-        """Return the output contracts of the taken side, representative of both.
-
-        Validation requires both sides to agree on output names and types, so
-        either side describes the branch outputs; the taken side is used.
-        """
-        return self.body.build_output_namespace()
+        """Return the output contracts of a continuing arm, if there is one."""
+        arm = next((branch for branch in self.branches if not branch.always_returns), self.body)
+        return arm.build_output_namespace()
 
     @override
     def to_dict(self) -> dict[str, t.Any]:
@@ -1408,13 +1406,18 @@ class GraphIR:
     identifier: str | None = None
     version: str = _GRAPH_IR_VERSION
     output_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
+    return_outputs: dict[str, OutputTree] | None = None
+    return_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
+    return_error: tuple[str, str] | None = None
 
     def __post_init__(self) -> None:
         # Imported here: validation reads this module's port helpers at runtime.
         from aiida.engine.processes.graphs.validate import validate_graph
 
         validate_graph(self)
-        if self._uses_result_policy:
+        if self.has_return or any(body.version == _GRAPH_IR_RETURN_VERSION for body in self._child_templates()):
+            version = _GRAPH_IR_RETURN_VERSION
+        elif self._uses_result_policy:
             version = _GRAPH_IR_RESULT_VERSION
         elif _graph_contains_operation(self, expression_only=True):
             version = _GRAPH_IR_EXPRESSION_VERSION
@@ -1422,6 +1425,35 @@ class GraphIR:
             version = _GRAPH_IR_VERSION if _graph_contains_operation(self) else _GRAPH_IR_LEGACY_VERSION
         if self.version != version:
             object.__setattr__(self, 'version', version)
+
+    @property
+    def has_return(self) -> bool:
+        """Whether this region ends with an explicit invocation return."""
+        return self.return_outputs is not None or self.return_error is not None
+
+    @cached_property
+    def always_returns(self) -> bool:
+        """Whether a successfully executed region can never reach its join."""
+        return self.has_return or any(
+            isinstance(task, BranchControl) and all(arm.always_returns for arm in task.branches) for task in self.tasks
+        )
+
+    def _child_templates(self, *, regions_only: bool = False) -> t.Iterator[GraphIR]:
+        """Yield immediate child templates, optionally staying within the invocation."""
+        for task in self.tasks:
+            if isinstance(task, BranchControl):
+                yield from task.branches
+            elif isinstance(task, LoopControl) or (not regions_only and isinstance(task, SubgraphTask)):
+                yield task.body
+            elif not regions_only and isinstance(task, MapControl) and task.body is not None:
+                yield task.body
+
+    def success_returns(self) -> t.Iterator[GraphIR]:
+        """Yield the explicit success-return sites of this invocation."""
+        if self.return_outputs is not None:
+            yield self
+        for region in self._child_templates(regions_only=True):
+            yield from region.success_returns()
 
     @cached_property
     def _uses_result_policy(self) -> bool:
@@ -1440,7 +1472,7 @@ class GraphIR:
     @cached_property
     def declared_errors(self) -> frozenset[str]:
         """Infer errors that can escape this template without being captured."""
-        errors: set[str] = set()
+        errors = {self.return_error[0]} if self.return_error is not None else set()
         for task in self.tasks:
             if isinstance(task, ProcessTask) and not task.capture_error:
                 errors.update(task.spec.result_errors)
@@ -1482,7 +1514,8 @@ class GraphIR:
     @property
     def result_port(self) -> str:
         """Return the single output port, or `''` when there is not exactly one."""
-        return next(iter(self.outputs)) if len(self.outputs) == 1 else ''
+        outputs = self.build_output_namespace()
+        return next(iter(outputs)) if len(outputs) == 1 else ''
 
     @property
     def result_shape(self) -> Shape:
@@ -1495,10 +1528,10 @@ class GraphIR:
         selected = namespace[self.result_port] if self.result_port else namespace
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
         base = _shape_from_port(selected)
-        if self.result_port:
-            annotated = self._tree_shape(self.outputs[self.result_port])
-        else:
-            annotated = self._tree_shape(self.outputs)
+        site = self._output_return_site()
+        tree = self.outputs if site is None else site.return_outputs or {}
+        source = tree[self.result_port] if self.result_port else tree
+        annotated = (site or self)._tree_shape(source)
         return _overlay_element(base, annotated)
 
     def _tree_shape(self, source: OutputTree | dict[str, OutputTree]) -> Shape | None:
@@ -1545,12 +1578,30 @@ class GraphIR:
         Outputs regroup existing nodes instead of creating data; every leaf keeps
         the stored node its task or graph input already holds.
         """
+        site = self._output_return_site()
+        if site is not None:
+            return site.build_return_namespace()
+        return self._output_namespace(self.outputs, self.output_typehints)
+
+    def _output_return_site(self) -> GraphIR | None:
+        """Return the success site that defines the output contract, if any."""
+        if self.identifier is not None and self.always_returns:
+            return next(self.success_returns(), None)
+        return None
+
+    def build_return_namespace(self) -> PortNamespace:
+        """Return the port contract for this region's explicit success return."""
+        return self._output_namespace(self.return_outputs or {}, self.return_typehints)
+
+    def _output_namespace(self, outputs: dict[str, OutputTree], hints: dict[str, tuple[type, ...]]) -> PortNamespace:
         namespace = PortNamespace('outputs')
-        for name, source in self.outputs.items():
-            namespace[name] = self._build_output_port(name, source, path=name)
+        for name, source in outputs.items():
+            namespace[name] = self._build_output_port(name, source, hint=hints.get(name))
         return namespace
 
-    def _build_output_port(self, name: str, source: OutputTree, path: str) -> OutputPort | PortNamespace:
+    def _build_output_port(
+        self, name: str, source: OutputTree, *, hint: tuple[type, ...] | None
+    ) -> OutputPort | PortNamespace:
         """Return one output leaf or namespace, preserving the stored node types.
 
         Outputs regroup their source nodes instead of creating data, so a leaf
@@ -1559,7 +1610,7 @@ class GraphIR:
         if isinstance(source, dict):
             nested = PortNamespace(name)
             for field, child in source.items():
-                nested[field] = self._build_output_port(field, child, path=f'{path}.{field}')
+                nested[field] = self._build_output_port(field, child, hint=hint)
             return nested
         if source.task is None:
             ports = self.build_input_namespace()
@@ -1567,7 +1618,7 @@ class GraphIR:
             try:
                 task = self.task(source.task)
             except KeyError as exception:
-                msg = f'graph output `{path}` refers to unknown task `{source.task}`.'
+                msg = f'graph output `{name}` refers to unknown task `{source.task}`.'
                 raise GraphTypeCheckError(msg) from exception
             ports = task.output_ports()
         origin = _port_at(ports, source.port)
@@ -1576,17 +1627,17 @@ class GraphIR:
                 name, origin, required=origin.required and _ancestry_required(ports, source.port)
             )
         if origin is None or isinstance(origin, PortNamespace):
-            msg = f'graph output `{path}` must reference a declared leaf or task namespace.'
+            msg = f'graph output `{name}` must reference a declared leaf or task namespace.'
             raise GraphTypeCheckError(msg)
-        top = path.split('.', maxsplit=1)[0]
-        valid_type = self._output_types(top, origin) or (DataNode,)
+        valid_type = self._output_types(origin, hint) or (DataNode,)
         # A required leaf under an optional namespace, such as a `Result` success, may be absent with it.
         required = _output_required(origin) and _ancestry_required(ports, source.port)
         return OutputPort(name, valid_type=valid_type, required=required)
 
-    def _output_types(self, name: str, origin: InputPort | OutputPort) -> tuple[type, ...] | type | None:
+    def _output_types(
+        self, origin: InputPort | OutputPort, hint: tuple[type, ...] | None
+    ) -> tuple[type, ...] | type | None:
         """Return the stored types of a graph output, normalizing runtime declarations."""
-        hint = self.output_typehints.get(name)
         if hint:
             return tuple(kind for declared in hint for kind in _infer_node_types(declared))
         if isinstance(origin, InputPort):
@@ -1607,6 +1658,24 @@ class GraphIR:
             'dependencies': [edge.to_dict() for edge in self.dependencies],
             'inputs': {name: [list(route) for route in targets] for name, targets in self.inputs.items()},
             'outputs': {name: _dump_output_tree(source) for name, source in self.outputs.items()},
+            **(
+                {'return_outputs': {name: _dump_output_tree(source) for name, source in self.return_outputs.items()}}
+                if self.return_outputs is not None
+                else {}
+            ),
+            **({'return_error': list(self.return_error)} if self.return_error is not None else {}),
+            **(
+                {
+                    'return_typehints': {
+                        name: [
+                            None if kind is type(None) else get_object_loader().identify_object(kind) for kind in kinds
+                        ]
+                        for name, kinds in self.return_typehints.items()
+                    }
+                }
+                if self.return_typehints
+                else {}
+            ),
             'identifier': self.identifier,
             'version': self.version,
             'input_namespace': dump_shape(self.input_shape),
@@ -1625,6 +1694,7 @@ class GraphIR:
             _GRAPH_IR_VERSION,
             _GRAPH_IR_EXPRESSION_VERSION,
             _GRAPH_IR_RESULT_VERSION,
+            _GRAPH_IR_RETURN_VERSION,
         )
         if version not in supported:
             msg = f'cannot read a graph declaration of version `{version}`; supported versions are {supported}.'
@@ -1646,6 +1716,16 @@ class GraphIR:
                 name: tuple(Route(*target) for target in targets) for name, targets in data.get('inputs', {}).items()
             },
             outputs={name: _load_output_tree(source) for name, source in data.get('outputs', {}).items()},
+            return_outputs=(
+                {name: _load_output_tree(source) for name, source in data['return_outputs'].items()}
+                if 'return_outputs' in data
+                else None
+            ),
+            return_error=(data['return_error'][0], data['return_error'][1]) if 'return_error' in data else None,
+            return_typehints={
+                name: tuple(type(None) if kind is None else get_object_loader().load_object(kind) for kind in kinds)
+                for name, kinds in data.get('return_typehints', {}).items()
+            },
             identifier=data.get('identifier'),
             version=version,
             output_typehints={

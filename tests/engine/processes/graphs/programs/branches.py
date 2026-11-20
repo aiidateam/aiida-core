@@ -270,10 +270,9 @@ def walrus_condition(value: int, flag: bool) -> int:
     return chosen
 
 
-# rejected at lowering: graphs declare one output at the end.
 @graph
 def early_return(value: int, flag: bool) -> int:
-    """Return from a branch; graphs declare one output at the end."""
+    """Return from a branch or fall through to the final return."""
     if flag:
         return add(x=value, y=1)
     return add(x=value, y=2)

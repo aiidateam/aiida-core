@@ -18,6 +18,7 @@ from dataclasses import replace
 import pytest
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, MissingRequiredInputsError
+from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.inputs import _prepare_graph_inputs
 from aiida.engine.processes.graphs.ir import Dependency, Endpoint, GraphIR, LoopControl, Route, TaskIR
 from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
@@ -34,6 +35,15 @@ from tests.engine.processes.graphs.programs import (
     tasks,
 )
 from tests.utils.processes import DummyProcess
+
+
+@pytest.mark.presto
+@pytest.mark.parametrize(('flag', 'expected'), [(True, 11), (False, 12)])
+def test_early_return_or_fallthrough(flag, expected) -> None:
+    outputs, node = run_get_node(branches.early_return, value=10, flag=flag)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+    assert len(node.called) == 1
 
 
 def test_graph_cannot_be_called_directly() -> None:
@@ -235,7 +245,6 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(statements.try_block, 'move it into a task', id='try'),
         pytest.param(statements.raise_statement, 'move it into a task', id='raise'),
         pytest.param(statements.assert_statement, 'move it into a task', id='assert'),
-        pytest.param(branches.early_return, 'only calls, branches, and loops belong here', id='early-return'),
         pytest.param(branches.match_statement, 'end the graph with a return', id='match'),
         pytest.param(branches.boolean_condition, 'must be boolean', id='boolop-int-operand'),
         pytest.param(branches.walrus_condition, 'on its own line', id='walrus'),

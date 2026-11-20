@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Early returns in graphs
+
+Graphs can return from nested branches and loops, either with existing output nodes or a declared ``Err``.
+Taken returns exit the current graph invocation without starting its later placements.
+
 ### Data container input fixes
 
 * Builder `_update` serializes mapping-valued static inputs, including `DataDict`, instead of treating them as namespaces. Existing namespace-update behavior is unchanged.

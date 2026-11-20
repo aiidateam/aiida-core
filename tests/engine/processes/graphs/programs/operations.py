@@ -223,7 +223,7 @@ def string_concat(label: str, suffix: str) -> int:
     return add(x=1, y=1)
 
 
-# rejected at lowering: inline operations need declared scalar types.
+# rejected at lowering: graph inputs need annotations.
 @graph
 def untyped_operand(value) -> int:  # type: ignore[no-untyped-def]
     """Scale an unannotated input; annotate the input instead."""

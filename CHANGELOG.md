@@ -22,6 +22,11 @@ Graph bodies accept a general `partial(...)` input binding that needs no import:
 
 ### Breaking changes
 
+#### Graph input annotations are required
+
+Every `@graph` now requires a type annotation for each parameter, and `typing.Any` is rejected like a missing annotation.
+Previously unannotated parameters silently became unconstrained inputs.
+Annotate each parameter with its intended type.
 #### Graph return annotations are required
 
 Every `@graph` now declares a return annotation, and its final return and every early return must agree with it when the graph is built.

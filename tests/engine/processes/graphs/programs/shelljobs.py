@@ -11,7 +11,7 @@
 from aiida.calculations.shell import ShellJob
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph, task
-from aiida.orm import Code, SinglefileData
+from aiida.orm import Code, RemoteData, SinglefileData
 
 cat = task(ShellJob, inputs={'nodes': {'text': SinglefileData}}, outputs={'stdout': SinglefileData})
 count_words = task(ShellJob, inputs={'nodes': {'text': SinglefileData}}, outputs={'stdout': SinglefileData})
@@ -68,7 +68,7 @@ def run_remote_none_in_task_call(text: SinglefileData, code: Code, arguments: li
 
 @graph
 def run_remote_none_in_graph_signature(
-    text: SinglefileData, code: Code, arguments: list[str], remote=None
+    text: SinglefileData, code: Code, arguments: list[str], remote: RemoteData | None = None
 ) -> SinglefileData:
     """Run with the remote input passed as `None`; the port stays out of the launch."""
     reran = rerun(code=code, arguments=arguments, nodes={'text': text}, remote_folder=remote)

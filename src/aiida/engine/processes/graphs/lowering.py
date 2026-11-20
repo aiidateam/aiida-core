@@ -720,6 +720,19 @@ def _check_signature(state: _LoweringState, function: ast.FunctionDef) -> None:
             + '`*args` and `**kwargs` are not supported; list each input separately instead'
         )
         _reject(state, node=function, reason=msg)
+    parameters = [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
+    missing = [
+        arg.arg
+        for arg in parameters
+        if arg.arg not in state.definition.hints or state.definition.hints[arg.arg] is t.Any
+    ]
+    if missing:
+        names = ', '.join(f'`{name}`' for name in missing)
+        msg = (
+            f'graph `{state.key}` is missing input annotations for {names}; '
+            + '`Any` declares no input, so annotate each input with its type instead'
+        )
+        _reject(state, node=function, reason=msg)
 
 
 def _parameter_defaults(state: _LoweringState, function: ast.FunctionDef) -> dict[str, t.Any]:

@@ -242,6 +242,12 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(ports.nonfinite_dict_value, 'finite JSON', id='nonfinite-dict'),
         pytest.param(ports.unannotated_return, 'annotate the return', id='unannotated-return'),
         pytest.param(ports.any_return, '`Any` declares no outputs', id='any-return'),
+        pytest.param(
+            ports.unannotated_param,
+            'missing input annotations for `value`',
+            id='unannotated-param',
+        ),
+        pytest.param(ports.any_param, 'missing input annotations for `value`', id='any-param'),
         pytest.param(ports.missing_declared_output, 'the return omits `product`', id='missing-declared-output'),
         pytest.param(ports.undeclared_output, '`extra` is not declared', id='undeclared-output'),
         pytest.param(

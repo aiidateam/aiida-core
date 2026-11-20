@@ -517,6 +517,7 @@ Graphs can be launched like any other process, with a loaded AiiDA profile:
 Tasks can be run independently: ``run_get_node(add, x=1, y=2)`` launches a single task.
 Function-based tasks require a type annotation for every parameter, including those with defaults, and for the return value.
 Missing annotations raise ``GraphTypeCheckError`` when ``@task`` is applied, before graph build.
+Graphs require a type annotation for every parameter as well; missing or ``Any`` annotations raise ``GraphLanguageError`` when the graph is built.
 Calling ``add(x=1, y=2)`` directly raises a :py:class:`~aiida.common.exceptions.GraphError`, as for graphs.
 
 .. _topics:workflows:graphs:where_to_define:

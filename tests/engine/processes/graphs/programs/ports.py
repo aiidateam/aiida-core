@@ -211,7 +211,7 @@ def nullable_chain(value: int | None = None) -> int | None:
 
 
 @graph
-def unrestricted_return(value: t.Any) -> Data:
+def unrestricted_return(value: Data | None) -> Data:
     """Return an unrestricted required input; a `None` value emits no output."""
     return value
 
@@ -282,6 +282,19 @@ def unannotated_return(value: int):
 @graph
 def any_return(value: int) -> t.Any:
     """Annotate the return with `Any`; graphs declare checkable outputs."""
+    return add(x=value, y=1)
+
+
+# rejected at lowering: graph inputs need annotations, `Any` included.
+@graph
+def unannotated_param(value, scale: int) -> int:
+    """Add an unannotated input; annotate each input instead."""
+    return add(x=value, y=scale)
+
+
+@graph
+def any_param(value: t.Any) -> int:
+    """Add an `Any` input; `Any` declares no input to wire against."""
     return add(x=value, y=1)
 
 

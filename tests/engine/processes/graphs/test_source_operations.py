@@ -182,7 +182,7 @@ def test_operation_template_round_trips_through_json() -> None:
         pytest.param(operations.nonboolean_condition, 'must be true or false', id='nonbool-condition'),
         pytest.param(operations.negated_number, 'reads `bool`', id='not-number'),
         pytest.param(operations.string_concat, 'works on numbers', id='strings'),
-        pytest.param(operations.untyped_operand, 'declared scalar types', id='untyped'),
+        pytest.param(operations.untyped_operand, 'missing input annotations', id='untyped'),
         pytest.param(operations.mixed_equality, 'numbers with numbers', id='mixed-equality'),
         pytest.param(operations.divided_loop, 'put this calculation in a task', id='augmented-truediv'),
     ],

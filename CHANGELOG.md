@@ -38,8 +38,9 @@ Graphs accept `execution_environment` or the separate `runtime_config` and `exec
 #### Fallible graph calls propagate by default
 
 In graph bodies, a bare function task call declared as `Result[T, E]` now exposes only its success value.
-Replace `value, error = step(...)` with `value, error = catch_error(step(...))` to handle a declared failure explicitly, importing the new intrinsic from `aiida.engine`.
-The intrinsic also works on nested graphs that can propagate declared failures.
+Use `value, error = step(...).catch()` to handle a declared failure explicitly, replacing either `value, error = step(...)` or `value, error = catch_error(step(...))`.
+The `catch_error` import from `aiida.engine` is removed.
+The `.catch()` modifier also works on nested graphs that can propagate declared failures.
 Uncaught declared failures fail the root with the original status and message.
 Process-class tasks using `errors=` still expose partial outputs and an error arm as before.
 Graph run checkpoints from before this change cannot resume; finish them before upgrading or relaunch them.
@@ -69,9 +70,12 @@ Configured node references are preserved outside `orm.Dict`, with ordinary child
 
 New `GraphProcess` runs store `INPUT_WORK` links as `x` or `settings__factor`, rather than `graph_inputs__x` or `graph_inputs__settings__factor`. The compiled declaration and per-placement launch metadata are recorded as immutable `GraphNode` attributes (`graph_definition` and optional `graph_task_metadata`), not scientific input links named `graph` and `task_metadata`. Consequently native provenance visualizations and low-level link queries now show only declared workflow arguments. `GraphNode.inputs` retains its flat user interface, including arguments named `graph`, `graph_inputs`, or `task_metadata`, and `get_builder_restart()` reconstructs the engine launch envelope. Existing nodes retain their original links; legacy input projection, restart builders, and checkpoints remain supported, so no database migration or rewriting of stored provenance is needed. Consumers of raw links on new nodes must use the declared labels instead of the engine prefix. The earlier `GraphNode.inputs` entry below describes the input view for legacy nodes.
 
-#### Graph calls resolve by declaration name; global aliases need inline `.alias(...)`
+#### Graph calls resolve by declaration name; placement aliases follow the call
 
-Graph calls resolve to an importable declaration under its own name: the plain `@task`/`@graph` name, a module-qualified target such as `tasks.add`, or a `task(CalcJob)`/`task(WorkChain)` factory variable under its assigned variable name. A module-global rebinding of a handle (`alias = add`, `alias = nested_graph`), a stored `alias = decl.alias('name')` handle, or a renamed import no longer resolves; each fails at build time pointing at the declared name with an inline `decl.alias('name')(...)` placement instead. Enum members in member tests, module-qualified tasks, and `par_map` callables keep their existing resolution. Calling one task or graph twice in the same graph body no longer falls back to an automatic numeric name (`add_2`); each placement needs its own inline `decl.alias('name')(...)` instead, and repeated default `par_map` placements need `par_map(task.alias('name'), values)`. Module-global scalars, nodes, mappings, and other values are not wires either; reading one fails at build time as a missing graph input (pass it as a graph input) rather than as a name to assign on an earlier line.
+Replace `decl.alias('name')(...)` with `decl(...).alias('name')`.
+The `par_map(decl.alias('name'), values)` form is unchanged.
+
+Graph calls resolve to an importable declaration under its own name: the plain `@task`/`@graph` name, a module-qualified target such as `tasks.add`, or a `task(CalcJob)`/`task(WorkChain)` factory variable under its assigned variable name. A module-global rebinding of a handle (`alias = add`, `alias = nested_graph`), a stored `alias = decl.alias('name')` handle, or a renamed import no longer resolves; each fails at build time pointing at the declared name with an inline `decl(...).alias('name')` placement instead. Enum members in member tests, module-qualified tasks, and `par_map` callables keep their existing resolution. Calling one task or graph twice in the same graph body no longer falls back to an automatic numeric name (`add_2`); each placement needs its own inline `decl(...).alias('name')` instead, and repeated default `par_map` placements need `par_map(task.alias('name'), values)`. Module-global scalars, nodes, mappings, and other values are not wires either; reading one fails at build time as a missing graph input (pass it as a graph input) rather than as a name to assign on an earlier line.
 
 #### Mapped process failures retain their stored outputs
 
@@ -186,7 +190,7 @@ Loading a node whose storage has not been migrated now raises `IncompatibleStora
 
 #### Explicit placement names in source graphs
 
-A task or graph call accepts an explicit placement name through `task.alias('scf')(...)`, for function tasks, `CalcJob` and `WorkChain` tasks, nested graphs, generic tasks, dotted and module call targets, and `par_map` callables. The alias names the compiled placement, the provenance call label, and the `task_metadata` entry, without mutating the task handle. It takes a non-empty string literal following the link-label contract; anything else fails at build time. Repeating a task, graph, or map placement in one graph body without a distinct alias fails at build time; branch arms, loop bodies, and nested graphs scope names independently, while generated branch, loop, and inline-operation names keep their automatic numbering.
+A task or graph call accepts an explicit placement name through `task(...).alias('scf')`, for function tasks, `CalcJob` and `WorkChain` tasks, nested graphs, generic tasks, and module-qualified targets. Maps take an explicit name through `par_map(task.alias('scf'), values)`. The alias names the compiled placement, the provenance call label, and the `task_metadata` entry, without mutating the task handle. It takes a non-empty string literal following the link-label contract; anything else fails at build time. Repeating a task, graph, or map placement in one graph body without a distinct alias fails at build time; branch arms, loop bodies, and nested graphs scope names independently, while generated branch, loop, and inline-operation names keep their automatic numbering.
 
 #### Parallel maps in source graphs
 

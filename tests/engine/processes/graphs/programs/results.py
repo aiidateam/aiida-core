@@ -15,7 +15,7 @@ import pydantic
 from aiida.engine import PortModel
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph, task
-from aiida.engine.processes.graphs.results import Err, Ok, Result, catch_error
+from aiida.engine.processes.graphs.results import Err, Ok, Result
 from tests.engine.processes.graphs.programs.structured_outputs import Quotient, read_quotient
 
 
@@ -97,7 +97,7 @@ def missing_result_wrapper(value: int) -> Result[int, DivisionErrors]:
 @graph
 def ratio_signed(numerator: float, denominator: float) -> float:
     """Divide, routing each declared failure to its own handler."""
-    value, error = catch_error(divide_signed(numerator=numerator, denominator=denominator))
+    value, error = divide_signed(numerator=numerator, denominator=denominator).catch()
     if error is None:
         selected = value
     elif error is DivisionErrors.ZERO_DENOMINATOR:
@@ -110,7 +110,7 @@ def ratio_signed(numerator: float, denominator: float) -> float:
 @graph
 def ratio_fallback(numerator: float, denominator: float) -> float:
     """Divide, recovering failures from either error enum."""
-    value, error = catch_error(divide_signed(numerator=numerator, denominator=denominator))
+    value, error = divide_signed(numerator=numerator, denominator=denominator).catch()
     if error is not None:
         selected = union_fallback(error=error)
     else:
@@ -121,7 +121,7 @@ def ratio_fallback(numerator: float, denominator: float) -> float:
 @graph
 def matched_signed(numerator: float, denominator: float) -> float:
     """Branch on one declared member; a union handler takes the rest."""
-    value, error = catch_error(divide_signed(numerator=numerator, denominator=denominator))
+    value, error = divide_signed(numerator=numerator, denominator=denominator).catch()
     if error is None:
         selected = value
     elif error is DivisionErrors.ZERO_DENOMINATOR:
@@ -134,7 +134,7 @@ def matched_signed(numerator: float, denominator: float) -> float:
 @graph
 def matched_negated(numerator: float, denominator: float) -> float:
     """Branch away from one declared member; a union handler takes the rest."""
-    value, error = catch_error(divide_signed(numerator=numerator, denominator=denominator))
+    value, error = divide_signed(numerator=numerator, denominator=denominator).catch()
     if error is None:
         selected = value
     elif error is not DivisionErrors.ZERO_DENOMINATOR:
@@ -154,7 +154,7 @@ class AliasErrors(ExitCodeEnum):
 @graph
 def matched_equality(value: float) -> float:
     """Compare an error arm for equality; only `is` tests members."""
-    outcome, error = catch_error(divide(numerator=value, denominator=0.0))
+    outcome, error = divide(numerator=value, denominator=0.0).catch()
     if error == 1:
         selected = recover_zero(error=error)
     else:
@@ -166,7 +166,7 @@ def matched_equality(value: float) -> float:
 @graph
 def matched_unknown_member(value: float) -> float:
     """Test an unknown name; the compared member must exist."""
-    outcome, error = catch_error(divide(numerator=value, denominator=0.0))
+    outcome, error = divide(numerator=value, denominator=0.0).catch()
     if error is MISSING:  # noqa: F821 - the unknown member is rejected
         selected = recover_zero(error=error)
     else:
@@ -178,7 +178,7 @@ def matched_unknown_member(value: float) -> float:
 @graph
 def matched_member_typo(value: float) -> float:
     """Test a misspelled member of a known enum; the member must exist."""
-    outcome, error = catch_error(divide(numerator=value, denominator=0.0))
+    outcome, error = divide(numerator=value, denominator=0.0).catch()
     if error is DivisionErrors.ZERO_DENOMINATORR:
         selected = recover_zero(error=error)
     else:
@@ -197,7 +197,7 @@ def divide_quotient(numerator: float, denominator: float) -> Result[Quotient, Di
 @graph
 def selected_ratio(numerator: float, denominator: float) -> float:
     """Pass the whole captured success namespace to a consumer."""
-    value, error = catch_error(divide_quotient(numerator=numerator, denominator=denominator))
+    value, error = divide_quotient(numerator=numerator, denominator=denominator).catch()
     if error is None:
         selected = read_quotient(value=value)
     else:
@@ -232,7 +232,7 @@ def divide_tuple(numerator: float, denominator: float) -> Result[TupleQuotient, 
 @graph
 def field_ratio(numerator: float, denominator: float) -> float:
     """Select a structured field without a call on one arm; recover on the other."""
-    value, error = catch_error(divide_quotient(numerator=numerator, denominator=denominator))
+    value, error = divide_quotient(numerator=numerator, denominator=denominator).catch()
     if error is None:
         selected = value.ratio
     else:
@@ -256,7 +256,7 @@ def extra_field(value: float) -> Result[Quotient, DivisionErrors]:
 @graph
 def quotient_ratio(numerator: float, denominator: float) -> float:
     """Divide, recovering with zero on any declared failure."""
-    value, error = catch_error(divide_quotient(numerator=numerator, denominator=denominator))
+    value, error = divide_quotient(numerator=numerator, denominator=denominator).catch()
     if error is not None:
         selected = recover_zero(error=error)
     else:
@@ -291,14 +291,14 @@ def divide_maybe(numerator: float, denominator: float) -> Result[MaybeQuotient, 
 @graph
 def direct_arm(numerator: float, denominator: float) -> float:
     """Return the success arm itself; the graph output is absent on failure."""
-    value, _error = catch_error(divide(numerator=numerator, denominator=denominator))
+    value, _error = divide(numerator=numerator, denominator=denominator).catch()
     return value
 
 
 @graph
 def direct_field(numerator: float, denominator: float) -> float:
     """Return a field of the structured success; the graph output is absent on failure."""
-    value, _error = catch_error(divide_quotient(numerator=numerator, denominator=denominator))
+    value, _error = divide_quotient(numerator=numerator, denominator=denominator).catch()
     return value.ratio
 
 

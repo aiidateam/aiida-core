@@ -14,7 +14,7 @@ steps, handlers, and guards run as child processes. See ``graph`` for the author
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph, task
-from aiida.engine.processes.graphs.results import Err, Ok, RestartErrors, Result, catch_error
+from aiida.engine.processes.graphs.results import Err, Ok, RestartErrors, Result
 from aiida.orm import StructureData
 
 
@@ -72,14 +72,14 @@ def check_recovered(marker: str, value: float | None, error: StepErrors | None) 
 def absent_arm_resets(attempt: int = 0) -> str:
     """Rebind a `Result` in a loop; an absent arm reads as `None`, not stale state."""
     marker = mark_absent()
-    value, error = catch_error(flip_step(attempt=attempt))
+    value, error = flip_step(attempt=attempt).catch()
     while attempt < 2:
         attempt = attempt + 1
         if value is None:
             marker = mark_absent()
         else:
             marker = mark_present(value=value)
-        value, error = catch_error(flip_step(attempt=attempt))
+        value, error = flip_step(attempt=attempt).catch()
     return check_recovered(marker=marker, value=value, error=error)
 
 
@@ -94,10 +94,10 @@ def read_last(value: float | None) -> float:
 @graph
 def discarded_arm(attempt: int = 0) -> float:
     """Discard the error arm with `_`; only the value arm carries across iterations."""
-    value, _ = catch_error(flip_step(attempt=attempt))
+    value, _ = flip_step(attempt=attempt).catch()
     while attempt < 2:
         attempt = attempt + 1
-        value, _ = catch_error(flip_step(attempt=attempt))
+        value, _ = flip_step(attempt=attempt).catch()
     return read_last(value=value)
 
 
@@ -119,11 +119,11 @@ def restartable(structure: StructureData, max_attempts: int, attempt: int = 0) -
     :param max_attempts: the budget; retries continue while ``attempt < max_attempts``.
     :param attempt: the zero-based attempt the first run steps from.
     """
-    value, error = catch_error(run_step(structure=structure, attempt=attempt))
+    value, error = run_step(structure=structure, attempt=attempt).catch()
     retry = error is not None and attempt < max_attempts
     while retry:
         attempt = attempt + 1
-        value, error = catch_error(run_step(structure=structure, attempt=attempt))
+        value, error = run_step(structure=structure, attempt=attempt).catch()
         retry = error is not None and attempt < max_attempts
     return ensure(value=value, error=error)
 
@@ -207,12 +207,12 @@ def chained_retry(parameters: dict, max_attempts: int, attempt: int = 0) -> floa
     :param max_attempts: the budget; retries continue while ``attempt < max_attempts``.
     :param attempt: the zero-based attempt the first run steps from.
     """
-    value, error = catch_error(mock_step(attempt=attempt))
+    value, error = mock_step(attempt=attempt).catch()
     fixed = fix_chain(error=error, parameters=parameters)
     retry = error is not None and attempt < max_attempts
     while retry:
         attempt = attempt + 1
-        value, error = catch_error(mock_step(attempt=attempt))
+        value, error = mock_step(attempt=attempt).catch()
         fixed = fix_chain(error=error, parameters=fixed)
         retry = error is not None and attempt < max_attempts
     return ensure_chain(value=value, error=error)

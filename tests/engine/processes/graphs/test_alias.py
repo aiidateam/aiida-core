@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Explicit placement alias contracts: `task.alias('scf')(...)`.
+"""Explicit placement alias contracts: `task(...).alias('scf')`.
 
 Placement names are independent of reusable declarations and survive control
 scopes, process dispatch, and scheduler checkpoints.
@@ -171,6 +171,12 @@ def test_aliased_validation_rejects_bad_names(declaration: GraphHandle) -> None:
     """Empty, invalid, and non-literal alias names fail at build time."""
     with pytest.raises(GraphLanguageError, match='alias'):
         declaration.build()
+
+
+def test_legacy_alias_suggests_postfix_syntax() -> None:
+    """A declaration alias cannot be called directly in a graph body."""
+    with pytest.raises(GraphLanguageError, match=r"call\(\.\.\.\)\.alias\('name'\)"):
+        aliases.legacy_alias.build()
 
 
 def test_alias_does_not_mutate_task_handle() -> None:

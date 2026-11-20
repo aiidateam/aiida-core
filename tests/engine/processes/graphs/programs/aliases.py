@@ -9,7 +9,7 @@
 """Placement alias declarations shared by the graph behavior suites.
 
 Each graph calls a task or subgraph through an explicit local placement
-constructor, ``task.alias('scf')(...)``, which names the placement instead of
+constructor, ``task(...).alias('scf')``, which names the placement instead of
 relying on the default task name or a generated numeric suffix. The ``scf``
 name is a placeholder for any stable authored name; tests assert the compiled
 template carries exactly that placement name and the run dispatches under it.
@@ -37,80 +37,80 @@ from tests.engine.processes.graphs.programs.workchains import add_chain
 @graph
 def aliased_function(x: int, y: int) -> int:
     """Place one function task under an explicit name."""
-    return add.alias('scf')(x=x, y=y)
+    return add(x=x, y=y).alias('scf')
 
 
 @graph
 def aliased_two_functions(x: int, y: int) -> int:
     """Place the same function task twice under two explicit names."""
-    first = add.alias('scf')(x=x, y=y)
-    return add.alias('nscf')(x=first, y=y)
+    first = add(x=x, y=y).alias('scf')
+    return add(x=first, y=y).alias('nscf')
 
 
 @graph
 def aliased_calcjob(x: int, y: int, code: Code) -> int | float:
     """Place one `CalcJob` task under an explicit name."""
-    total = add_calc.alias('scf')(x=x, y=y, code=code)
+    total = add_calc(x=x, y=y, code=code).alias('scf')
     return total.sum
 
 
 @graph
 def aliased_two_calcjobs(x: int, y: int, code: Code) -> int | float:
     """Place the same `CalcJob` task twice under two explicit names."""
-    first = add_calc.alias('scf')(x=x, y=y, code=code)
-    second = add_calc.alias('nscf')(x=first.sum, y=y, code=code)
+    first = add_calc(x=x, y=y, code=code).alias('scf')
+    second = add_calc(x=first.sum, y=y, code=code).alias('nscf')
     return second.sum
 
 
 @graph
 def aliased_workchain(x: int, y: int) -> int:
     """Place one `WorkChain` task under an explicit name."""
-    total = add_chain.alias('scf')(x=x, y=y)
+    total = add_chain(x=x, y=y).alias('scf')
     return total.result
 
 
 @graph
 def aliased_two_workchains(x: int, y: int) -> int:
     """Place the same `WorkChain` task twice under two explicit names."""
-    first = add_chain.alias('scf')(x=x, y=y)
-    second = add_chain.alias('nscf')(x=first.result, y=y)
+    first = add_chain(x=x, y=y).alias('scf')
+    second = add_chain(x=first.result, y=y).alias('nscf')
     return second.result
 
 
 @graph
 def aliased_graph(x: int, y: int, z: int) -> int:
     """Place one nested graph under an explicit name."""
-    return call_programs.multiply_add.alias('stage')(x=x, y=y, z=z)
+    return call_programs.multiply_add(x=x, y=y, z=z).alias('stage')
 
 
 @graph
 def aliased_inner(x: int, y: int) -> int:
     """Place a function task under an explicit name inside a nested graph."""
-    return add.alias('pw')(x=x, y=y)
+    return add(x=x, y=y).alias('pw')
 
 
 @graph
 def aliased_nested(x: int, y: int) -> int:
     """Place a nested graph holding an aliased task under an explicit name."""
-    return aliased_inner.alias('scf')(x=x, y=y)
+    return aliased_inner(x=x, y=y).alias('scf')
 
 
 @graph
 def aliased_branch(value: int, flag: bool) -> int:
     """Place an aliased task on the taken branch arm."""
     if flag:
-        chosen = add.alias('scf')(x=value, y=1)
+        chosen = add(x=value, y=1).alias('scf')
     else:
-        chosen = add.alias('scf')(x=value, y=2)
+        chosen = add(x=value, y=2).alias('scf')
     return chosen
 
 
 @graph
 def aliased_loop(value: int, count: int) -> int:
     """Step an aliased task across loop iterations; one entry covers every pass."""
-    total = add.alias('scf')(x=value, y=0)
+    total = add(x=value, y=0).alias('scf')
     while is_positive(value=count):
-        total = add.alias('scf')(x=total, y=1)
+        total = add(x=total, y=1).alias('scf')
         count = decrement(value=count)
     return total
 
@@ -118,26 +118,26 @@ def aliased_loop(value: int, count: int) -> int:
 @graph
 def aliased_ordered(x: int) -> int:
     """Order an aliased placement with `after`."""
-    first = add.alias('prepare')(x=x, y=0)
-    return add.alias('scf')(x=x, y=1, after=first)
+    first = add(x=x, y=0).alias('prepare')
+    return add(x=x, y=1, after=first).alias('scf')
 
 
 @graph
 def aliased_generic(x: int, y: int) -> int:
     """Place a generic task under an explicit name; constraints still check."""
-    return generic_add.alias('scf')(a=x, b=y)
+    return generic_add(a=x, b=y).alias('scf')
 
 
 @graph
 def aliased_dotted(x: int, y: int) -> int:
     """Place a task reached through a dotted module path under an explicit name."""
-    return tasks.add.alias('scf')(x=x, y=y)
+    return tasks.add(x=x, y=y).alias('scf')
 
 
 @graph
 def aliased_module(x: int, y: int) -> int:
     """Place a task reached through an imported module under an explicit name."""
-    return task_module.add.alias('scf')(x=x, y=y)
+    return task_module.add(x=x, y=y).alias('scf')
 
 
 @graph
@@ -149,14 +149,14 @@ def aliased_map(values: DataList) -> DataList:
 @graph
 def aliased_inner_scf(x: int, y: int) -> int:
     """Place a function task under the outer alias name inside a nested graph."""
-    return add.alias('scf')(x=x, y=y)
+    return add(x=x, y=y).alias('scf')
 
 
 @graph
 def aliased_scoped_nested(x: int, y: int) -> int:
     """Reuse one alias in the outer body and inside a nested graph; scopes keep them apart."""
-    first = add.alias('scf')(x=x, y=y)
-    return aliased_inner_scf.alias('stage')(x=first, y=y)
+    first = add(x=x, y=y).alias('scf')
+    return aliased_inner_scf(x=first, y=y).alias('stage')
 
 
 # rejected at build: each placement needs its own name; repeats take `.alias('unique_name')`.
@@ -171,8 +171,8 @@ def duplicate_implicit(x: int, y: int) -> int:
 @graph
 def duplicate_explicit(x: int, y: int) -> int:
     """Place one task twice under one alias; each alias names a single placement."""
-    first = add.alias('scf')(x=x, y=y)
-    return add.alias('scf')(x=first, y=y)
+    first = add(x=x, y=y).alias('scf')
+    return add(x=first, y=y).alias('scf')
 
 
 # rejected at build: an explicit alias cannot reuse a name another placement already holds.
@@ -180,7 +180,7 @@ def duplicate_explicit(x: int, y: int) -> int:
 def duplicate_mixed(x: int, y: int) -> int:
     """Pair a bare call with an explicit alias colliding on the task name."""
     first = add(x=x, y=y)
-    return add.alias('add')(x=first, y=y)
+    return add(x=first, y=y).alias('add')
 
 
 # rejected at build: nested calls hide a placement; put the inner call on its own line first.
@@ -218,18 +218,24 @@ def duplicate_map_explicit(values: DataList) -> DataList:
 @graph
 def alias_empty(x: int, y: int) -> int:
     """Alias with an empty name; names must be non-empty link labels."""
-    return add.alias('')(x=x, y=y)
+    return add(x=x, y=y).alias('')
 
 
 # rejected at build: placement names follow the link-label contract.
 @graph
 def alias_invalid(x: int, y: int) -> int:
     """Alias with spaces and punctuation; use alphanumerics and underscores instead."""
-    return add.alias('bad alias!')(x=x, y=y)
+    return add(x=x, y=y).alias('bad alias!')
 
 
 # rejected at build: the alias must be a string literal the compiler can read.
 @graph
+def legacy_alias(x: int, y: int) -> int:
+    """The alias belongs on the invocation, not the declaration."""
+    return add.alias('scf')(x=x, y=y)
+
+
+@graph
 def alias_nonliteral(x: int, y: int, label: str) -> int:
     """Alias through a graph input; the compiler only accepts a literal name."""
-    return add.alias(label)(x=x, y=y)
+    return add(x=x, y=y).alias(label)

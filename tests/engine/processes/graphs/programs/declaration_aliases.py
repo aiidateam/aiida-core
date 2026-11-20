@@ -143,7 +143,7 @@ def calls_canonical_factory(x: int, y: int, code: Code) -> int | float:
 @graph
 def calls_inline_alias(x: int, y: int) -> int:
     """Place an inline `.alias(...)` at the call; aliases are local to the graph body."""
-    return add.alias('scf')(x=x, y=y)
+    return add(x=x, y=y).alias('scf')
 
 
 @graph

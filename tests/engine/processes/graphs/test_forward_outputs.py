@@ -20,7 +20,6 @@ from aiida.engine import (
     Ok,
     PortModel,
     Result,
-    catch_error,
     forward_outputs,
     graph,
     run_get_node,
@@ -80,14 +79,14 @@ def explicit(mode: int):
 @graph
 def select_optional(mode: int):
     """Filter an optional namespace from a captured result."""
-    result, error = catch_error(produce(mode=mode))
+    result, error = produce(mode=mode).catch()
     return {'summary': forward_outputs(result, exclude=('report',)), 'error': error}
 
 
 @graph
 def captured(mode: int):
     """Expose both arms of the invocation as one namespace."""
-    result, error = catch_error(produce(mode=mode))
+    result, error = produce(mode=mode).catch()
     return {'value': result, 'error': error}
 
 

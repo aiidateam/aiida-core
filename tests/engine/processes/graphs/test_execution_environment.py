@@ -77,7 +77,7 @@ def consume(x: Int) -> Int:
 
 @graph
 def calculation(x: int, threshold: int) -> Int:
-    result = simulated.alias('solver')(x=x, y=threshold)
+    result = simulated(x=x, y=threshold).alias('solver')
     return result.sum
 
 
@@ -90,14 +90,14 @@ def observe_error(error: JobErrors | None, partial_sum: Int | None) -> Int:
 
 @graph
 def mapped_failure(x: int, threshold: int) -> Int:
-    result = mapped.alias('solver')(x=x, y=threshold)
+    result = mapped(x=x, y=threshold).alias('solver')
     return observe_error(error=result.error, partial_sum=result.sum)
 
 
 @graph
 def workflow(x: int, threshold: int) -> Int:
     prepared = preprocess(x=x)
-    result = calculation.alias('stage')(x=prepared, threshold=threshold)
+    result = calculation(x=prepared, threshold=threshold).alias('stage')
     return consume(x=result)
 
 
@@ -105,7 +105,7 @@ def workflow(x: int, threshold: int) -> Int:
 def iterated(x: int, threshold: int, count: int) -> int:
     index = 0
     while index < count:
-        result = simulated.alias('solver')(x=x, y=threshold)
+        result = simulated(x=x, y=threshold).alias('solver')
         x = result.sum
         index = index + 1
     return x

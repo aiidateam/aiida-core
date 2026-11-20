@@ -133,8 +133,8 @@ def missing_science(y: int) -> int:
 
 @graph
 def nested(x: int) -> int:
-    first = configured.alias('first')(x=x)
-    return configured.alias('second')(x=first)
+    first = configured(x=x).alias('first')
+    return configured(x=first).alias('second')
 
 
 @graph

@@ -37,7 +37,7 @@ def plain_add(x: int, y: int) -> int:
 def chain(x: int, y: int) -> int:
     """Two whole-result placements."""
     first = add(x=x, y=y)
-    return add.alias('add_2')(x=first, y=y)
+    return add(x=first, y=y).alias('add_2')
 
 
 @graph
@@ -51,8 +51,8 @@ def multiply_add(x: int, y: int, z: int) -> int:
 def diamond(x: int) -> int:
     """Fan two additions into one."""
     left = add(x=x, y=1)
-    right = add.alias('add_2')(x=x, y=2)
-    return add.alias('add_3')(x=left, y=right)
+    right = add(x=x, y=2).alias('add_2')
+    return add(x=left, y=right).alias('add_3')
 
 
 @graph
@@ -73,7 +73,7 @@ def ordered_named(value: int) -> int:
 def multiple_ordered(x: int) -> int:
     """Order on two placements at once."""
     first = prepare(value=x)
-    second = prepare.alias('prepare_2')(value=x)
+    second = prepare(value=x).alias('prepare_2')
     return add(x=x, y=1, after=(first, second))
 
 
@@ -94,7 +94,7 @@ def failed(x: int) -> int:
 def collision(x: int) -> int:
     """Place three tasks across two callees."""
     first = add(x=x, y=1)
-    second = add.alias('add_2')(x=first, y=1)
+    second = add(x=first, y=1).alias('add_2')
     return collision_add(x=second, y=1)
 
 

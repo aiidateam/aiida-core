@@ -65,7 +65,6 @@ __all__ = (
     'append_',
     'assign_',
     'calcfunction',
-    'catch_error',
     'construct_awaitable',
     'forward_outputs',
     'graph',

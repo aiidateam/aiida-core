@@ -30,7 +30,7 @@ import json
 import pytest
 
 from aiida.common.exceptions import GraphLanguageError
-from aiida.engine import ProcessState, catch_error, graph, par_map, task
+from aiida.engine import ProcessState, graph, par_map, task
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.exit_code import ExitCodeEnum
 from aiida.engine.processes.graphs.ir import GraphIR
@@ -83,7 +83,7 @@ def mark_present(value: int) -> bool:
 @graph
 def branch_on_nested_error(x: int) -> bool:
     """Branch outside the nested scope on the absent success arm."""
-    value, error = catch_error(nested_flaky(x=x))
+    value, error = nested_flaky(x=x).catch()
     if error is not None:
         selected = mark_absent()
     else:
@@ -108,11 +108,11 @@ def ensure_value(value: int | None, error: FlakyErrors | None) -> int:
 @graph
 def retry_until_even(x: int) -> int:
     """Retry a declared `ODD` failure with an inline counter and a named predicate."""
-    value, error = catch_error(flaky_increment(x=x))
+    value, error = flaky_increment(x=x).catch()
     retry = should_retry(error=error, attempt=x)
     while retry:
         x = x + 1
-        value, error = catch_error(flaky_increment(x=x))
+        value, error = flaky_increment(x=x).catch()
         retry = should_retry(error=error, attempt=x)
     return ensure_value(value=value, error=error)
 
@@ -138,7 +138,7 @@ def label_ok(value: int) -> str:
 @graph
 def branch_on_member(x: int) -> str:
     """Distinguish one declared member from every other outcome."""
-    value, error = catch_error(flaky_increment(x=x))
+    value, error = flaky_increment(x=x).catch()
     if error is FlakyErrors.ODD:
         selected = label_odd()
     elif error is not None:
@@ -307,7 +307,7 @@ def stop_in_loop(x: int, fail_at: int, limit: int) -> Result[int, FlakyErrors]:
 
 @graph
 def capture_loop_return(x: int) -> bool:
-    value, error = catch_error(stop_in_loop(x=x, fail_at=1, limit=3))
+    value, error = stop_in_loop(x=x, fail_at=1, limit=3).catch()
     if error is FlakyErrors.TOO_BIG:
         if value is None:
             return mark_absent()
@@ -396,7 +396,7 @@ def choose_error(first: bool, x: float) -> float:
 
 @graph
 def capture_aliased_scope(first: bool, x: float) -> float:
-    _, error = catch_error(choose_error.alias('chosen')(first=first, x=x))
+    _, error = choose_error(first=first, x=x).alias('chosen').catch()
     if error is results.AliasErrors.ALSO_ZERO:
         selected = x
     else:
@@ -418,8 +418,8 @@ def test_nested_capture_distinguishes_equal_statuses(first, expected):
 
 @graph
 def capture_with_uncaught_sibling(x: int) -> bool:
-    value, error = catch_error(nested_flaky.alias('captured')(x=x))
-    also = nested_flaky.alias('uncaught')(x=x)
+    value, error = nested_flaky(x=x).alias('captured').catch()
+    also = nested_flaky(x=x).alias('uncaught')
     if error is not None:
         selected = mark_present(value=also)
     else:
@@ -451,8 +451,8 @@ def test_nested_capture_survives_checkpoint_before_and_after_failure():
 
 @graph
 def concurrent_failures(first: int, second: int) -> int:
-    value = flaky_increment.alias('first_call')(x=first)
-    _other = flaky_increment.alias('second_call')(x=second)
+    value = flaky_increment(x=first).alias('first_call')
+    _other = flaky_increment(x=second).alias('second_call')
     return value
 
 
@@ -477,25 +477,37 @@ def test_first_observed_failure_stays_latched_after_resume():
 @graph
 def capture_value(x: int) -> int:
     value = flaky_increment(x=x)
-    result, _ = catch_error(value)
+    result, _ = value.catch()
     return result
 
 
 @graph
 def capture_expression(x: int) -> int:
-    result, _ = catch_error(x + 1)
+    result, _ = (x + 1).catch()
     return result
 
 
 @graph
 def capture_infallible(x: int) -> bool:
-    result, _ = catch_error(mark_present(value=x))
+    result, _ = mark_present(value=x).catch()
     return result
 
 
 @graph
 def capture_without_unpack(x: int) -> int:
-    result = catch_error(flaky_increment(x=x))
+    result = flaky_increment(x=x).catch()
+    return result
+
+
+@graph
+def capture_with_argument(x: int) -> int:
+    result, _ = flaky_increment(x=x).catch(x)
+    return result
+
+
+@graph
+def capture_wrong_arity(x: int) -> int:
+    result, _, _ = flaky_increment(x=x).catch()
     return result
 
 
@@ -507,7 +519,7 @@ def legacy_unpack(x: float) -> float:
 
 @graph
 def compare_undeclared_member(x: float) -> float:
-    value, error = catch_error(results.divide(numerator=x, denominator=0.0))
+    value, error = results.divide(numerator=x, denominator=0.0).catch()
     if error is results.AliasErrors.ALSO_ZERO:
         selected = x
     else:
@@ -518,10 +530,12 @@ def compare_undeclared_member(x: float) -> float:
 @pytest.mark.parametrize(
     ('declaration', 'message'),
     [
-        (capture_value, 'one direct fallible'),
-        (capture_expression, 'one direct fallible'),
+        (capture_value, 'a name cannot be both a wire and a declaration'),
+        (capture_expression, 'use a task or graph declaration'),
         (capture_infallible, 'with declared failures'),
         (capture_without_unpack, 'tuple assignment'),
+        (capture_with_argument, 'takes no arguments'),
+        (capture_wrong_arity, 'must unpack into exactly two names'),
         (legacy_unpack, 'bare Result calls expose only success'),
         (compare_undeclared_member, 'enum is not declared'),
     ],
@@ -562,7 +576,7 @@ def describe_capture(value: int | None, error: FlakyErrors | None) -> str:
 
 @graph
 def capture_nullable(x: int) -> str:
-    value, error = catch_error(maybe_value(x=x))
+    value, error = maybe_value(x=x).catch()
     return describe_capture(value=value, error=error)
 
 
@@ -591,7 +605,7 @@ def test_uncaught_failure_stops_loop_on_second_iteration():
 
 @graph
 def recovery_can_fail(x: int) -> int:
-    value, error = catch_error(flaky_increment(x=x))
+    value, error = flaky_increment(x=x).catch()
     if error is not None:
         result = flaky_increment(x=11)
     else:
@@ -619,7 +633,7 @@ def unexpected_failure(x: int) -> Result[int, FlakyErrors]:
 
 @graph
 def capture_unexpected(x: int) -> str:
-    value, error = catch_error(unexpected_failure(x=x))
+    value, error = unexpected_failure(x=x).catch()
     return describe_capture(value=value, error=error)
 
 
@@ -662,7 +676,7 @@ def nested_nullable_structure(x: float) -> results.Quotient | None:
 
 @graph
 def capture_nullable_structure(x: float) -> float:
-    value, error = catch_error(nested_nullable_structure(x=x))
+    value, error = nested_nullable_structure(x=x).catch()
     if error is not None:
         selected = results.recover_zero(error=error)
     elif value is None:

@@ -163,7 +163,7 @@ def nullable_forward(value: int | None = None) -> int | None:
 def nullable_chain(value: int | None = None) -> int | None:
     """Wire the optional output of a child graph; an absent value leaves the next input unwired."""
     forwarded = nullable_return(value=value)
-    return nullable_return.alias('nullable_return_2')(value=forwarded)
+    return nullable_return(value=forwarded).alias('nullable_return_2')
 
 
 @graph

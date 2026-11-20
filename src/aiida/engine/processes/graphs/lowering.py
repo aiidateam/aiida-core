@@ -68,10 +68,10 @@ from aiida.engine.processes.graphs.par_map import par_map
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.results import Err, Ok, _error_types, _result_contract
 from aiida.engine.processes.graphs.shapes import (
-    Forward,
     LeafShape,
     NamespaceShape,
     Shape,
+    expose,
     json_default,
     namespace_shape_for,
     shape_for_annotation,
@@ -89,7 +89,7 @@ from aiida.engine.processes.ports import _node_type
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.orm import Bool, DataDict, DataList, EnumData
 
-__all__ = ('Forward', 'GraphHandle', 'forward_outputs', 'graph', 'par_map', 'task')
+__all__ = ('GraphHandle', 'expose', 'forward_outputs', 'graph', 'par_map', 'task')
 
 # `compile_graph` is intentionally absent from `__all__` and from the
 # `aiida.engine.processes.graphs` and `aiida.engine` re-exports: it is the

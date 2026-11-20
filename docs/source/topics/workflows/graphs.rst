@@ -565,7 +565,7 @@ A task or graph called through ``.alias('scf')`` names its placement explicitly 
 * The alias is local to the call: it never mutates the task handle, so a later plain ``add(...)`` still places under its own name.
 * It accepts only a non-empty string literal following the link-label contract; a variable or an invalid name fails when the graph is built.
 * The compiled template, the provenance call labels, and the ``runtime_config`` entries below all carry the alias.
-* This is unrelated to the module-level ``Forward`` input alias under :ref:`spreading <topics:workflows:graphs:spreading>`, which reuses an input declaration across graphs.
+* This is unrelated to ``expose`` under :ref:`spreading <topics:workflows:graphs:spreading>`, which reuses an input declaration across graphs.
 
 .. _topics:workflows:graphs:runtime_config:
 
@@ -811,8 +811,8 @@ Port-level validation applies: aliases and decorated validators are rejected at 
 
 .. _topics:workflows:graphs:spreading:
 
-Spreading and forwarding
-^^^^^^^^^^^^^^^^^^^^^^^^
+Spreading and exposing
+^^^^^^^^^^^^^^^^^^^^^^
 
 ``**`` spreads a namespace input or the result of a multi-output call across the ports of a call.
 Each field must match an input of the called task or graph, and each port is given once:
@@ -829,30 +829,30 @@ Each field must match an input of the called task or graph, and each port is giv
 
 To pass a subset of fields or replace one, wire the ports one by one, such as ``add(x=1, y=bundle.y)``.
 
-``Forward`` declares a namespace input with the same inputs as a task or graph, so a graph passes a whole input contract on without restating its ports.
-It is ``Annotated`` metadata, like ``PortField``; the marker declares the namespace, so the base type is ``Any``:
+``expose`` returns the annotation for a namespace input with the same inputs as a task or graph, so a graph passes a whole input contract on without restating its ports:
 
 .. code:: python
 
-    from typing import Annotated, Any
+    from aiida.engine import expose
 
-    from aiida.engine import Forward
+    MultiplyAddInputs = expose(multiply_add)
 
     @graph
-    def forwarded(bundle: Annotated[Any, Forward(multiply_add)]) -> int:
+    def forwarded(bundle: MultiplyAddInputs) -> int:
         result = multiply_add(**bundle)
         return add(x=result, y=1)
 
-``exclude`` leaves out ports that the graph wires itself; it takes one port name or a tuple of them, with dots for nested ports, such as ``exclude=('structure', 'pw.parameters')``.
-An alias reuses one declaration across graphs:
+``exclude`` leaves out ports that the graph wires itself; it takes one port name or a tuple of them, with dots for nested ports, such as ``exclude=('structure', 'pw.parameters')``:
 
 .. code:: python
 
-    MultiplyAddInputs = Annotated[Any, Forward(multiply_add, exclude=('z',))]
+    MultiplyAddInputsWithoutZ = expose(multiply_add, exclude='z')
 
     @graph
-    def forwarded_z(bundle: MultiplyAddInputs) -> int:
+    def forwarded_z(bundle: MultiplyAddInputsWithoutZ) -> int:
         return multiply_add(**bundle, z=1)
+
+Static type checkers such as mypy and pyright reject a variable as an annotation; the graph lowering resolves it when the graph is built.
 
 .. _topics:workflows:graphs:outputs:
 

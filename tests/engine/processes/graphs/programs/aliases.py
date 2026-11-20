@@ -19,7 +19,7 @@ for constants, ``pair.sum`` field reads) are a separate language feature and
 keep their existing fixtures in :mod:`branches <tests.engine.processes.graphs.programs.branches>`
 and :mod:`constants <tests.engine.processes.graphs.programs.constants>`; this
 module only covers the callable placement constructor. Module-global
-``Forward`` type aliases (``AddInputs`` in ``calls``) are also unrelated and
+``expose`` aliases (``AddInputs`` in ``calls``) are also unrelated and
 stay where they are.
 """
 

@@ -25,7 +25,7 @@ from aiida.common.exceptions import (
     MissingRequiredInputsError,
 )
 from aiida.common.links import LinkType
-from aiida.engine import Forward, task
+from aiida.engine import expose, task
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import Endpoint, GraphIR, InlineOperation, LoopControl, Route
 from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
@@ -94,6 +94,9 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         ),
         pytest.param(call_programs.forwarded_exclude, {'bundle': {'x': 2}}, {'result': 4}, id='forwarded-exclude'),
         pytest.param(call_programs.forwarded_alias, {'bundle': {'x': 2, 'y': 3}}, {'result': 5}, id='forwarded-alias'),
+        pytest.param(
+            call_programs.forwarded_annotated, {'bundle': {'x': 2, 'y': 3}}, {'result': 5}, id='forwarded-annotated'
+        ),
         pytest.param(call_programs.generic_chain, {'x': 2, 'y': 3}, {'result': 4}, id='generic-chain'),
         pytest.param(call_programs.generic_mixed, {'x': 2, 'y': 2.5}, {'result': 4.5}, id='generic-mixed'),
         pytest.param(call_programs.namespaced_call, {'x': 1, 'y': 2}, {'result': 3}, id='namespaced'),
@@ -569,15 +572,16 @@ def test_trailing_underscore_function_name_rejected() -> None:
         task(namespace['trailing_'])
 
 
-def test_forward_string_exclusion_accepted() -> None:
+def test_expose_string_exclusion_accepted() -> None:
     """A single string exclusion drops one port."""
-    assert Forward(tasks.add, exclude='y').exclude == ('y',)
+    exposed = expose(tasks.add, exclude='y')
+    assert (exposed.task, exposed.exclude) == (tasks.add, ('y',))
 
 
-def test_forward_invalid_marker_rejected() -> None:
-    """A forward exclusion must name input paths."""
+def test_expose_invalid_exclusion_rejected() -> None:
+    """An exposed-input exclusion must name input paths."""
     with pytest.raises(GraphLanguageError, match='must be strings'):
-        Forward(tasks.add, exclude=(42,))
+        expose(tasks.add, exclude=(42,))
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

@@ -12,9 +12,7 @@ Authoring examples illustrate the recommended shapes, including the inline retry
 regression fixtures preserve historical edge-case behavior.
 """
 
-import typing as t
-
-from aiida.engine import Forward, WorkChain, calcfunction, task
+from aiida.engine import WorkChain, calcfunction, expose, task
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph
 from aiida.orm import Bool, Float, Int
@@ -66,7 +64,7 @@ optional_input_chain = task(OptionalInputWorkChain)
 
 
 @graph
-def forward_optional_field(bundle: t.Annotated[t.Any, Forward(optional_input_chain)]) -> int | None:
+def forward_optional_field(bundle: expose(optional_input_chain)) -> int | None:
     """Return an optional forwarded field without a default; an omitted one emits no output."""
     return bundle.y
 
@@ -131,7 +129,7 @@ def forward_declared(x: Int, y: Int) -> int:
 
 
 @graph
-def forward_optional_namespace(bundle: t.Annotated[t.Any, Forward(optional_input_chain)]):
+def forward_optional_namespace(bundle: expose(optional_input_chain)):
     """Return a forwarded namespace; an omitted optional field stays out of it."""
     return bundle
 

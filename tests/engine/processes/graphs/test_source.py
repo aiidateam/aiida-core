@@ -214,7 +214,7 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(calls.spread_override, 'given twice', id='spread-override'),
         pytest.param(calls.spread_double, 'given twice', id='spread-double'),
         pytest.param(calls.spread_extra, 'matches no input', id='spread-extra'),
-        pytest.param(calls.forwarded_unknown, 'only tasks and graphs forward', id='forwarded-unknown'),
+        pytest.param(calls.forwarded_unknown, 'only tasks and graphs can be exposed', id='forwarded-unknown'),
         pytest.param(calls.forwarded_exclude_unknown, 'matches no input here', id='forwarded-exclude-unknown'),
         pytest.param(calls.namespaced_unknown, 'unknown name', id='namespaced-unknown'),
         pytest.param(calls.namespaced_shadowed, 'both a wire and a declaration', id='namespaced-shadowed'),

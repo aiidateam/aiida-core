@@ -144,19 +144,12 @@ def test_map_downstream_chaining_executes() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_map_keyword_and_after_execute() -> None:
-    """Keyword binding and `after` ordering execute with exact values."""
+def test_map_keyword_arguments() -> None:
+    """Bind the callable and values by keyword."""
     original = DataList([Int(4)])
     outputs, node = run_get_node(par_maps.map_keyword, values=original)
     assert node.is_finished_ok
     assert [member.value for member in outputs['result']] == [5]
-    outputs, node = run_get_node(par_maps.map_after, x=10, values=original)
-    assert node.is_finished_ok
-    assert [member.value for member in outputs['result']] == [5]
-    assert any(
-        edge.source == 'increment' and edge.target == 'map_increment' and edge.carried_between is None
-        for edge in compile_graph(par_maps.map_after).dependencies
-    )
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -238,6 +231,7 @@ def test_map_wrong_collection_type_rejected() -> None:
 @pytest.mark.parametrize(
     'declaration, match',
     [
+        pytest.param(par_maps.map_obsolete_after, 'pass the callable and the collection', id='obsolete-after'),
         pytest.param(par_maps.map_two_inputs, 'exactly one input', id='non-unary'),
         pytest.param(par_maps.map_pair_outputs, 'exactly one value', id='multi-output'),
         pytest.param(par_maps.map_no_output, 'exactly one value', id='no-output'),

@@ -259,7 +259,7 @@ The graph body supports:
 * field and namespace selection (``.key``, ``['key']``, ``.result``; ``.result`` on a single-output call is optional) and multi-output unpacking (``first, second = step(...)``);
 * module-qualified calls (``my_module.add(...)``) and explicitly aliased placements (``decl(...).alias('name')``), required whenever one task or graph is placed twice in the same body;
 * namespace ``dict`` literals (``nodes={'text': text}``) and ``**bundle`` spreading (:ref:`topics:workflows:graphs:spreading`);
-* ``after=`` ordering: ``add(x=x, y=1, after=prepared)`` waits for the ``prepared`` placement without using its outputs; ``after=(first, second)`` waits for both; ``after`` is reserved and cannot be a task parameter;
+* placements execute one at a time in graph-body order, including those that do not use each other's outputs; ``par_map`` can run items within one placement in parallel;
 * ``partial`` bindings: ``configured = partial(add, y=y)`` fixes some inputs of a task or graph once and reuses the binding for ordinary calls and maps (:ref:`topics:workflows:graphs:partial`); ``partial`` needs no import and cannot name an input, wire, or binding;
 
 Each call is assigned to a name, including calls to tasks without outputs; ``return`` and the tests of ``if`` and ``while`` also take inline expressions and calls directly.
@@ -381,7 +381,7 @@ In a branch without an early return, each arm holds one statement: an assignment
 
 A return from a branch or loop exits the current graph invocation, and only continuing arms need to bind names used after the branch.
 All successful returns must provide compatible graph outputs.
-A taken return blocks later placements, including subsequent loop iterations, but does not cancel work that already started.
+A taken return skips later placements, including subsequent loop iterations.
 In a ``Result``-annotated graph, use ``Ok(...)`` for success or ``Err(Errors.MEMBER)`` for a declared failure.
 A caller can handle the latter with ``.catch()``.
 Whole-namespace arms on both sides must share the same fields.
@@ -1139,30 +1139,9 @@ Failures and restarts
 ^^^^^^^^^^^^^^^^^^^^^
 
 Declared failures keep the graph alive, as above.
-Anything else stops it: tasks that depend on a failed task never start; independent tasks still run, and the graph then exits with ``ERROR_TASK_FAILED``.
+An unexpected task failure stops the graph with ``ERROR_TASK_FAILED`` without starting later placements.
 The graph checkpoint records dispatched and finished tasks with their scope hierarchy, so a restarted graph reattaches pending children and reuses finished work instead of resubmitting it.
 Caching applies to tasks as to any other process.
-
-.. _topics:workflows:graphs:ordering:
-
-Explicit ordering
------------------
-
-The reserved ``after`` argument makes a task wait for another task without using its output:
-
-.. code:: python
-
-    @task
-    def prepare(x: int) -> None:
-        ...
-
-    @graph
-    def ordered(x: int) -> int:
-        prepared = prepare(x=x)
-        return add(x=x, y=1, after=prepared)
-
-``after=(first, second)`` waits for both.
-Task functions cannot have a parameter named ``after``.
 
 .. _topics:workflows:graphs:partial:
 
@@ -1258,7 +1237,7 @@ Empty collections produce empty containers without dispatching any item tasks.
 A collector calculation creates the result container from the child outputs; the graph only returns it, preserving calculation/workflow provenance rules.
 If any item fails or omits its declared output, the graph fails with ``ERROR_TASK_FAILED`` and does not run the collector.
 Map progress is checkpointed, so restarting does not resubmit completed items.
-Like task calls, ``par_map`` accepts ``after=placement`` for explicit ordering.
+A ``par_map`` placement waits for preceding placements and completes before later ones start.
 
 Provenance
 ----------
@@ -1526,22 +1505,6 @@ Pick a value with a conditional expression instead of a branch
         return add(x=chosen, y=0)
 
 Only the taken side runs. See :ref:`topics:workflows:graphs:control_flow`.
-
-Order placements without passing values
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code:: python
-
-    @task
-    def prepare(x: int) -> None:
-        ...
-
-    @graph
-    def ordered(x: int) -> int:
-        prepared = prepare(x=x)
-        return add(x=x, y=1, after=prepared)
-
-``after=(first, second)`` waits for both. See :ref:`topics:workflows:graphs:ordering`.
 
 Pass a structured input bundle instead of flat arguments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

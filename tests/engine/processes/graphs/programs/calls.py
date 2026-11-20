@@ -57,24 +57,22 @@ def diamond(x: int) -> int:
 
 @graph
 def ordered(x: int) -> int:
-    """Order a placement with `after`."""
+    """Run two placements in source order without passing a value between them."""
+    _prepared = prepare(value=x)
+    return add(x=x, y=1)
+
+
+@graph
+def obsolete_after(x: int) -> int:
+    """Reject ordering keywords not declared as task inputs."""
     first = prepare(value=x)
     return add(x=x, y=1, after=first)
 
 
 @graph
-def ordered_named(value: int) -> int:
-    """Order on a task; the bare return takes the single output."""
-    prepared = prepare(value=value)
-    return add(x=value, y=1, after=prepared)
-
-
-@graph
-def multiple_ordered(x: int) -> int:
-    """Order on two placements at once."""
-    first = prepare(value=x)
-    second = prepare(value=x).alias('prepare_2')
-    return add(x=x, y=1, after=(first, second))
+def passes_after_input(x: int) -> int:
+    """Wire an ordinary task input named after."""
+    return tasks.after_parameter(x=x, after=2)
 
 
 @graph()
@@ -85,9 +83,9 @@ def labelled(x: int) -> int:
 
 @graph
 def failed(x: int) -> int:
-    """Fail through a broken placement."""
-    first = fail_always(x=x)
-    return add(x=first, y=1)
+    """Fail before reaching the next placement, even without a data dependency."""
+    _failed = fail_always(x=x)
+    return add(x=x, y=1)
 
 
 @graph

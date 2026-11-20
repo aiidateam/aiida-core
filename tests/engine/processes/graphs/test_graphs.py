@@ -76,9 +76,7 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(call_programs.multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 10}, id='multiply-add'),
         pytest.param(call_programs.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
         pytest.param(call_programs.diamond, {'x': 2}, {'result': 7}, id='diamond'),
-        pytest.param(call_programs.ordered, {'x': 2}, {'result': 3}, id='ordering-without-output'),
-        pytest.param(call_programs.ordered_named, {'value': 2}, {'result': 3}, id='ordering-named'),
-        pytest.param(call_programs.multiple_ordered, {'x': 2}, {'result': 3}, id='ordering-on-two'),
+        pytest.param(call_programs.passes_after_input, {'x': 2}, {'result': 4}, id='after-as-data-input'),
         pytest.param(call_programs.chain, {'x': 2, 'y': 3}, {'result': 8}, id='chain'),
         pytest.param(call_programs.spread_bundle, {'bundle': {'x': 2, 'y': 3}}, {'result': 5}, id='spread'),
         pytest.param(
@@ -647,12 +645,6 @@ def test_task_can_run_without_retrievable_source(monkeypatch: pytest.MonkeyPatch
     assert result.value == 4
 
 
-def test_task_after_kwarg_rejected_outside_graphs() -> None:
-    """`after` orders graph placements; direct task calls reject it."""
-    with pytest.raises(GraphError, match='orders placements'):
-        tasks.add(x=1, y=1, after='x')
-
-
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_zero_iteration_loop_returns_initial_state() -> None:
     """A never-entered loop returns its initial state like the equivalent Python loop."""
@@ -889,7 +881,7 @@ def test_unexpected_inputs_are_rejected() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_task_failure_does_not_dispatch_downstream() -> None:
+def test_task_failure_does_not_dispatch_later_placements() -> None:
     outputs, node = run_get_node(call_programs.failed, x=2)
     assert node.exit_status == 400
     assert outputs == {}
@@ -897,7 +889,7 @@ def test_task_failure_does_not_dispatch_downstream() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_ordering_is_a_scheduler_dependency() -> None:
+def test_data_independent_placements_dispatch_in_source_order() -> None:
     state = GraphRun(compile_graph(call_programs.ordered), given={'x': Int(2)})
     assert [start.instance for start in state.step().starts] == ['prepare']
     _, completed = tasks.prepare.run_get_node(value=2)

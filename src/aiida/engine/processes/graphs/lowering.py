@@ -63,7 +63,7 @@ from aiida.engine.processes.graphs.operations import (
 )
 from aiida.engine.processes.graphs.par_map import par_map
 from aiida.engine.processes.graphs.process import GraphProcess
-from aiida.engine.processes.graphs.results import catch_error
+from aiida.engine.processes.graphs.results import Err, Ok, _error_types, _result_contract, catch_error
 from aiida.engine.processes.graphs.shapes import (
     Forward,
     LeafShape,
@@ -436,6 +436,11 @@ class _LoweringState:
     used: Counter[str] = field(default_factory=Counter)
     partials: dict[str, _PartialBinding] = field(default_factory=dict)
     synthetic_fixed: dict[str, _CapturedValue] = field(default_factory=dict)
+    success_annotation: object = None
+    error_enums: frozenset[str] = frozenset()
+    return_outputs: dict[str, OutputTree] | None = None
+    return_error: tuple[str, str] | None = None
+    return_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
 
     @property
     def key(self) -> str:
@@ -750,17 +755,25 @@ def _lower_function(state: _LoweringState) -> GraphIR:
     if statements and isinstance(statements[0], ast.Expr) and isinstance(statements[0].value, ast.Constant):
         if isinstance(statements[0].value.value, str):
             statements = statements[1:]
-    if not statements or not isinstance(statements[-1], ast.Return):
+    annotation = state.definition.hints.get('return')
+    state.success_annotation, errors = _result_contract(annotation)
+    if errors:
+        state.error_enums = frozenset(
+            get_object_loader().identify_object(kind) for kind in _error_types(t.get_args(annotation)[1])
+        )
+    has_final = bool(statements and isinstance(statements[-1], ast.Return))
+    if not has_final and not _ends_in_return(statements):
         msg = (
             f'{state.key}: the final return declares the graph outputs, so without it the graph promises nothing; '
             + 'end the graph with a return declaring its outputs'
         )
         raise GraphLanguageError(msg)
-    for statement in statements[:-1]:
-        if isinstance(statement, ast.If):
-            _lower_branch(state, statement=statement)
-        elif isinstance(statement, ast.While):
-            _lower_loop(state, statement=statement)
+    barrier: str | None = None
+    for statement in statements[:-1] if has_final else statements:
+        start = len(state.tasks)
+        guard = None
+        if isinstance(statement, (ast.If, ast.While)):
+            guard = _lower_control(state, statement)
         elif isinstance(statement, (ast.For, ast.AsyncFor)):
             msg = (
                 'the list of placements is fixed before anything runs, '
@@ -786,16 +799,25 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             and isinstance(statement.targets[0], ast.Tuple)
         ):
             _lower_unpack(state, statement=statement)
+        elif isinstance(statement, ast.Return):
+            _lower_early_return(state, statement)
         else:
             _lower_assignment(state, statement=statement)
-    result: ast.expr | None = statements[-1].value
-    if result is None:
-        msg = (
-            'graphs only pass along existing nodes, so a bare return with no value names nothing; '
-            + 'return must name a task or graph input; return placements, input leaves, or mappings'
-        )
-        _reject(state, node=statements[-1], reason=msg)
-    outputs, output_typehints = _lower_outputs(state, result=result)
+        _order_after_guard(state, barrier, start)
+        barrier = guard or barrier
+        if _ends_in_return([statement]):
+            has_final = False
+            break
+    outputs: dict[str, OutputTree] = {}
+    output_typehints: dict[str, tuple[type, ...]] = {}
+    if has_final:
+        returned = statements[-1]
+        assert isinstance(returned, ast.Return)
+        start = len(state.tasks)
+        result = _return_expression(state, returned)
+        if result is not None:
+            outputs, output_typehints = _lower_outputs(state, result=result)
+        _order_after_guard(state, barrier, start)
     return GraphIR(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
@@ -804,16 +826,66 @@ def _lower_function(state: _LoweringState) -> GraphIR:
         identifier=state.key,
         output_typehints=output_typehints,
         input_shape=boundary,
+        return_outputs=state.return_outputs,
+        return_error=state.return_error,
+        return_typehints=state.return_typehints,
     )
+
+
+def _result_constructor(state: _LoweringState, expression: ast.expr) -> object:
+    """Resolve a result wrapper by identity, respecting region-local bindings."""
+    if isinstance(expression, ast.Call):
+        base, parts = _attribute_path(expression.func)
+        if isinstance(base, ast.Name) and base.id not in state.names:
+            resolved = state.definition.symbols.values.get(base.id)
+            for part in parts:
+                resolved = getattr(resolved, part, None)
+            return resolved
+    return None
+
+
+def _return_expression(state: _LoweringState, statement: ast.Return) -> ast.expr | None:
+    """Unwrap a successful return or record the declared error at this site."""
+    result = statement.value
+    if result is None:
+        msg = (
+            'graphs only pass along existing nodes, so a bare return with no value names nothing; '
+            + 'return must name a task or graph input; return placements, input leaves, or mappings'
+        )
+        _reject(state, node=statement, reason=msg)
+    if not state.error_enums:
+        return result
+    constructor = _result_constructor(state, result)
+    if (
+        not isinstance(result, ast.Call)
+        or (constructor is not Ok and constructor is not Err)
+        or len(result.args) != 1
+        or result.keywords
+    ):
+        _reject(state, node=result, reason='Result returns need `Ok(...)` or `Err(...)` with one positional argument')
+    value = result.args[0]
+    if constructor is Ok:
+        return value
+    member = _resolve_enum_member(state, value)
+    if member is None or member[0] not in state.error_enums:
+        _reject(state, node=value, reason='Err must name a member of an exit-code enum declared in Result')
+    state.return_error = member
+    return None
+
+
+def _lower_early_return(state: _LoweringState, statement: ast.Return) -> None:
+    """Record the output endpoints or declared error for a region terminator."""
+    value = _return_expression(state, statement)
+    if value is not None:
+        state.return_outputs, state.return_typehints = _lower_outputs(state, result=value)
 
 
 def _lower_outputs(
     state: _LoweringState, result: ast.expr
 ) -> tuple[dict[str, OutputTree], dict[str, tuple[type, ...]]]:
     """Lower the return statement to named endpoints and their type hints."""
-    hints = state.definition.hints
     references = _lower_return(state, expression=result)
-    returned = shape_for_annotation(hints.get('return'))
+    returned = shape_for_annotation(state.success_annotation)
     outputs: dict[str, OutputTree] = {
         name: _endpoint_tree(reference, preserve_optional_namespaces=True) for name, reference in references.items()
     }
@@ -1331,13 +1403,17 @@ def _lower_ifexp(state: _LoweringState, node: ast.IfExp) -> _Reference:
     return state.names[armed]
 
 
-def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
-    """Lower an if statement to a branch control task, returning the exposed wire."""
-    _check_branch_shape(state, statement=statement)
-    test: ast.expr = statement.test
+_ConditionTest: t.TypeAlias = t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member']
+
+
+def _lower_branch_condition(
+    state: _LoweringState, test: ast.expr
+) -> tuple[ast.expr, _ConditionTest, tuple[str, str] | None]:
+    """Prepare a condition and its runtime dispatch mode."""
+    original = test
     if isinstance(test, (ast.Call, ast.BoolOp, ast.IfExp)):
         test = _bind_test_condition(state, test=test)
-    condition_test: t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'] = 'truthy'
+    condition_test: _ConditionTest = 'truthy'
     condition_member: tuple[str, str] | None = None
     if (none_test := _match_none_test(test)) is not None:
         test, condition_test = none_test
@@ -1345,11 +1421,18 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
         test, condition_test, condition_member = matched
         shape = _probe_shape(state, test)
         if isinstance(shape, LeafShape) and shape.error_enums and condition_member[0] not in shape.error_enums:
-            _reject(state, node=statement.test, reason='this enum is not declared by the captured invocation')
+            _reject(state, node=original, reason='this enum is not declared by the captured invocation')
     elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp)):
         # Numeric inline operations bind to a fresh boolean wire; `is`/`is not`
         # presence and member tests above must win over this numeric path.
         test = _bind_test_condition(state, test=test)
+    return test, condition_test, condition_member
+
+
+def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
+    """Lower an if statement to a branch control task, returning the exposed wire."""
+    _check_branch_shape(state, statement=statement)
+    test, condition_test, condition_member = _lower_branch_condition(state, statement.test)
     first = _lower_arm(state, statements=statement.body)
     if statement.orelse:
         second = _lower_arm(state, statements=statement.orelse)
@@ -1580,7 +1663,11 @@ def _check_arms_agree(state: _LoweringState, statement: ast.If, first: _Arm, sec
             + 'both sides must share one new name instead'
         )
         _reject(state, node=statement, reason=msg)
-    if _CONDITION_PORT in first.body.inputs or _CONDITION_PORT in second.body.inputs:
+    _check_condition_port(state, statement, first.body, second.body)
+
+
+def _check_condition_port(state: _LoweringState, statement: ast.If, *arms: GraphIR) -> None:
+    if any(_CONDITION_PORT in arm.inputs for arm in arms):
         msg = (
             'the condition travels on a reserved port, so a body input with that name would collide; '
             + 'condition conflicts with a branch input; rename one of them'
@@ -1624,16 +1711,134 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
     return assigned
 
 
-def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
+def _has_region_return(statements: list[ast.stmt]) -> bool:
+    """Find returns without crossing an unsupported construct or a declaration."""
+    return any(
+        isinstance(node, ast.Return)
+        or (isinstance(node, (ast.If, ast.While)) and _has_region_return([*node.body, *node.orelse]))
+        for node in statements
+    )
+
+
+def _ends_in_return(statements: list[ast.stmt]) -> bool:
+    """Whether there is no path from the region entry to its join."""
+    return any(
+        isinstance(node, ast.Return)
+        or (isinstance(node, ast.If) and _ends_in_return(node.body) and _ends_in_return(node.orelse))
+        for node in statements
+    )
+
+
+def _order_after_guard(state: _LoweringState, guard: str | None, start: int) -> None:
+    """Do not start later placements until the prior return decision has settled."""
+    if guard is not None:
+        state.dependencies.extend(Dependency(guard, target=task.name) for task in state.tasks[start:])
+
+
+def _lower_control(state: _LoweringState, statement: ast.If | ast.While) -> str | None:
+    """Lower a control statement and identify any return barrier it introduces."""
+    may_return = _has_region_return([statement])
+    if isinstance(statement, ast.While):
+        placement = _lower_loop(state, statement)
+    elif may_return:
+        placement = _lower_returning_branch(state, statement)
+    else:
+        _lower_branch(state, statement)
+        return None
+    return placement if may_return else None
+
+
+def _lower_region_statements(state: _LoweringState, statements: list[ast.stmt]) -> set[str]:
+    """Lower a region sequence, tracking bindings reaching its end."""
+    barrier: str | None = None
+    written: set[str] = set()
+    for statement in statements:
+        start = len(state.tasks)
+        guard = None
+        if isinstance(statement, (ast.If, ast.While)):
+            prior = dict(state.names)
+            guard = _lower_control(state, statement)
+            written.update(
+                name for name in _body_state_names([statement]) if prior.get(name) is not state.names.get(name)
+            )
+        elif isinstance(statement, ast.Return):
+            _lower_early_return(state, statement)
+        elif (
+            isinstance(statement, ast.Assign)
+            and len(statement.targets) == 1
+            and isinstance(statement.targets[0], ast.Tuple)
+        ):
+            _lower_unpack(state, statement, rebind=True)
+            written.update(_body_state_names([statement]))
+        else:
+            _lower_assignment(state, statement, rebind=True)
+            written.update(_body_state_names([statement]))
+        _order_after_guard(state, barrier, start)
+        barrier = guard or barrier
+        if _ends_in_return([statement]):
+            break
+    return written
+
+
+def _lower_returning_branch(state: _LoweringState, statement: ast.If) -> str:
+    """Lower a branch with nonlocal returns, merging only the continuing arms."""
+    test, condition_test, condition_member = _lower_branch_condition(state, statement.test)
+    children = [_collect_region_inputs(state, arm) for arm in (statement.body, statement.orelse)]
+    writes = [
+        _lower_region_statements(child, arm)
+        for child, arm in zip(children, (statement.body, statement.orelse), strict=True)
+    ]
+    continues = [not _ends_in_return(arm) for arm in (statement.body, statement.orelse)]
+    joined = sorted({name for names, live in zip(writes, continues, strict=True) if live for name in names})
+    instance = _claim_name(state, f'branch_{len(state.tasks) + 1}')
+    given: dict[str, _CapturedValue] = {}
+    _wire(state, instance=instance, port=_CONDITION_PORT, value=_lower_value(state, test), given=given)
+    arms: list[GraphIR] = []
+    bindings: dict[str, _Reference] = {}
+    for child, live in zip(children, continues, strict=True):
+        outputs: dict[str, _Reference] = {}
+        if live:
+            for name in joined:
+                if name not in child.names:
+                    if name not in state.names:
+                        _reject(state, node=statement, reason=f'each continuing arm must provide `{name}`')
+                    ref = state.names[name]
+                    child.inputs[name] = []
+                    child.input_shapes[name] = ref.shape
+                    child.names[name] = _Reference(None, port=name, shape=ref.shape)
+                outputs[name] = child.names[name]
+                bindings.setdefault(name, _Reference(instance, port=name, shape=outputs[name].shape))
+        arms.append(_lower_region_body(child, outputs))
+    _check_condition_port(state, statement, *arms)
+    read = {path.split('.')[0] for child in children for path in child.inputs}
+    for name in sorted(read):
+        _wire(state, instance=instance, port=name, value=state.names[name], given=given)
+    state.tasks.append(
+        BranchControl(
+            name=instance,
+            inputs=given,
+            body=arms[0],
+            otherwise=arms[1],
+            condition_test=condition_test,
+            condition_member=condition_member,
+        )
+    )
+    state.names.update(bindings)
+    return instance
+
+
+def _lower_loop(state: _LoweringState, statement: ast.While) -> str:
     """Lower a while statement to a resumable loop control task."""
     body: list[ast.stmt] = list(statement.body)
+    terminal = _ends_in_return(body)
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
         test = _bind_test_condition(state, test=test)
         update = ast.Assign(targets=[ast.Name(id=test.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
-        body.append(update)
+        if not terminal:
+            body.append(update)
     elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp, ast.BoolOp, ast.IfExp)) and (
         _identity_compare(test) is None or _is_supported_predicate(state, test)
     ):
@@ -1644,7 +1849,8 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         update = ast.Assign(targets=[ast.Name(id=test.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
-        body.append(update)
+        if not terminal:
+            body.append(update)
     if statement.orelse or not isinstance(test, ast.Name) or test.id not in state.names:
         msg = (
             'the loop runs again from one stored true/false value each pass and has no other exit; '
@@ -1656,7 +1862,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     # Loop state is read from the previous iteration, including values rebound in the body.
     # Branches in the body assign loop state through their arms, and nested loops through
     # their own state, so both join it; every name still starts from an enclosing binding.
-    assigned = _body_state_names(body)
+    assigned = {condition} if terminal else _body_state_names(body)
     live = _loop_live_in(state, body)
     carried: set[str] = set()
     for name in assigned:
@@ -1677,31 +1883,17 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     if condition not in assigned:
         msg = 'without an update the loop never ends; ' + 'update the check inside the loop body instead'
         _reject(state, node=statement, reason=msg)
-    for node in body:
-        if isinstance(node, ast.If):
-            _lower_branch(child, statement=node)
-            continue
-        if isinstance(node, ast.While):
-            _lower_loop(child, statement=node)
-            continue
-        if not isinstance(node, (ast.Assign, ast.AugAssign)):
-            msg = (
-                'loop bodies only record task calls, inline operations, branches, and loops; '
-                + 'move anything else into a task instead'
-            )
-            _reject(state, node=node, reason=msg)
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
-            _lower_unpack(child, node, rebind=True)
-            continue
-        _lower_assignment(child, node, rebind=True)
-    outputs: dict[str, _Reference] = {name: child.names[name] for name in carried}
+    initial_condition = child.names[condition]
+    _lower_region_statements(child, body)
+    outputs = {condition: initial_condition} if terminal else {name: child.names[name] for name in carried}
     body_spec = _lower_region_body(child, outputs=outputs)
     instance = _claim_name(state, f'loop_{len(state.tasks) + 1}')
     given: dict[str, _CapturedValue] = {}
     _route_region(state, child=child, instance=instance, given=given)
     state.tasks.append(LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition))
-    for name in carried:
-        state.names[name] = _Reference(instance, port=name, shape=child.names[name].shape)
+    for name, ref in outputs.items():
+        state.names[name] = _Reference(instance, port=name, shape=ref.shape)
+    return instance
 
 
 def _loop_live_in(state: _LoweringState, body: list[ast.stmt]) -> set[str]:
@@ -1710,7 +1902,7 @@ def _loop_live_in(state: _LoweringState, body: list[ast.stmt]) -> set[str]:
     Called names, dotted-module bases, and enum members in member tests resolve without
     enclosing state, so they never count as loop-carried reads.
     """
-    skipped = _callee_ids(state, body, state.names) | _member_test_skips(state, body)
+    skipped = _callee_ids(state, body, state.names) | _member_test_skips(state, body) | _return_skips(state, body)
     live: set[str] = set()
     _collect_live(body, written=set(), live=live, skipped=skipped)
     return live
@@ -1737,14 +1929,18 @@ def _collect_live(statements: list[ast.stmt], *, written: set[str], live: set[st
             for arm in (statement.body, statement.orelse):
                 arm_written = set(written)
                 _collect_live(arm, written=arm_written, live=live, skipped=skipped)
-                delta = arm_written - written
-                definite = delta if definite is None else definite & delta
+                if not _ends_in_return(arm):
+                    delta = arm_written - written
+                    definite = delta if definite is None else definite & delta
             written |= definite or set()
         elif isinstance(statement, ast.While):
             _collect_loads(statement.test, written=written, live=live, skipped=skipped)
             # Zero iterations are possible, so nested writes never count as definite here,
             # but nested reads still observe the enclosing iteration state.
             _collect_live(statement.body, written=set(written), live=live, skipped=skipped)
+        elif isinstance(statement, ast.Return):
+            _collect_loads(statement, written=written, live=live, skipped=skipped)
+            break
         elif isinstance(statement, ast.AugAssign) and isinstance(statement.target, ast.Name):
             if statement.target.id not in written and id(statement.target) not in skipped:
                 live.add(statement.target.id)
@@ -1926,12 +2122,25 @@ def _member_test_skips(state: _LoweringState, statements: list[ast.stmt]) -> set
     return skipped
 
 
+def _return_skips(state: _LoweringState, statements: list[ast.stmt]) -> set[int]:
+    """An Err argument is declaration syntax, not an input wire."""
+    return {
+        id(part)
+        for node in _walk_region(statements)
+        if isinstance(node, ast.Return)
+        and isinstance(node.value, ast.Call)
+        and _result_constructor(state, node.value) is Err
+        for part in ast.walk(node.value)
+        if isinstance(part, ast.Name)
+    }
+
+
 def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
     """Collect the enclosing values a nested body reads as region inputs."""
     # Names read in the body become inputs of the nested graph. Calls are not values.
     assigned = _assigned_names(statements)
     callees = _callee_ids(state, statements, state.names)
-    skipped = _member_test_skips(state, statements)
+    skipped = _member_test_skips(state, statements) | _return_skips(state, statements)
     reads: dict[str, ast.Name] = {}
     for node in _walk_region(statements):
         if not isinstance(node, ast.Name) or not isinstance(node.ctx, ast.Load):
@@ -1939,7 +2148,9 @@ def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) ->
         if node.id in assigned or id(node) in callees or id(node) in skipped or node.id in reads:
             continue
         reads[node.id] = node
-    child = _LoweringState(state.definition, stack=state.stack)
+    child = _LoweringState(
+        state.definition, stack=state.stack, success_annotation=state.success_annotation, error_enums=state.error_enums
+    )
     for partial_name, binding in state.partials.items():
         if partial_name not in assigned:
             child.partials[partial_name] = binding
@@ -2031,6 +2242,9 @@ def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) ->
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=endpoints,
         input_shape=NamespaceShape(fields=tuple(state.input_shapes.items())),
+        return_outputs=state.return_outputs,
+        return_error=state.return_error,
+        return_typehints=state.return_typehints,
     )
 
 

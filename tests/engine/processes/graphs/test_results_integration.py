@@ -38,6 +38,7 @@ from aiida.engine.processes.graphs.lowering import compile_graph
 from aiida.engine.processes.graphs.results import Err, Ok, Result
 from aiida.engine.processes.graphs.run import GraphRun
 from aiida.orm import CalcFunctionNode, DataList, Int
+from aiida.orm.utils.serialize import deserialize_unsafe, serialize
 from tests.engine.processes.graphs.programs import results
 
 pytestmark = pytest.mark.presto
@@ -234,6 +235,130 @@ def test_bare_success_returns_original_node():
     (child,) = node.called
     assert node.is_finished_ok
     assert outputs['result'].pk == child.outputs.value.pk
+
+
+@graph
+def choose_early(first: int, second: int, early: bool) -> int:
+    if early:
+        return first
+    else:
+        return second
+
+
+@graph
+def call_early(first: int, second: int, early: bool) -> int:
+    return choose_early(first=first, second=second, early=early)
+
+
+@pytest.mark.parametrize(('early', 'expected'), [(True, 1), (False, 2)])
+def test_success_returns_from_both_arms(early, expected):
+    first, second = Int(1), Int(2)
+    outputs, node = run_get_node(call_early, first=first, second=second, early=early)
+    assert node.is_finished_ok
+    assert outputs['result'].pk == (first if early else second).pk
+    assert outputs['result'].value == expected
+    assert not node.called
+
+
+@graph
+def guarded_join(x: int, reject: bool, enter: bool) -> Result[int, FlakyErrors]:
+    if enter:
+        if reject:
+            return Err(FlakyErrors.ODD)
+        else:
+            return Ok(x)
+    elif reject:
+        return Err(FlakyErrors.TOO_BIG)
+    else:
+        selected = flaky_increment(x=x)
+    return Ok(selected)
+
+
+@pytest.mark.parametrize(('enter', 'error'), [(True, FlakyErrors.ODD), (False, FlakyErrors.TOO_BIG)])
+def test_nested_error_returns(enter, error):
+    outputs, node = run_get_node(guarded_join, x=2, reject=True, enter=enter)
+    assert (node.exit_status, node.exit_message) == error.value[:2]
+    assert not outputs
+    assert not node.called
+
+
+def test_only_continuing_arm_provides_join_value():
+    outputs, node = run_get_node(guarded_join, x=2, reject=False, enter=False)
+    assert node.is_finished_ok
+    (child,) = node.called
+    assert outputs['result'].pk == child.outputs.value.pk
+
+
+@task
+def advance_early(x: int) -> int:
+    return x + 1
+
+
+@graph
+def stop_in_loop(x: int, fail_at: int, limit: int) -> Result[int, FlakyErrors]:
+    current = x
+    while current < limit:
+        if current >= fail_at:
+            return Err(FlakyErrors.TOO_BIG)
+        current = advance_early(x=current)
+    _following = mark_present(value=x)
+    return Ok(current)
+
+
+@graph
+def capture_loop_return(x: int) -> bool:
+    value, error = catch_error(stop_in_loop(x=x, fail_at=1, limit=3))
+    if error is FlakyErrors.TOO_BIG:
+        if value is None:
+            return mark_absent()
+    return mark_present(value=value)
+
+
+@graph
+def propagate_loop_return(x: int) -> int:
+    return stop_in_loop(x=x, fail_at=1, limit=3)
+
+
+def test_loop_return_blocks_later_iteration_and_independent_continuation():
+    outputs, node = run_get_node(propagate_loop_return, x=0)
+    assert (node.exit_status, node.exit_message) == FlakyErrors.TOO_BIG.value[:2]
+    assert not outputs
+    assert [child.process_label for child in node.called] == ['advance_early']
+
+
+def test_capture_of_loop_return_exposes_only_error():
+    outputs, node = run_get_node(capture_loop_return, x=0)
+    assert node.is_finished_ok
+    assert outputs['result'].value is True
+    assert {child.process_label for child in node.called} == {'advance_early', 'mark_absent'}
+
+
+@pytest.mark.parametrize('reject', [False, True])
+def test_early_return_survives_template_and_checkpoint_round_trip(reject):
+    template = GraphIR.from_dict(json.loads(json.dumps(compile_graph(guarded_join).to_dict())))
+    value = Int(2).store()
+    state = GraphRun(template, given={'x': value, 'reject': reject, 'enter': True})
+    assert not state.step().starts
+    restored = GraphRun.from_dict(template, state.given, deserialize_unsafe(serialize(state.to_dict())))
+    assert not restored.step().starts
+    if reject:
+        assert restored.propagated_exit_code == FlakyErrors.ODD.value
+        assert not restored.outputs()
+    else:
+        assert restored.propagated_exit_code is None
+        assert restored.outputs()['result'].pk == value.pk
+
+
+@graph
+def invalid_early_member(x: int, reject: bool) -> Result[int, FlakyErrors]:
+    if reject:
+        return Err(results.DivisionErrors.ZERO_DENOMINATOR)
+    return Ok(x)
+
+
+def test_early_error_must_be_declared():
+    with pytest.raises(GraphLanguageError, match='declared in Result'):
+        invalid_early_member.build()
 
 
 @graph

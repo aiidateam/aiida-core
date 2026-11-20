@@ -58,6 +58,16 @@ def validate_graph(graph: GraphIR) -> None:
         if isinstance(task, InlineOperation):
             _validate_operation(task)
     _validate_outputs(graph, boundary)
+    if graph.return_outputs is not None:
+        outputs = graph.build_return_namespace()
+        for name, tree in graph.return_outputs.items():
+            port = outputs[name]
+            assert isinstance(port, (OutputPort, PortNamespace))
+            _validate_output_tree(graph, boundary, tree, port, f'early return `{name}`')
+    if graph.identifier is not None:
+        expected = graph.build_output_namespace()
+        for site in graph.success_returns():
+            _check_types(site.build_return_namespace(), expected, 'early return')
     _validate_acyclic(graph)
 
 
@@ -133,6 +143,8 @@ def _validate_region(graph: GraphIR, task: GraphTask) -> None:
         if task.condition_port in task.body.inputs or task.condition_port in task.otherwise.inputs:
             msg = f'branch `{task.name}` condition conflicts with a body input.'
             raise GraphTypeCheckError(msg)
+        if any(arm.always_returns for arm in task.branches):
+            return
         if task.body.outputs.keys() != task.otherwise.outputs.keys():
             msg = (
                 f'both branches of `{task.name}` must return the same outputs; '

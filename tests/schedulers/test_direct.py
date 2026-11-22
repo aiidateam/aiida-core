@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for the ``DirectScheduler`` plugin."""
 
+import logging
 import sys
 
 import pytest
@@ -86,7 +87,8 @@ def test_submit_script_sched_join_files(scheduler, template, caplog):
 
     # Case 2: sched_join_files=True with sched_error_path set -> ignores error path and logs info
     template.sched_error_path = 'stderr.txt'
-    script = scheduler.get_submit_script(template)
+    with caplog.at_level(logging.INFO, logger=scheduler.logger.name):
+        script = scheduler.get_submit_script(template)
     assert 'exec 2>&1' in script
     assert 'exec 2> stderr.txt' not in script
     assert 'sched_join_files is True, but sched_error_path is set' in caplog.text

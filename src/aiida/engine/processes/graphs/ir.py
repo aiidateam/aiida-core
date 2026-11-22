@@ -1563,15 +1563,17 @@ class GraphIR:
 
     def _tree_shape(self, source: OutputTree | dict[str, OutputTree]) -> Shape | None:
         """Return the source element contracts for one output subtree."""
-        if isinstance(source, dict):
-            fields: list[tuple[str, Shape]] = []
-            for name, child in source.items():
-                shaped = self._tree_shape(child)
-                if shaped is None:
-                    return None
-                fields.append((name, shaped))
-            return NamespaceShape(fields=tuple(fields))
-        return self._endpoint_shape(source)
+        if isinstance(source, Endpoint):
+            return self._endpoint_shape(source)
+        optional = isinstance(source, OptionalOutputNamespace)
+        children = source.fields if isinstance(source, OptionalOutputNamespace) else source
+        fields: list[tuple[str, Shape]] = []
+        for name, child in children.items():
+            shaped = self._tree_shape(child)
+            if shaped is None:
+                return None
+            fields.append((name, shaped))
+        return NamespaceShape(fields=tuple(fields), required=not optional)
 
     def _endpoint_shape(self, endpoint: Endpoint) -> Shape | None:
         """Return the source contracts for one output endpoint, or `None` when unknown."""

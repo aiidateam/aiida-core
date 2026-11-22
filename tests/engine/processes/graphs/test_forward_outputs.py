@@ -157,6 +157,13 @@ def select_with_optional_child(mode: int) -> SelectedChild:
 
 
 @graph
+def nested_selection(mode: int) -> SelectedOptional:
+    """Consume a subgraph whose output includes a filtered optional namespace."""
+    result = select_optional(mode=mode)
+    return {'summary': result.summary, 'error': result.error}
+
+
+@graph
 def select_subtree(mode: int) -> SelectedSubtree:
     """Exclude an entire subtree in an Ok-wrapped output mapping."""
     result = produce(mode=mode)
@@ -209,13 +216,13 @@ def test_forward_outputs_round_trip_and_provenance():
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('mode', [0, 1, 2])
-@pytest.mark.parametrize('declaration', [select_optional, select_with_optional_child])
+@pytest.mark.parametrize('declaration', [select_optional, nested_selection, select_with_optional_child])
 def test_forward_outputs_optional(mode, declaration):
     """Missing namespaces and leaves stay absent across the compiled template round trip."""
     restored = GraphIR.from_dict(json.loads(json.dumps(compile_graph(declaration).to_dict())))
     outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(restored, {'mode': mode}))
     assert node.is_finished_ok
-    if declaration is select_optional:
+    if declaration is not select_with_optional_child:
         parent, key = outputs, 'summary'
         port = restored.build_output_namespace()['summary']
     else:

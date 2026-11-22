@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for the ``DirectScheduler`` plugin."""
 
+import logging
 import sys
 
 import pytest
@@ -72,6 +73,37 @@ def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
     )
     result = scheduler.get_submit_script(template)
     assert f'export OMP_NUM_THREADS={num_cores_per_mpiproc}' in result
+
+
+def test_submit_script_sched_join_files(scheduler, template, caplog):
+    """Test stdout/stderr redirection for `sched_join_files` and `sched_error_path`."""
+    template.sched_output_path = 'stdout.txt'
+
+    # Case 1: sched_join_files=True -> joins stderr into stdout with 'exec 2>&1'
+    template.sched_join_files = True
+    script = scheduler.get_submit_script(template)
+    assert 'exec > stdout.txt' in script
+    assert 'exec 2>&1' in script
+
+    # Case 2: sched_join_files=True with sched_error_path set -> ignores error path and logs info
+    template.sched_error_path = 'stderr.txt'
+    with caplog.at_level(logging.INFO, logger=scheduler.logger.name):
+        script = scheduler.get_submit_script(template)
+    assert 'exec 2>&1' in script
+    assert 'exec 2> stderr.txt' not in script
+    assert 'sched_join_files is True, but sched_error_path is set' in caplog.text
+
+    # Case 3: sched_join_files=False with sched_error_path set -> redirects stderr to file
+    template.sched_join_files = False
+    script = scheduler.get_submit_script(template)
+    assert 'exec 2> stderr.txt' in script
+    assert 'exec 2>&1' not in script
+
+    # Case 4: sched_join_files=False with no error path -> does not join files
+    template.pop('sched_error_path')
+    script = scheduler.get_submit_script(template)
+    assert 'exec 2>&1' not in script
+    assert 'exec 2>' not in script
 
 
 # TODO(danielhollas): It's not clear if the fork method can lead to actual deadlock in this case

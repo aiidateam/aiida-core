@@ -85,17 +85,18 @@ class MpirunCommandParamType(StringParamType):
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
         newval = t.cast(str, super().convert(value, param, ctx))
 
-        # TODO: Handle case when ctx is None
-        scheduler_ep = ctx.params.get('scheduler', None)  # type: ignore[union-attr]
+        scheduler_ep = ctx.params.get('scheduler', None) if ctx else None
         if scheduler_ep is not None:
             try:
                 job_resource_keys = scheduler_ep.load().job_resource_class.get_valid_keys()
             except ImportError:
-                self.fail(f"Unable to load the '{scheduler_ep.name}' scheduler")
+                self.fail(f"Unable to load the '{scheduler_ep.name}' scheduler", param, ctx)
         else:
             self.fail(
                 'Scheduler not specified for this computer! The mpirun-command must always be asked '
-                'after asking for the scheduler.'
+                'after asking for the scheduler.',
+                param,
+                ctx,
             )
 
         # Prepare some substitution values to check if it is all ok
@@ -105,8 +106,8 @@ class MpirunCommandParamType(StringParamType):
         try:
             newval.format(**subst)
         except KeyError as exc:
-            self.fail(f"In workdir there is an unknown replacement field '{exc.args[0]}'")
+            self.fail(f"In workdir there is an unknown replacement field '{exc.args[0]}'", param, ctx)
         except ValueError as exc:
-            self.fail(f"Error in the string: '{exc}'")
+            self.fail(f"Error in the string: '{exc}'", param, ctx)
 
         return newval

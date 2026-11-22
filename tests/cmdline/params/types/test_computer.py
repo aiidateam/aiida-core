@@ -10,10 +10,11 @@
 
 import uuid
 
+import click
 import pytest
 
 from aiida import orm
-from aiida.cmdline.params.types import ComputerParamType
+from aiida.cmdline.params.types import ComputerParamType, MpirunCommandParamType
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 
@@ -119,3 +120,40 @@ def test_ambiguous_label_uuid(setup_computers, parameter_type):
     identifier = f'{entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_03.uuid
+
+
+def test_mpirun_command_param_type_ctx_none():
+    """Test that `MpirunCommandParamType.convert` raises BadParameter when `ctx` is None."""
+    param_type = MpirunCommandParamType()
+    with pytest.raises(click.BadParameter, match='Scheduler not specified for this computer!'):
+        param_type.convert('mpirun -np {tot_num_mpiprocs}', None, None)
+
+
+def test_mpirun_command_param_type_ctx_missing_scheduler():
+    """Test that `MpirunCommandParamType.convert` raises BadParameter when `ctx.params` lacks 'scheduler'."""
+    param_type = MpirunCommandParamType()
+    ctx = click.Context(click.Command('test'))
+    ctx.params = {}
+    with pytest.raises(click.BadParameter, match='Scheduler not specified for this computer!'):
+        param_type.convert('mpirun -np {tot_num_mpiprocs}', None, ctx)
+
+
+def test_mpirun_command_param_type_valid_ctx():
+    """Test `MpirunCommandParamType.convert` with a valid scheduler context."""
+    from aiida.plugins.entry_point import get_entry_point_from_string
+
+    param_type = MpirunCommandParamType()
+    ctx = click.Context(click.Command('test'))
+    ctx.params = {'scheduler': get_entry_point_from_string('aiida.schedulers:core.direct')}
+
+    # Valid command with known replacement field
+    result = param_type.convert('mpirun -np {tot_num_mpiprocs}', None, ctx)
+    assert result == 'mpirun -np {tot_num_mpiprocs}'
+
+    # Invalid command with unknown replacement field
+    with pytest.raises(click.BadParameter, match="In workdir there is an unknown replacement field 'unknown_field'"):
+        param_type.convert('mpirun -np {unknown_field}', None, ctx)
+
+    # Malformed format string
+    with pytest.raises(click.BadParameter, match='Error in the string'):
+        param_type.convert('mpirun -np {unclosed', None, ctx)

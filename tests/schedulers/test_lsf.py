@@ -262,3 +262,36 @@ def test_parsing_errors():
     with pytest.raises(ValueError) as exc:
         scheduler._parse_time_string('Bad-Time-String')
     assert '`Bad-Time-String`' in str(exc.value)
+
+
+def test_submit_script_sched_join_files(caplog):
+    """Test that setting `sched_join_files = True` correctly sets the error path and avoids `#BSUB -e None`."""
+    from aiida.common.datastructures import CodeRunMode, JobTemplate
+
+    logging.disable(logging.NOTSET)
+    scheduler = LsfScheduler()
+    job_tmpl = JobTemplate()
+    job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2)
+    job_tmpl.codes_info = []
+    job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+
+    # Case 1: sched_join_files=True and sched_output_path set, no sched_error_path
+    job_tmpl.sched_output_path = 'output.txt'
+    job_tmpl.sched_join_files = True
+    script = scheduler.get_submit_script(job_tmpl)
+    assert '#BSUB -o output.txt' in script
+    assert '#BSUB -e output.txt_' in script
+    assert '#BSUB -e None' not in script
+    assert 'LSF scheduler does not support joining' in caplog.text
+
+    # Case 2: sched_join_files=False, custom sched_error_path
+    job_tmpl.sched_join_files = False
+    job_tmpl.sched_error_path = 'custom_err.txt'
+    script = scheduler.get_submit_script(job_tmpl)
+    assert '#BSUB -e custom_err.txt' in script
+
+    # Case 3: sched_join_files=False, no sched_error_path
+    job_tmpl.pop('sched_error_path')
+    script = scheduler.get_submit_script(job_tmpl)
+    assert '#BSUB -e' not in script
+

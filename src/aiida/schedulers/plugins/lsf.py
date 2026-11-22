@@ -364,7 +364,8 @@ class LsfScheduler(BashCliScheduler):
 
         sched_error_path = getattr(job_tmpl, 'sched_error_path', None)
         if job_tmpl.sched_join_files:
-            sched_error_path = f'{job_tmpl.sched_output_path}_'
+            if job_tmpl.sched_output_path:
+                sched_error_path = f'{job_tmpl.sched_output_path}_'
             self.logger.warning(
                 'LSF scheduler does not support joining '
                 'the standard output and standard error '
@@ -373,7 +374,7 @@ class LsfScheduler(BashCliScheduler):
             )
 
         if sched_error_path:
-            lines.append(f'#BSUB -e {job_tmpl.sched_error_path}')
+            lines.append(f'#BSUB -e {sched_error_path}')
 
         if job_tmpl.queue_name:
             lines.append(f'#BSUB -q {job_tmpl.queue_name}')

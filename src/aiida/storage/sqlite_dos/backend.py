@@ -390,4 +390,4 @@ class SqliteDosStorage(PsqlDosBackend):
         LOGGER.report('Backing up sqlite database')
         manager.call_rsync(self.filepath_database, path, link_dest=prev_backup, dest_trailing_slash=True)
 
-        self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)
+        self._backup_checkpoints(manager=manager, path=path, prev_backup=prev_backup)

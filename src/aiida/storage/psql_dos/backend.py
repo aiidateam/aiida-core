@@ -713,9 +713,9 @@ class PsqlDosBackend(StorageBackend):
 
             # Not part of the repository, so the sweep above cannot see them: a checkpoint is a node attribute and
             # the class it carries is a file beside the container, which nothing references once its node is gone.
-            orphaned = self.delete_orphaned_checkpoint_class_files(only_sealed=not full, dry_run=dry_run)
+            orphaned = self.delete_orphaned_checkpoint_files(only_sealed=not full, dry_run=dry_run)
             action: str = 'Would delete' if dry_run else 'Deleting'
-            STORAGE_LOGGER.info(f'{action} {len(orphaned)} orphaned process class files ...')
+            STORAGE_LOGGER.info(f'{action} {len(orphaned)} orphaned checkpoint files ...')
 
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
@@ -832,23 +832,25 @@ class PsqlDosBackend(StorageBackend):
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
 
-        # step 5: back up the checkpoint class files
-        self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)
+        # step 5: back up the checkpoint files
+        self._backup_checkpoints(manager=manager, path=path, prev_backup=prev_backup)
 
-    def _backup_checkpoint_classes(
+    def _backup_checkpoints(
         self,
         manager: backup_utils.BackupManager,
         path: pathlib.Path,
         prev_backup: pathlib.Path | None = None,
     ) -> None:
-        """Back up class files required to restore checkpoints carrying serialized classes."""
-        checkpoints: pathlib.Path = self.get_checkpoint_classes_dirpath()
+        """Back up published checkpoint files, not temporary files being written."""
+        checkpoints = self.get_checkpoint_classes_dirpath()
 
         if not checkpoints.exists():
             return
 
-        STORAGE_LOGGER.report('Backing up checkpoint class files')
-        manager.call_rsync(src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True)
+        STORAGE_LOGGER.report('Backing up checkpoint files')
+        manager.call_rsync(
+            src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True, extra_args=['--exclude=.*']
+        )
 
     def _backup(
         self,

@@ -17,7 +17,7 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.orm.implementation.checkpoint_class_store import CheckpointClassStore
+from aiida.orm.implementation.checkpoint_store import CheckpointStore
 
 if t.TYPE_CHECKING:
     from disk_objectstore.backup_utils import BackupManager
@@ -68,7 +68,7 @@ class StorageBackend(abc.ABC):
     read_only = False
 
     _CHECKPOINT_CLASSES_DIRNAME: str = 'checkpoint_classes'
-    """Directory name for digest-referenced checkpoint class files."""
+    """Directory name retained for compatibility with existing checkpoint files."""
 
     @classmethod
     @abc.abstractmethod
@@ -357,24 +357,20 @@ class StorageBackend(abc.ABC):
         """Return the object repository configured for this backend."""
 
     @property
-    def checkpoint_class_store(self) -> CheckpointClassStore:
-        """Return the class-file store for this backend."""
-        return CheckpointClassStore(storage=self)
+    def checkpoint_store(self) -> CheckpointStore:
+        """Return the checkpoint file store for this backend."""
+        return CheckpointStore(storage=self)
 
     def get_checkpoint_classes_dirpath(self) -> Path:
-        """Return the shared directory for checkpoint class files.
+        """Return the shared directory for checkpoint files.
 
-        :raises NotImplementedError: If this backend does not support class-file persistence.
+        :raises NotImplementedError: If this backend does not support checkpoint persistence.
         """
-        msg: str = (
-            f'`{self.__class__.__name__}` defines no directory for checkpoint class files, so a process whose '
-            'class travels in its checkpoint cannot be persisted on it: implement '
-            '`get_checkpoint_classes_dirpath`.'
-        )
+        msg = f'`{self.__class__.__name__}` must implement `get_checkpoint_classes_dirpath` to save checkpoints.'
         raise NotImplementedError(msg)
 
-    def delete_orphaned_checkpoint_class_files(self, *, only_sealed: bool = True, dry_run: bool = False) -> list[Path]:
-        """Delete class files of sealed nodes, and of deleted nodes unless restricted to sealed owners.
+    def delete_orphaned_checkpoint_files(self, *, only_sealed: bool = True, dry_run: bool = False) -> list[Path]:
+        """Delete checkpoint files of sealed nodes, and of deleted nodes with exclusive profile access.
 
         Unsealed nodes retain all files to protect concurrent checkpoint writes. Files whose owners may be
         uncommitted elsewhere are retained unless `only_sealed` is `False`.
@@ -387,7 +383,7 @@ class StorageBackend(abc.ABC):
         """
         from aiida.orm import ProcessNode, QueryBuilder
 
-        owned: dict[Path, str] = dict(self.checkpoint_class_store.iter_files())
+        owned: dict[Path, str] = dict(self.checkpoint_store.iter_files())
 
         if not owned or self.in_transaction:
             return []
@@ -414,7 +410,7 @@ class StorageBackend(abc.ABC):
         if dry_run:
             return orphaned
 
-        return self.checkpoint_class_store.discard_files(paths=orphaned)
+        return self.checkpoint_store.discard_files(paths=orphaned)
 
     @abc.abstractmethod
     def set_global_variable(
@@ -574,7 +570,8 @@ class StorageBackend(abc.ABC):
         backup_manager = self._validate_or_init_backup_folder(dest, keep)
 
         try:
-            self._backup(dest, keep)
+            with self.checkpoint_store.retain_files():
+                self._backup(dest, keep)
         except NotImplementedError:
             success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
 

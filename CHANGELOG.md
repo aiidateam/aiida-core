@@ -177,6 +177,11 @@ The process persistence primitives have been replaced with explicit checkpoint c
 - `Persister` is replaced by `CheckpointPersister`.
 - `AiiDAPersister` is replaced by `AiidaCheckpointPersister`.
 
+New process checkpoints store picklable Python state in files under the profile's `checkpoint_classes` directory.
+The process node's `checkpoints` attribute now holds a versioned file reference rather than inline YAML.
+Existing YAML checkpoints from the in-tree persistence implementation remain readable, but older installations cannot load the new format.
+Storage plugins must provide a shared checkpoint directory through `StorageBackend.get_checkpoint_classes_dirpath` to save process checkpoints.
+
 The `aiida.manage.tests.pytest_fixtures` module, deprecated since `aiida-core==2.6`, has been removed.
 Use `aiida.tools.pytest_fixtures` instead, which provides the fixtures for plugin packages and can be loaded with:
 ```python

@@ -17,7 +17,7 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.orm.implementation.checkpoint_class_store import CheckpointClassStore
+from aiida.orm.implementation.checkpoint_store import CheckpointClassStore
 
 if t.TYPE_CHECKING:
     from disk_objectstore.backup_utils import BackupManager

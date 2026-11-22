@@ -20,7 +20,7 @@ from aiida.common.loaders import DefaultObjectLoader as ObjectLoader
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes import persistence as process_persistence
 from aiida.engine.processes.exceptions import PersistenceError
-from aiida.orm.implementation.checkpoint_class_store import CheckpointClassStore, ProcessClassBytes
+from aiida.orm.implementation.checkpoint_store import CheckpointClassStore, ProcessClassBytes
 from aiida.orm.utils import serialize
 
 if t.TYPE_CHECKING:

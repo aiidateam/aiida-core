@@ -464,7 +464,7 @@ def test_loading_class_bytes_checks_the_digest(
 @pytest.mark.usefixtures('aiida_profile')
 def test_class_file_write_syncs_parent_directory(monkeypatch):
     """The profile directory is synchronized before a new class directory can be referenced."""
-    from aiida.orm.implementation.checkpoint_class_store import CheckpointClassStore, ProcessClassBytes
+    from aiida.orm.implementation.checkpoint_store import CheckpointClassStore, ProcessClassBytes
 
     synced: list[tuple[int, int]] = []
     fsync = os.fsync

@@ -14,14 +14,12 @@ import traceback
 import typing as t
 from collections.abc import Hashable
 
-import yaml
-
 from aiida.common.loaders import DefaultObjectLoader as ObjectLoader
 from aiida.common.loaders import get_object_loader
+from aiida.engine import _checkpoint_pickle
 from aiida.engine.processes import persistence as process_persistence
 from aiida.engine.processes.exceptions import PersistenceError
-from aiida.orm.implementation.checkpoint_store import CheckpointBytes, CheckpointStore
-from aiida.orm.utils import serialize
+from aiida.orm.implementation.checkpoint_store import CheckpointBytes
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.process import Process
@@ -31,78 +29,19 @@ __all__ = ('AiidaCheckpointPersister', 'ObjectLoader', 'get_object_loader')
 LOGGER = logging.getLogger(__name__)
 
 
-_CLASS_BYTES_PREFIX: t.Final[str] = 'sha256:'
+_PICKLE_PREFIX: t.Final[str] = 'checkpoint-pickle-v1:'
 
 
-def _class_store() -> CheckpointStore:
-    from aiida.manage import get_manager
-
-    return get_manager().get_profile_storage().checkpoint_store
-
-
-def _detach_carried_class(*, payload: process_persistence.CheckpointPayload) -> CheckpointBytes | None:
-    """Replace carried bytes in `payload` with a digest reference and return `CheckpointBytes`, or `None`."""
-    metadata: dict[str, t.Any] = payload.get(process_persistence.META, {})
-    content: bytes | None = metadata.get(process_persistence.META__CLASS_BYTES)
-
-    if content is None:
+def _checkpoint_digest(*, checkpoint: str | None) -> str | None:
+    """Return the digest of a supported checkpoint reference, or `None`."""
+    if checkpoint is None or not checkpoint.startswith(_PICKLE_PREFIX):
         return None
-
-    carried: CheckpointBytes = CheckpointBytes(content=content)
-    metadata[process_persistence.META__CLASS_BYTES] = f'{_CLASS_BYTES_PREFIX}{carried.digest}'
-
-    return carried
-
-
-def _attach_carried_class(*, payload: process_persistence.CheckpointPayload, uuid: str) -> None:
-    """Restore carried class bytes in `payload` from their digest reference."""
-    metadata: dict[str, t.Any] = payload.get(process_persistence.META, {})
-    reference: t.Any = metadata.get(process_persistence.META__CLASS_BYTES)
-
-    if not isinstance(reference, str) or not reference.startswith(_CLASS_BYTES_PREFIX):
-        return
-
-    digest: str = reference[len(_CLASS_BYTES_PREFIX) :]
-    metadata[process_persistence.META__CLASS_BYTES] = _class_store().read(node_uuid=uuid, digest=digest)
-
-
-def _carried_digest_in(*, checkpoint: str | None) -> str | None:
-    """Return the unique metadata class digest, or `None`, without constructing YAML objects.
-
-    Malformed or ambiguous metadata defers cleanup.
-    """
-    if checkpoint is None:
-        return None
-    try:
-        root: yaml.Node | None = yaml.compose(checkpoint, Loader=yaml.SafeLoader)
-    except yaml.YAMLError:
-        LOGGER.warning('Cannot parse checkpoint metadata; class-file cleanup is deferred.')
-        return None
-    if not isinstance(root, yaml.MappingNode):
-        return None
-    metadata: list[yaml.Node] = [
-        value for key, value in root.value if isinstance(key, yaml.ScalarNode) and key.value == process_persistence.META
-    ]
-    if len(metadata) != 1 or not isinstance(metadata[0], yaml.MappingNode):
-        return None
-    references: list[yaml.Node] = [
-        value
-        for key, value in metadata[0].value
-        if isinstance(key, yaml.ScalarNode) and key.value == process_persistence.META__CLASS_BYTES
-    ]
-    if len(references) != 1:
-        if references:
-            LOGGER.warning('Ambiguous checkpoint class references; class-file cleanup is deferred.')
-        return None
-    reference: yaml.Node = references[0]
-    if not isinstance(reference, yaml.ScalarNode):
-        return None
-    match: re.Match[str] | None = re.fullmatch(rf'{re.escape(_CLASS_BYTES_PREFIX)}([0-9a-f]{{64}})', reference.value)
-    return None if match is None else match.group(1)
+    digest: str = checkpoint.removeprefix(_PICKLE_PREFIX)
+    return digest if re.fullmatch(r'[0-9a-f]{64}', digest) else None
 
 
 class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
-    """Store process checkpoints on process nodes, with carried class bytes in profile files."""
+    """Store checkpoints in profile files with references on process nodes."""
 
     def save_checkpoint(self, process: 'Process', tag: str | None = None):  # type: ignore[override]
         """Persist a Process instance.
@@ -125,39 +64,37 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
             raise PersistenceError(msg)
 
         try:
-            superseded: str | None = process.node.checkpoint
-            stored_payload: process_persistence.CheckpointPayload = process_persistence.CheckpointPayload(payload)
-            stored_payload[process_persistence.META] = dict(payload.get(process_persistence.META, {}))
-            carried: CheckpointBytes | None = _detach_carried_class(payload=stored_payload)
-            stored: str = serialize.serialize(data=stored_payload)
+            node = process.node
+            store = node.backend.checkpoint_store
+            previous = node.checkpoint
+            data = CheckpointBytes(content=_checkpoint_pickle.dumps(payload))
+            reference = f'{_PICKLE_PREFIX}{data.digest}'
 
-            if stored == superseded:
-                LOGGER.debug('checkpoint of process<%d> is unchanged, so nothing is written', process.pid)
-            else:
-                byte_files: CheckpointStore = _class_store()
-                current: str | None = None
-
-                if carried is not None:
-                    current = carried.digest
-                    # The bytes go in first, so the attribute never refers to a file that was not written.
-                    byte_files.write(node_uuid=process.node.uuid, data=carried)
-
-                process.node.set_checkpoint(checkpoint=stored)
-                superseded_digest: str | None = _carried_digest_in(checkpoint=superseded)
-
-                # A bundle changes far more often than the class it carries, and then both refer to one file.
-                # The first checkpoint of a process supersedes nothing, and one carrying no class refers to none.
-                if superseded_digest is not None and superseded_digest != current:
-                    # Only now, since until the attribute refers to the new file the old one is what revives it.
-                    byte_files.discard_one(node_uuid=process.node.uuid, digest=superseded_digest)
-        except Exception:
+            # A missing file (external deletion, partial restore) must be rewritten even when the
+            # reference is unchanged, otherwise the node keeps a permanently dangling reference. A present
+            # file is revalidated since mere existence cannot prove readability or digest integrity.
+            needs_write = reference != previous
+            if not needs_write:
+                try:
+                    store.read(node_uuid=node.uuid, digest=data.digest)
+                except (ValueError, OSError):
+                    needs_write = True
+            if needs_write:
+                store.write(node_uuid=node.uuid, data=data)
+                node.set_checkpoint(checkpoint=reference)
+                previous_digest = _checkpoint_digest(checkpoint=previous)
+                if previous_digest is not None and previous_digest != data.digest:
+                    store.discard_one(node_uuid=node.uuid, digest=previous_digest)
+        except Exception as exception:
             msg = f"Failed to store a checkpoint for '{process}': {traceback.format_exc()}"
-            raise PersistenceError(msg)
+            raise PersistenceError(msg) from exception
 
         return payload
 
     def load_checkpoint(self, pid: Hashable, tag: str | None = None) -> process_persistence.CheckpointPayload:
         """Load a process from a persisted checkpoint by its process id.
+
+        Checkpoints can execute Python code during deserialization. Only load from trusted profiles.
 
         :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
@@ -165,32 +102,37 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
         :rtype: :class:`aiida.engine.processes.persistence.CheckpointPayload`
         :raises: :class:`PersistenceError` Raised if there was a problem loading the checkpoint
         """
-        from aiida.common.exceptions import MultipleObjectsError, NotExistent
+        from aiida.manage import get_manager
         from aiida.orm import load_node
 
         if tag is not None:
             raise NotImplementedError('Checkpoint tags not supported yet')
 
         try:
-            calculation = load_node(pid)
-        except (MultipleObjectsError, NotExistent):
-            msg = f'Failed to load the node for process<{pid}>: {traceback.format_exc()}'
-            raise PersistenceError(msg)
+            store = get_manager().get_profile_storage().checkpoint_store
+            if store.storage.in_transaction:
+                msg = (
+                    f'Process<{pid}> cannot be loaded inside an open storage transaction, such as a '
+                    '`QueryBuilder.iterall()` or `iterdict()` loop. Collect the query results first, for '
+                    'example with `QueryBuilder.all()`.'
+                )
+                raise PersistenceError(msg)
+            node = load_node(pid)
+            checkpoint = node.checkpoint
+            if checkpoint is None:
+                msg = f'Process<{pid}> does not have a saved checkpoint'
+                raise PersistenceError(msg)
+            if not checkpoint.startswith(_PICKLE_PREFIX):
+                msg = f'Process<{pid}> has an unsupported checkpoint format.'
+                raise PersistenceError(msg)
+            data = store.read(node_uuid=node.uuid, digest=checkpoint.removeprefix(_PICKLE_PREFIX))
 
-        checkpoint = calculation.checkpoint
-
-        if checkpoint is None:
-            msg = f'Calculation<{calculation.pk}> does not have a saved checkpoint'
-            raise PersistenceError(msg)
-
-        try:
-            payload = serialize.deserialize_unsafe(checkpoint)
-            _attach_carried_class(payload=payload, uuid=calculation.uuid)
-        except Exception:
-            msg = f'Failed to load the checkpoint for process<{pid}>: {traceback.format_exc()}'
-            raise PersistenceError(msg)
-
-        return payload
+            return _checkpoint_pickle.loads_unsafe(data)
+        except PersistenceError:
+            raise
+        except Exception as exception:
+            msg = f'Failed to load the checkpoint for process<{pid}>: {exception}'
+            raise PersistenceError(msg) from exception
 
     def get_checkpoints(self):
         """Return a list of all the current persisted process checkpoints
@@ -216,7 +158,7 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
         calc = load_node(pid)
         # Attribute first, matching the write: a kill leaves an unreferenced file, never a dangling reference.
         calc.delete_checkpoint()
-        _class_store().discard_all(node_uuid=calc.uuid)
+        calc.backend.checkpoint_store.discard_all(node_uuid=calc.uuid)
 
     def delete_process_checkpoints(self, pid: Hashable):
         """Delete all persisted checkpoints related to the given process id.

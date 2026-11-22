@@ -539,8 +539,8 @@ class PsqlDosBackend(StorageBackend):
             if not dry_run:
                 repository.delete_objects(list(unreferenced_objects))
 
-            # Not part of the repository, so the sweep above cannot see them: a checkpoint is a node attribute and
-            # the class it carries is a file beside the container, which nothing references once its node is gone.
+            # Not part of the repository, so the sweep above cannot see them: a checkpoint is a node attribute
+            # referencing a file beside the container, which nothing references once its node is gone.
             orphaned = self.delete_orphaned_checkpoint_files(only_sealed=not full, dry_run=dry_run)
             action: str = 'Would delete' if dry_run else 'Deleting'
             STORAGE_LOGGER.info(f'{action} {len(orphaned)} orphaned checkpoint files ...')
@@ -660,7 +660,7 @@ class PsqlDosBackend(StorageBackend):
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
 
-        # step 5: back up the checkpoint class files
+        # step 5: back up the checkpoint files
         self._backup_checkpoints(manager=manager, path=path, prev_backup=prev_backup)
 
     def _backup_checkpoints(
@@ -669,7 +669,7 @@ class PsqlDosBackend(StorageBackend):
         path: pathlib.Path,
         prev_backup: pathlib.Path | None = None,
     ) -> None:
-        """Back up published class files, skipping files staged by unfinished writes."""
+        """Back up published checkpoint files, skipping files staged by unfinished writes."""
         checkpoints: pathlib.Path = self.get_checkpoint_directory()
 
         if not checkpoints.exists():

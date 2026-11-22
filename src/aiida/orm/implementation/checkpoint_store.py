@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Checkpoint class-file storage, cleanup and backup coordination."""
+"""Storage for immutable checkpoint files, with rollback-safe cleanup."""
 
 import dataclasses
 import functools
@@ -15,6 +15,8 @@ import os
 import re
 import typing as t
 from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from uuid import uuid4
 
@@ -29,7 +31,7 @@ _CHECKPOINT_FILE_OWNER: t.Final[re.Pattern[str]] = re.compile(
 
 @dataclasses.dataclass(frozen=True)
 class CheckpointBytes:
-    """Process class bytes with their SHA-256 digest."""
+    """Serialized checkpoint data with its SHA-256 digest."""
 
     content: bytes
 
@@ -61,23 +63,47 @@ def _fsync_dir(path: Path) -> None:
 
 @dataclasses.dataclass(frozen=True)
 class CheckpointStore:
-    """Class files belonging to one storage backend."""
+    """Checkpoint files belonging to one storage backend."""
 
     storage: 'StorageBackend'
+    _deferred_discards: ContextVar[set[Path] | None] = dataclasses.field(
+        default_factory=lambda: ContextVar('checkpoint_discards', default=None), init=False, repr=False, compare=False
+    )
+
+    @contextmanager
+    def transaction(self) -> Iterator[None]:
+        """Commit database changes before discarding the exact files they supersede.
+
+        An enclosing transaction is joined, never committed. In that case obsolete files remain
+        for maintenance, since this context cannot know whether the caller will commit or roll back.
+        """
+        if self.storage.in_transaction:
+            yield
+            return
+
+        pending: set[Path] = set()
+        token = self._deferred_discards.set(pending)
+        try:
+            with self.storage.transaction():
+                yield
+        finally:
+            self._deferred_discards.reset(token)
+
+        self.discard_files(paths=pending)
 
     def _path_of(self, *, node_uuid: str, digest: str) -> Path:
-        """Return the finished class-file path for `node_uuid` and `digest`."""
+        """Return the finished checkpoint-file path for `node_uuid` and `digest`."""
         return self.storage.get_checkpoint_directory() / f'{node_uuid}-{digest}.pkl'
 
     def read(self, *, node_uuid: str, digest: str) -> bytes:
-        """Return class bytes after validating the reference and content digest."""
+        """Return the bytes after validating the reference and content digest."""
         if re.fullmatch(r'[0-9a-f]{64}', digest) is None:
-            msg: str = f'Invalid checkpoint class digest {digest!r} for node {node_uuid}.'
+            msg: str = f'Invalid checkpoint digest {digest!r} for node {node_uuid}.'
             raise ValueError(msg)
         path: Path = self._path_of(node_uuid=node_uuid, digest=digest)
         content: bytes = path.read_bytes()
         if hashlib.sha256(content).hexdigest() != digest:
-            msg = f'Checkpoint class digest mismatch for node {node_uuid} at {path.resolve()}.'
+            msg = f'Checkpoint digest mismatch for node {node_uuid} at {path.resolve()}.'
             raise ValueError(msg)
         return content
 
@@ -100,14 +126,17 @@ class CheckpointStore:
             staged.unlink(missing_ok=True)
 
         _fsync_dir(destination.parent)
+        pending: set[Path] | None = self._deferred_discards.get()
+        if pending is not None:
+            pending.discard(destination)
 
     def discard_one(self, *, node_uuid: str, digest: str) -> None:
-        """Delete an obsolete class file after its checkpoint update has committed."""
+        """Delete an obsolete file after its checkpoint update has committed."""
         # Rollback can restore the old reference. Retained files are collected after the node seals.
         self.discard_files(paths=[self._path_of(node_uuid=node_uuid, digest=digest)])
 
     def discard_all(self, *, node_uuid: str) -> None:
-        """Delete this node's finished and staged class files after checkpoint deletion commits."""
+        """Delete this node's finished and staged files after checkpoint deletion commits."""
         self.discard_files(paths=[path for path, _ in self.iter_files(node_uuid=node_uuid)])
 
     def discard_files(self, *, paths: Iterable[Path]) -> list[Path]:
@@ -116,12 +145,16 @@ class CheckpointStore:
         :returns: Deleted paths; transactions defer deletion.
         """
         pending: list[Path] = list(paths)
+        deferred: set[Path] | None = self._deferred_discards.get()
+        if deferred is not None:
+            deferred.update(pending)
+            return []
         if not pending or self.storage.in_transaction:
             return []
         return [path for path in pending if _discard_file(path=path)]
 
     def iter_files(self, *, node_uuid: str | None = None) -> Iterator[tuple[Path, str]]:
-        """Yield finished and staged class-file paths with their owner UUIDs.
+        """Yield finished and staged checkpoint files with their owner UUIDs.
 
         Unsupported storage yields nothing; unrecognized names, symlinks and non-files are skipped.
 
@@ -135,7 +168,8 @@ class CheckpointStore:
         if not dirpath.exists():
             return
 
-        for path in sorted(dirpath.iterdir()):
+        paths = dirpath.iterdir() if node_uuid is None else dirpath.glob(f'*{node_uuid}-*')
+        for path in sorted(paths):
             match: re.Match[str] | None = _CHECKPOINT_FILE_OWNER.fullmatch(path.name)
 
             if match is None or path.is_symlink() or not path.is_file():

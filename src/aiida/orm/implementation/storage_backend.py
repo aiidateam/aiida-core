@@ -14,6 +14,7 @@ import abc
 import typing as t
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
+from functools import cached_property
 from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
@@ -65,7 +66,7 @@ class StorageBackend(abc.ABC):
     read_only = False
 
     _CHECKPOINT_DIRNAME: t.ClassVar[str] = 'checkpoints'
-    """Directory name for digest-referenced checkpoint class files."""
+    """Directory name for process checkpoint files."""
 
     @classmethod
     @abc.abstractmethod
@@ -287,25 +288,21 @@ class StorageBackend(abc.ABC):
     def get_repository(self) -> AbstractRepositoryBackend:
         """Return the object repository configured for this backend."""
 
-    @property
+    @cached_property
     def checkpoint_store(self) -> CheckpointStore:
-        """Return the class-file store for this backend."""
+        """Return the checkpoint file store and its transaction-local cleanup state."""
         return CheckpointStore(storage=self)
 
     def get_checkpoint_directory(self) -> Path:
-        """Return the shared directory for checkpoint class files.
+        """Return the shared directory for checkpoint files.
 
-        :raises NotImplementedError: If this backend does not support class-file persistence.
+        :raises NotImplementedError: If this backend does not support checkpoint persistence.
         """
-        msg: str = (
-            f'`{self.__class__.__name__}` defines no directory for checkpoint class files, so a process whose '
-            'class travels in its checkpoint cannot be persisted on it: implement '
-            '`get_checkpoint_directory`.'
-        )
+        msg: str = f'`{self.__class__.__name__}` must implement `get_checkpoint_directory` to save checkpoints.'
         raise NotImplementedError(msg)
 
     def delete_orphaned_checkpoint_files(self, *, only_sealed: bool = True, dry_run: bool = False) -> list[Path]:
-        """Delete class files of sealed nodes, and of deleted nodes unless restricted to sealed owners.
+        """Delete checkpoint files of sealed nodes, and of deleted nodes with exclusive profile access.
 
         Unsealed nodes retain all files to protect concurrent checkpoint writes. Files whose owners may be
         uncommitted elsewhere are retained unless `only_sealed` is `False`.

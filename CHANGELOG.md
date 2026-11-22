@@ -23,6 +23,23 @@ The process persistence primitives have been replaced with explicit checkpoint c
 - `Persister` is replaced by `CheckpointPersister`.
 - `AiiDAPersister` is replaced by `AiidaCheckpointPersister`.
 
+New process checkpoints store picklable Python state in files under the profile's `checkpoints` directory.
+The process node's `checkpoints` attribute, formerly inline YAML, now holds a versioned file reference.
+The submitting interpreter and all daemon workers must share access to that directory.
+Only load checkpoints from trusted profiles: unpickling can execute code.
+Existing checkpoints from AiiDA v2 cannot be resumed under this version.
+Finish running processes before upgrading, or restart them under v3.
+Restore backups using the AiiDA version and a compatible Python and dependency environment that created them; checkpoint conversion across major versions is unsupported.
+Storage plugins must provide a shared checkpoint directory through `StorageBackend.get_checkpoint_directory` to save process checkpoints.
+
+Persisted process state transitions commit outputs, process state, exit status and the checkpoint reference atomically.
+`Process.on_finish` no longer writes the exit status.
+The exit status now commits together with the `FINISHED` state after `on_finish` returns, so an override that reads `self.node.exit_status` there gets `None`.
+Read the `result` argument, or move the logic to `on_finished`.
+A failed checkpoint save is logged in the process report and keeps the previous checkpoint, except for the first checkpoint of a new process, whose failure seals the node as excepted and raises to the caller of `run()` or `submit()`.
+Launching or advancing a persisted process inside an open storage transaction, such as a `QueryBuilder.iterall()` or `iterdict()` loop, raises `InvalidOperation`.
+Collect the query results first, for example with `QueryBuilder.all()`.
+
 The `aiida.manage.tests.pytest_fixtures` module, deprecated since `aiida-core==2.6`, has been removed.
 Use `aiida.tools.pytest_fixtures` instead, which provides the fixtures for plugin packages and can be loaded with:
 ```python
@@ -77,12 +94,13 @@ Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import
 
 ### Behavior changes
 
-#### Checkpoint class files
+#### Checkpoint files
 
-Serialized process classes are stored as `<node uuid>-<digest>.pkl` in the profile's `checkpoints` directory, with digest references in node checkpoints.
+Process checkpoints are stored as `<node uuid>-<digest>.pkl` in the profile's `checkpoints` directory, with digest references in node checkpoints.
 Backups must include this directory; storage plugins provide its location through `StorageBackend.get_checkpoint_directory`.
 
-`verdi storage maintain` deletes class files of sealed nodes.
+`verdi node delete` also deletes the checkpoint files of the nodes it deletes.
+`verdi storage maintain` deletes checkpoint files of sealed nodes.
 `verdi storage maintain --full` also deletes files whose nodes were deleted.
 
 ### Fixes

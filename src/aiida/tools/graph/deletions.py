@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Iterable
+from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
@@ -102,12 +103,30 @@ def delete_nodes(
     if not pks_set_to_delete:
         return (pks_set_to_delete, True)
 
+    checkpoint_files: list[Path] = _checkpoint_files(backend=backend, pks=pks_set_to_delete)
+
     DELETE_LOGGER.report('Starting node deletion...')
     with backend.transaction():
         backend.delete_nodes_and_connections(pks_set_to_delete)
+    # After the commit, so a rollback keeps the files. Skipped files remain for `verdi storage maintain --full`.
+    backend.checkpoint_store.discard_files(paths=checkpoint_files)
     DELETE_LOGGER.report('Deletion of nodes completed.')
 
     return (pks_set_to_delete, True)
+
+
+def _checkpoint_files(*, backend: StorageBackend, pks: set[int]) -> list[Path]:
+    """Return the checkpoint files of the nodes in `pks`."""
+    owners: dict[Path, str] = dict(backend.checkpoint_store.iter_files())
+    if not owners:
+        return []
+
+    # Filter by the few file owners, since `pks` can exceed the query parameter limit.
+    builder = QueryBuilder(backend=backend).append(
+        Node, filters={'uuid': {'in': sorted(set(owners.values()))}}, project=['uuid', 'id']
+    )
+    uuids: set[str] = {uuid for uuid, pk in builder.iterall() if pk in pks}
+    return [path for path, owner in owners.items() if owner in uuids]
 
 
 def delete_group_nodes(

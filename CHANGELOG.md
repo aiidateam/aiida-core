@@ -43,6 +43,7 @@ Nested scopes do not publish outputs or create provenance nodes of their own.
 `verdi process show` and `verdi node show` list a graph output once.
 Archives preserve both links for graph-created outputs.
 Older versions that restrict `CREATE` to calculations cannot import these graph-created outputs.
+Recursive scientific ancestry and cycle checks now follow `INPUT_WORK` links into `GraphNode` alongside `INPUT_CALC` and `CREATE`, but do not follow `RETURN` or `CALL` links.
 
 #### Graph return annotations are required
 

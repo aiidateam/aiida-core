@@ -968,6 +968,10 @@ A graph returning one value declares one output named ``result``, and a graph re
 A nested ``dict`` declares nested outputs, and returning a whole namespace regroups its leaves under one output.
 The root graph reuses any existing stored node and attaches only a ``RETURN`` link.
 It materializes a new inline value as a data node with both ``CREATE`` and ``RETURN`` links to the same UUID.
+Use ``RETURN`` to query published outputs and ``CREATE`` to query data the graph itself created.
+Recursive scientific ancestry follows ``INPUT_WORK`` links into a graph, but not into other workflows, and does not follow ``RETURN`` or call links.
+This is graph-level ancestry: all recorded graph inputs are considered ancestors of an inline output the graph creates, even if a particular expression uses only some of them.
+It does not infer a dependency on a child task's output from the fact that the graph called that task.
 A ``None`` value for a nullable field stays out of the emitted outputs.
 
 Every graph declares a return annotation, and the final return and every early return must agree with it when the graph is built:

@@ -77,12 +77,15 @@ class NodeLinks:
         :raise ValueError: if the proposed link is invalid
         """
         from aiida.orm.nodes.node import Node
+        from aiida.orm.nodes.process.workflow.graph import GraphNode
         from aiida.orm.utils.links import validate_link
 
         validate_link(source, self._node, link_type, link_label, backend=self._node.backend)
 
-        # Check if the proposed link would introduce a cycle in the graph following ancestor/descendant rules
-        if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
+        # Only links traversed by the recursive provenance query can close a scientific cycle.
+        if link_type in (LinkType.CREATE, LinkType.INPUT_CALC) or (
+            link_type is LinkType.INPUT_WORK and self._node.node_type == GraphNode.class_node_type
+        ):
             builder = (
                 QueryBuilder(backend=self._node.backend)
                 .append(Node, filters={'id': self._node.pk}, tag='parent')

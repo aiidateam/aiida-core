@@ -466,6 +466,17 @@ class SqlaJoiner:
 
         return JoinReturn(new_query, aliased_edge)
 
+    def _scientific_link_filter(self, edge: AliasedClass) -> ColumnElement[bool]:
+        """Follow data provenance, including inputs to graphs that can create data."""
+        from aiida.orm import GraphNode
+
+        node = self._entities.Node
+        graph_ids = select(node.id).where(node.node_type == GraphNode.class_node_type)
+        return or_(
+            edge.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)),
+            and_(edge.type == LinkType.INPUT_WORK.value, edge.output_id.in_(graph_ids)),
+        )
+
     def _join_node_descendants_recursive(
         self, joined_entity, entity_to_join, isouterjoin: bool, filter_dict: FilterType, expand_path=False
     ):
@@ -479,7 +490,7 @@ class SqlaJoiner:
         link2 = aliased(self._entities.Link)
         node1 = aliased(self._entities.Node)
 
-        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
+        link_filters = self._scientific_link_filter(link1)
         in_recursive_filters = self._entities.build_filters(node1, filter_dict)
         if in_recursive_filters is None:
             filters = link_filters
@@ -521,7 +532,7 @@ class SqlaJoiner:
                         link2.input_id == aliased_walk.c.descendant_id,
                     )
                 )
-                .where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                .where(self._scientific_link_filter(link2))
             )
         )  # .alias()
 
@@ -546,7 +557,7 @@ class SqlaJoiner:
         link2 = aliased(self._entities.Link)
         node1 = aliased(self._entities.Node)
 
-        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
+        link_filters = self._scientific_link_filter(link1)
         in_recursive_filters = self._entities.build_filters(node1, filter_dict)
         if in_recursive_filters is None:
             filters = link_filters
@@ -588,8 +599,7 @@ class SqlaJoiner:
                         link2.output_id == aliased_walk.c.ancestor_id,
                     )
                 )
-                .where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
-                # I can't follow RETURN or CALL links
+                .where(self._scientific_link_filter(link2))
             )
         )
 

@@ -191,8 +191,11 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
     process their specific keywords.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, durable: bool = True, **kwargs) -> None:
         """Override the constructor to check the type of the default if set and warn if not immutable."""
+        self.durable = durable
+        if not durable:
+            kwargs['non_db'] = True
         if 'default' in kwargs:
             default = kwargs['default']
             # If the default is specified and it is a node instance, raise a warning. This is to try and prevent that
@@ -239,8 +242,13 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
 
         super().__init__(*args, **kwargs)
 
-    def serialize(self, value: t.Any) -> Node:
+    def serialize(self, value: t.Any) -> t.Any:
         """Serialize owned-container declarations without routing through JSON containers."""
+        if not self.durable:
+            from aiida.engine._checkpoint_pickle import validate_port_value
+
+            validate_port_value(self.name, value)
+            return value
         kinds = self.valid_type if isinstance(self.valid_type, tuple) else (self.valid_type,)
         if DataList in kinds and isinstance(value, list):
             return DataList(value)
@@ -447,6 +455,16 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
                 result[name] = dynamic(value)
 
         return result
+
+
+def checkpoint_leaves(namespace: PortNamespace, prefix: str = '') -> t.Iterator[str]:
+    """Yield dotted paths of checkpoint-only ports."""
+    for name, port in namespace.items():
+        path = f'{prefix}{name}'
+        if isinstance(port, PortNamespace):
+            yield from checkpoint_leaves(port, f'{path}.')
+        elif not port.durable:
+            yield path
 
 
 def _is_storable(annotation: t.Any) -> bool:

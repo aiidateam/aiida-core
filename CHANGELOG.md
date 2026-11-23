@@ -213,6 +213,10 @@ Loading a node whose storage has not been migrated now raises `IncompatibleStora
 
 ### New features
 
+#### Checkpoint-only graph ports
+
+`Annotated[T, PortField(durable=False)]` keeps a value in workflow state without creating a data node or a data provenance link for that port. Checkpoint-only values can cross function task and nested graph boundaries and survive daemon restarts. Root outputs must still be durable. Existing ports remain durable by default.
+
 #### Explicit placement names in source graphs
 
 A task or graph call accepts an explicit placement name through `task(...).alias('scf')`, for function tasks, `CalcJob` and `WorkChain` tasks, nested graphs, generic tasks, and module-qualified targets. Maps take an explicit name through `par_map(task.alias('scf'), values)`. The alias names the compiled placement, the provenance call label, and the `task_metadata` entry, without mutating the task handle. It takes a non-empty string literal following the link-label contract; anything else fails at build time. Repeating a task, graph, or map placement in one graph body without a distinct alias fails at build time; branch arms, loop bodies, and nested graphs scope names independently, while generated branch, loop, and inline-operation names keep their automatic numbering.

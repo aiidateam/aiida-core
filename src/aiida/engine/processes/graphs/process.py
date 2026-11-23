@@ -38,7 +38,8 @@ from aiida.engine.processes.graphs.recovery import (
 )
 from aiida.engine.processes.graphs.run import GraphRun, _GraphRunState, _Start
 from aiida.engine.processes.graphs.runtime_config import _bind_runtime_config, _merge_runtime_inputs
-from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.graphs.tasks import TaskProcess
+from aiida.engine.processes.ports import PortNamespace, checkpoint_leaves
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.states import Wait
@@ -153,6 +154,7 @@ class GraphProcess(Process):
     @override
     def _create_and_setup_db_record(self) -> t.Any:
         graph = GraphIR.from_dict(self.inputs[self._GRAPH].get_dict())
+        self._validate_root_outputs(graph)
         stored = _serialize_graph_inputs(graph, dict(self.inputs.get(self._GRAPH_INPUTS, {})))
         # Checkpoint the normalized containers, not the unstored members they copied.
         self._raw_inputs = AttributesFrozendict({**(self.raw_inputs or {}), self._GRAPH_INPUTS: stored})
@@ -181,15 +183,24 @@ class GraphProcess(Process):
     def _setup_db_record(self) -> None:
         super()._setup_db_record()
         self.node.base.attributes.set(GraphNode.GRAPH_DEFINITION_KEY, self.inputs[self._GRAPH].get_dict())
+        checkpoint_inputs = tuple(checkpoint_leaves(self._graph.build_input_namespace()))
+        if checkpoint_inputs:
+            self.node.base.attributes.set('checkpoint_ports', {'inputs': checkpoint_inputs})
         config = self._input_sources.get(self._RUNTIME_CONFIG, {})
         if config:
-            self.node.base.attributes.set(GraphNode.RUNTIME_CONFIG_KEY, self._encode_input_args(dict(config)))
+            self.node.base.attributes.set(GraphNode.RUNTIME_CONFIG_KEY, super()._encode_input_args(dict(config)))
         for key, channel in (
             (GraphNode.EXECUTION_POLICY_KEY, self._EXECUTION_POLICY),
             (GraphNode.PROTOCOL_KEY, self._PROTOCOL_RECORD),
         ):
             if snapshot := self._input_sources.get(channel):
                 self.node.base.attributes.set(key, snapshot)
+
+    @staticmethod
+    def _validate_root_outputs(body: GraphIR) -> None:
+        if body.checkpoint_outputs:
+            msg = f'root graph outputs cannot be checkpoint-only: {list(body.checkpoint_outputs)}.'
+            raise GraphValidationError(msg)
 
     @classmethod
     def _launch_inputs(
@@ -201,6 +212,7 @@ class GraphProcess(Process):
         protocol_record: Mapping[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
         """Fill workflow arguments and bind execution configuration separately."""
+        cls._validate_root_outputs(body)
         prepared = _prepare_graph_inputs(body.build_input_namespace(), inputs, body.identifier)
         config = _bind_runtime_config(body, {} if runtime_config is None else runtime_config)
         return {
@@ -243,6 +255,12 @@ class GraphProcess(Process):
         return self._run_state.graph
 
     @override
+    def _encode_input_args(self, inputs: dict[str, t.Any]) -> dict[str, t.Any] | str:
+        if self._graph.has_checkpoint_ports:
+            return dict(inputs)
+        return super()._encode_input_args(inputs)
+
+    @override
     def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
         """Checkpoint the scheduling progress and the graph input sources."""
         # The launch envelope remains checkpointed, but no longer has scientific input links.
@@ -250,7 +268,7 @@ class GraphProcess(Process):
         _store_run_nodes(self._input_sources.get(self._RUNTIME_CONFIG))
         super().save_instance_state(out_state, save_context)
         run_state = self._run_state.to_dict()
-        # Scope inputs must be stored before encoding: YAML checkpoints reference nodes by UUID.
+        # Durable scope values are ORM references; checkpoint-only values stay in the payload.
         _store_run_nodes(run_state)
         out_state['run'] = self._encode_input_args(t.cast(dict[str, t.Any], run_state))
         if self._recovery:
@@ -338,10 +356,22 @@ class GraphProcess(Process):
                 self._dispatch_attempt(start.instance, process_class, state)
                 return
         metadata = {**inputs.get('metadata', {}), 'call_link_label': start.instance}
-        node = self.submit(process_class, **{**inputs, 'metadata': metadata})
+        node = None
+        if issubclass(process_class, TaskProcess) and process_class.checkpoint_ports():
+            metadata['disable_cache'] = True
+            previous = self.node.base.links.get_outgoing(link_type=LinkType.CALL_CALC, link_label_filter=start.instance)
+            node = next((entry.node for entry in previous.all() if entry.link_label == start.instance), None)
+        if node is None:
+            node = self.submit(process_class, **{**inputs, 'metadata': metadata})
         assert node.pk is not None
         self._run_state.started(start.instance, node.pk)
         self.report(f'dispatched task `{start.instance}` as {node.pk}')
+
+    @override
+    def on_terminated(self) -> None:
+        super().on_terminated()
+        if not self._enable_persistence and self.node.is_stored and self._graph.has_checkpoint_ports:
+            self.node.backend.checkpoint_store.discard_all(node_uuid=self.node.uuid)
 
     def _policy_at(self, path: tuple[str, ...]) -> RetryPolicy | None:
         snapshot = _at_placement(self.inputs.get(self._EXECUTION_POLICY, {}), path)

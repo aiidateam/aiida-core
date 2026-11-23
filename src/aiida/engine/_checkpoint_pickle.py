@@ -86,6 +86,15 @@ def dumps(payload: CheckpointPayload) -> bytes:
         return stream.getvalue()
 
 
+def validate_port_value(port: str, value: object) -> None:
+    """Reject values that cannot travel through a checkpoint-only port."""
+    try:
+        dumps(CheckpointPayload({port: value}))
+    except (pickle.PicklingError, TypeError, AttributeError, ValueError, RecursionError) as exc:
+        msg = f'checkpoint-only port `{port}` cannot checkpoint a `{type(value).__name__}`: {exc}'
+        raise ValueError(msg) from exc
+
+
 def loads_unsafe(data: bytes) -> CheckpointPayload:
     """Deserialize a checkpoint from trusted profile storage only."""
     with io.BytesIO(data) as stream:

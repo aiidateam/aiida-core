@@ -41,14 +41,22 @@ from aiida.engine.processes.port_model import (
     _field_from_annotation,
     _is_structured,
     _namespace_value,
+    _port_durable,
     _without_marks,
 )
-from aiida.engine.processes.ports import PortNamespace, _infer_node_types, _owned_container_type, _runtime_value
+from aiida.engine.processes.ports import (
+    PortNamespace,
+    _infer_node_types,
+    _infer_runtime_types,
+    _owned_container_type,
+    _runtime_value,
+    checkpoint_leaves,
+)
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.engine.utils import is_process_function
-from aiida.orm import CalcFunctionNode, CalcJobNode, Data, DataList, EnumData, WorkChainNode, to_aiida_type
+from aiida.orm import CalcFunctionNode, CalcJobNode, Data, DataList, EnumData, GraphNode, WorkChainNode, to_aiida_type
 from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
@@ -155,6 +163,12 @@ def _declared_shape(declaration: PortDeclaration | None, *, leaves: bool = False
     return NamespaceShape(fields=tuple(fields))
 
 
+def _output_options(annotation: object, *, fallback: type[DataNode] = DataNode) -> dict[str, t.Any]:
+    durable = _port_durable(annotation)
+    infer = _infer_node_types if durable else _infer_runtime_types
+    return {'valid_type': infer(annotation) or (fallback,), 'durable': durable}
+
+
 def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
     """Declare static output ports from the return annotation.
 
@@ -170,14 +184,18 @@ def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
         msg = 'exposed inputs declare graph inputs, not task outputs; return a task output instead.'
         raise GraphTypeCheckError(msg)
     return_annotation = _expanded_annotation(return_annotation)
-    if is_typeddict(return_annotation):
-        hints = t.get_type_hints(return_annotation, include_extras=True)
-        if set(hints) != set(return_annotation.__required_keys__):
+    bare = _without_marks(return_annotation)
+    if (is_typeddict(bare) or _is_structured(bare)) and not _port_durable(return_annotation):
+        msg = 'checkpoint-only policy must be set on leaf outputs, not a namespace.'
+        raise GraphTypeCheckError(msg)
+    if is_typeddict(bare):
+        hints = t.get_type_hints(bare, include_extras=True)
+        if set(hints) != set(bare.__required_keys__):
             msg = 'TypedDict task outputs must be total; declare every output.'
             raise GraphTypeCheckError(msg)
         for key, raw in hints.items():
             hint = _expanded_annotation(raw)
-            spec.output(key, valid_type=_infer_node_types(hint) or (DataNode,))
+            spec.output(key, **_output_options(hint))
         return
     if t.get_origin(return_annotation) is tuple or return_annotation is tuple:
         msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
@@ -187,7 +205,7 @@ def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
         return
     spec.output(
         Process.SINGLE_OUTPUT_LINKNAME,
-        valid_type=_infer_node_types(return_annotation) or (DataNode,),
+        **_output_options(return_annotation),
     )
 
 
@@ -241,7 +259,7 @@ class TaskProcess(FunctionProcessBase):
                 spec.outputs_from(t.cast(type, success), prefix='value.')
                 spec.outputs['value'].required = False
             else:
-                spec.output('value', valid_type=_infer_node_types(annotation) or (Data,), required=False)
+                spec.output('value', **_output_options(annotation, fallback=Data), required=False)
             spec.output('error', valid_type=EnumData, required=False)
             spec.outputs.dynamic = False
             cls._named_outputs = False
@@ -249,6 +267,40 @@ class TaskProcess(FunctionProcessBase):
         _declare_output_ports(return_annotation, spec)
         spec.outputs.dynamic = False
         cls._named_outputs = is_typeddict(return_annotation) or _is_structured(return_annotation)
+
+    @classmethod
+    def checkpoint_ports(cls) -> dict[str, tuple[str, ...]]:
+        """Return checkpoint-only leaves by direction."""
+        return {
+            key: paths for key in ('inputs', 'outputs') if (paths := tuple(checkpoint_leaves(getattr(cls.spec(), key))))
+        }
+
+    @override
+    def _encode_input_args(self, inputs: dict[str, t.Any]) -> dict[str, t.Any] | str:
+        if self.checkpoint_ports():
+            return dict(inputs)
+        return super()._encode_input_args(inputs)
+
+    @override
+    def _setup_db_record(self) -> None:
+        ports = self.checkpoint_ports()
+        if ports and not isinstance(self.get_parent_calc(), GraphNode):
+            msg = 'checkpoint-only task ports require a calling graph.'
+            raise GraphValidationError(msg)
+        super()._setup_db_record()
+        if ports:
+            self.node.base.attributes.set('checkpoint_ports', ports)
+            self.node.base.caching.is_valid_cache = False
+
+    @override
+    async def run(self) -> ExitCode | None:
+        self._checkpoint_outputs: dict[str, t.Any] = {}
+        result = await super().run()
+        if 'outputs' in self.checkpoint_ports() and (result is None or result.status == 0):
+            from aiida.engine.processes.graphs._checkpoint_outputs import publish_outputs
+
+            publish_outputs(self.node, self._checkpoint_outputs)
+        return result
 
     @override
     def _function_arguments(self) -> tuple[list[t.Any], dict[str, t.Any]]:
@@ -266,6 +318,10 @@ class TaskProcess(FunctionProcessBase):
         annotation = t.get_type_hints(self._func, include_extras=True).get('return')
         _, codes = _result_contract(annotation)
         if t.get_origin(annotation) is not Result:
+            if result is None and not self._named_outputs and self.SINGLE_OUTPUT_LINKNAME in self.spec().outputs:
+                port = self.spec().outputs[self.SINGLE_OUTPUT_LINKNAME]
+                if not port.durable:
+                    self._store_leaf(port, None, self.SINGLE_OUTPUT_LINKNAME)
             if isinstance(result, Result):
                 msg = 'task exit codes must be declared in a Result return annotation.'
                 raise GraphValidationError(msg)
@@ -326,6 +382,16 @@ class TaskProcess(FunctionProcessBase):
 
     def _store_leaf(self, port: Port, value: t.Any, path: str) -> None:
         """Store one leaf arm; `None` stores nothing, so only an optional port admitting it accepts it."""
+        if not port.durable:
+            from aiida.engine._checkpoint_pickle import validate_port_value
+
+            value = _runtime_value(port.valid_type, value)
+            error = port.validate(value)
+            if error:
+                raise GraphValidationError(str(error))
+            validate_port_value(path, value)
+            self._checkpoint_outputs[path] = value
+            return
         if value is not None:
             stored = _runtime_value(port.valid_type, value)
             self.out(path, stored if isinstance(stored, DataNode) else to_aiida_type(stored))
@@ -388,17 +454,22 @@ class TaskProcess(FunctionProcessBase):
         if self._named_outputs and not isinstance(value, Mapping):
             msg = f'task declares named outputs {names} but returned a single value; return a mapping instead.'
             raise GraphValidationError(msg)
+        if len(names) == 1 and not outputs[names[0]].durable:
+            self._store_leaf(outputs[names[0]], result, names[0])
+            return
         values = result if isinstance(result, tuple) else (result,)
         if not names and result is None:
             return
         if len(values) != len(names):
             msg = f'task declares {len(names)} outputs {names} but returned {len(values)} values.'
             raise GraphValidationError(msg)
-        stored: dict[str, DataNode] = {}
         for name, value in zip(names, values, strict=True):
-            converted = _runtime_value(outputs[name].valid_type, value)
-            stored[name] = converted if isinstance(converted, DataNode) else to_aiida_type(converted)
-        super()._out_result(stored)
+            port = outputs[name]
+            if not port.durable:
+                self._store_leaf(port, value, name)
+                continue
+            converted = _runtime_value(port.valid_type, value)
+            self.out(name, converted if isinstance(converted, DataNode) else to_aiida_type(converted))
 
 
 def _admits_none(annotation: object) -> bool:

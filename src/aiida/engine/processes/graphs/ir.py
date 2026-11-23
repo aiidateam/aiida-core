@@ -49,7 +49,14 @@ from aiida.engine.processes.graphs.shapes import (
     load_shape,
     shape_for_annotation,
 )
-from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types, _node_type
+from aiida.engine.processes.ports import (
+    InputPort,
+    OutputPort,
+    PortNamespace,
+    _infer_node_types,
+    _node_type,
+    checkpoint_leaves,
+)
 from aiida.engine.processes.process import Process
 from aiida.orm import Code, DataDict, DataList
 from aiida.orm.nodes.data.datanode import DataNode
@@ -74,6 +81,7 @@ __all__ = (
 
 _GRAPH_IR_EXPRESSION_VERSION: t.Final = '0.3'
 _GRAPH_IR_OUTPUT_TREE_VERSION: t.Final = '0.5'
+_GRAPH_IR_CHECKPOINT_PORTS_VERSION: t.Final = '0.6'
 _GRAPH_IR_RESULT_VERSION: t.Final = '0.4'
 _GRAPH_IR_VERSION: t.Final = '0.2'
 _GRAPH_IR_LEGACY_VERSION: t.Final = '0.1'
@@ -670,7 +678,9 @@ def _output_namespace_from_origin(name: str, origin: PortNamespace, *, required:
         if isinstance(child, PortNamespace):
             result[key] = _output_namespace_from_origin(key, child, required=child.required)
         else:
-            result[key] = OutputPort(key, valid_type=child.valid_type, required=_output_required(child))
+            result[key] = OutputPort(
+                key, valid_type=child.valid_type, required=_output_required(child), durable=child.durable
+            )
     return result
 
 
@@ -1432,13 +1442,16 @@ class GraphIR:
     return_outputs: dict[str, OutputTree] | None = None
     return_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
     return_error: tuple[str, str] | None = None
+    checkpoint_outputs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         # Imported here: validation reads this module's port helpers at runtime.
         from aiida.engine.processes.graphs.validate import validate_graph
 
         validate_graph(self)
-        if (
+        if self.has_checkpoint_ports:
+            version = _GRAPH_IR_CHECKPOINT_PORTS_VERSION
+        elif (
             self.has_return
             or any(_has_optional_output_namespace(tree) for tree in self.outputs.values())
             or any(body.version == _GRAPH_IR_OUTPUT_TREE_VERSION for body in self._child_templates())
@@ -1452,6 +1465,20 @@ class GraphIR:
             version = _GRAPH_IR_VERSION if _graph_contains_operation(self) else _GRAPH_IR_LEGACY_VERSION
         if self.version != version:
             object.__setattr__(self, 'version', version)
+
+    @cached_property
+    def has_checkpoint_ports(self) -> bool:
+        """Whether this template or a placement uses checkpoint-only ports."""
+        if self.checkpoint_outputs or any(checkpoint_leaves(self.build_input_namespace())):
+            return True
+        if any(body.version == _GRAPH_IR_CHECKPOINT_PORTS_VERSION for body in self._child_templates()):
+            return True
+        return any(
+            isinstance(task, (ProcessTask, MapControl))
+            and task.spec is not None
+            and (any(checkpoint_leaves(task.spec.inputs)) or any(checkpoint_leaves(task.spec.outputs)))
+            for task in self.tasks
+        )
 
     @property
     def has_return(self) -> bool:
@@ -1609,8 +1636,19 @@ class GraphIR:
         """
         site = self._output_return_site()
         if site is not None:
-            return site.build_return_namespace()
-        return self._output_namespace(self.outputs, self.output_typehints)
+            ports = site.build_return_namespace()
+        else:
+            ports = self._output_namespace(self.outputs, self.output_typehints)
+        if self.identifier is not None:
+            undeclared = set(checkpoint_leaves(ports)) - set(self.checkpoint_outputs)
+            if undeclared:
+                msg = f'graph outputs {sorted(undeclared)} cannot wire a checkpoint-only value to a durable port.'
+                raise GraphTypeCheckError(msg)
+        for path in self.checkpoint_outputs:
+            port = _port_at(ports, path)
+            if isinstance(port, OutputPort):
+                port.durable = False
+        return ports
 
     def _output_return_site(self) -> GraphIR | None:
         """Return the success site that defines the output contract, if any."""
@@ -1671,12 +1709,14 @@ class GraphIR:
             ports = ancestor
             relative = source.port[len(present.port) + 1 :]
         required = _output_required(origin) and _ancestry_required(ports, relative)
-        return OutputPort(name, valid_type=valid_type, required=required)
+        return OutputPort(name, valid_type=valid_type, required=required, durable=origin.durable)
 
     def _output_types(
         self, origin: InputPort | OutputPort, hint: tuple[type, ...] | None
     ) -> tuple[type, ...] | type | None:
         """Return the stored types of a graph output, normalizing runtime declarations."""
+        if not origin.durable:
+            return hint or origin.valid_type
         if hint:
             return tuple(kind for declared in hint for kind in _infer_node_types(declared))
         if isinstance(origin, InputPort):
@@ -1718,6 +1758,7 @@ class GraphIR:
             'identifier': self.identifier,
             'version': self.version,
             'input_namespace': dump_shape(self.input_shape),
+            **({'checkpoint_outputs': list(self.checkpoint_outputs)} if self.checkpoint_outputs else {}),
             'output_typehints': {
                 name: [None if kind is type(None) else get_object_loader().identify_object(kind) for kind in kinds]
                 for name, kinds in self.output_typehints.items()
@@ -1734,6 +1775,7 @@ class GraphIR:
             _GRAPH_IR_EXPRESSION_VERSION,
             _GRAPH_IR_RESULT_VERSION,
             _GRAPH_IR_OUTPUT_TREE_VERSION,
+            _GRAPH_IR_CHECKPOINT_PORTS_VERSION,
         )
         if version not in supported:
             msg = f'cannot read a graph declaration of version `{version}`; supported versions are {supported}.'
@@ -1766,6 +1808,7 @@ class GraphIR:
                 for name, kinds in data.get('return_typehints', {}).items()
             },
             identifier=data.get('identifier'),
+            checkpoint_outputs=tuple(data.get('checkpoint_outputs', ())),
             version=version,
             output_typehints={
                 name: tuple(type(None) if kind is None else get_object_loader().load_object(kind) for kind in kinds)

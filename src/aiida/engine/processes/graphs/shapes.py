@@ -20,7 +20,14 @@ from dataclasses import dataclass
 from aiida.common.exceptions import GraphLanguageError, GraphTypeCheckError
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.generic.ports import UNSPECIFIED
-from aiida.engine.processes.port_model import _fields_of, _namespace_value, _port_help, _without_marks
+from aiida.engine.processes.port_model import (
+    PortField,
+    _fields_of,
+    _namespace_value,
+    _port_durable,
+    _port_help,
+    _without_marks,
+)
 from aiida.engine.processes.ports import _infer_runtime_types
 
 if t.TYPE_CHECKING:
@@ -55,6 +62,7 @@ class LeafShape(_ValueShape):
     types: tuple[type, ...] | None = None
     element: Shape | None = None
     error_enums: frozenset[str] = frozenset()
+    durable: bool = True
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -245,6 +253,7 @@ def shape_for_annotation(
                 raise GraphTypeCheckError(msg) from exception
         default = json_default(default)
     resolved_help = help or _port_help(annotation)
+    durable = _port_durable(annotation)
     exposed = _exposed_inputs(annotation)
     if exposed is not None:
         return _exposed_shape(exposed.task, exposed.exclude)
@@ -258,12 +267,21 @@ def shape_for_annotation(
             required=required,
             default=default,
             help=resolved_help,
+            durable=durable,
         )
+    if not durable:
+        msg = 'checkpoint-only policy must be set on leaf ports, not namespaces.'
+        raise GraphTypeCheckError(msg)
     return NamespaceShape(
         fields=tuple(
             (
                 field.name,
-                shape_for_annotation(field.annotation, required=field.required, default=field.default, help=field.help),
+                shape_for_annotation(
+                    t.Annotated[field.annotation, PortField(durable=field.durable)],
+                    required=field.required,
+                    default=field.default,
+                    help=field.help,
+                ),
             )
             for field in fields
         ),
@@ -318,6 +336,8 @@ def dump_shape(shape: Shape, *, defaults: bool = True) -> dict[str, t.Any]:
         )
         if shape.element is not None:
             result['element'] = dump_shape(shape.element, defaults=defaults)
+        if not shape.durable:
+            result['durable'] = False
         if shape.error_enums:
             result['error_enums'] = sorted(shape.error_enums)
     elif isinstance(shape, NamespaceShape):
@@ -347,6 +367,7 @@ def load_shape(data: Mapping[str, t.Any]) -> Shape:
             else tuple(type(None) if kind is None else get_object_loader().load_object(kind) for kind in types),
             element=load_shape(element_data) if element_data is not None else None,
             error_enums=frozenset(data.get('error_enums', ())),
+            durable=data.get('durable', True),
             required=required,
             help=help,
             default=default,

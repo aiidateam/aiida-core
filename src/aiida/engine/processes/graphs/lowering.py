@@ -29,7 +29,7 @@ from dataclasses import dataclass, field, replace
 from itertools import pairwise
 from types import ModuleType, UnionType
 
-from typing_extensions import get_type_hints, is_typeddict
+from typing_extensions import NotRequired, Required, get_type_hints, is_typeddict
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
@@ -868,11 +868,18 @@ def _lower_function(state: _LoweringState) -> GraphIR:
         result = _return_expression(state, returned)
         if result is not None:
             outputs, output_typehints = _lower_outputs(state, result=result)
+    declaration = _declared_return_shape(state.success_annotation)
+    checkpoint_outputs = (
+        tuple(_checkpoint_paths(declaration))
+        if isinstance(declaration, NamespaceShape)
+        else (() if declaration.durable else ('result',))
+    )
     return GraphIR(
         tasks=tuple(state.tasks),
         dependencies=_ordered_dependencies(state),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=outputs,
+        checkpoint_outputs=checkpoint_outputs,
         identifier=state.key,
         output_typehints=output_typehints,
         input_shape=boundary,
@@ -976,17 +983,28 @@ def _lower_outputs(
     return outputs, typehints
 
 
+def _checkpoint_paths(shape: NamespaceShape, prefix: str = '') -> t.Iterator[str]:
+    for name, child in shape.fields:
+        path = f'{prefix}{name}'
+        if isinstance(child, NamespaceShape):
+            yield from _checkpoint_paths(child, f'{path}.')
+        elif not child.durable:
+            yield path
+
+
 def _declared_return_shape(annotation: object, *, required: bool = True) -> Shape:
     """Return the output contract of a graph return annotation.
 
     A `TypedDict` declares one field per key, also when nested, and `X | None` declares
     `X` as optional, so structured annotations compare field by field with the return.
     """
+    if t.get_origin(annotation) in (Required, NotRequired):
+        annotation = t.get_args(annotation)[0]
     # `is_typeddict` narrows nothing for type checkers, so the TypedDict attributes read through `Any`.
     bare: t.Any = t.get_args(annotation)[0] if t.get_origin(annotation) is t.Annotated else annotation
     if is_typeddict(bare):
         keys = bare.__required_keys__
-        hints = get_type_hints(bare)
+        hints = get_type_hints(bare, include_extras=True)
         return NamespaceShape(
             fields=tuple((key, _declared_return_shape(hint, required=key in keys)) for key, hint in hints.items()),
             required=required,
@@ -1089,7 +1107,7 @@ def _check_return_leaf_types(state: _LoweringState, tree: OutputTree, declared: 
     if produced is None or isinstance(produced, PortNamespace):
         return  # unknown and regrouped wires are reported where they are wired
     context = f'graph output `{path}`' if path else 'graph output'
-    _check_types(produced, OutputPort('declared', valid_type=declared.types), context)
+    _check_types(produced, OutputPort('declared', valid_type=declared.types, durable=declared.durable), context)
 
 
 def _preserved_namespace(state: _LoweringState, endpoint: Endpoint) -> PortNamespace | None:

@@ -761,7 +761,7 @@ class Process(ProcessBase):
         return UUID(self.node.uuid)
 
     @override
-    def _encode_input_args(self, inputs: dict[str, t.Any]) -> str:
+    def _encode_input_args(self, inputs: dict[str, t.Any]) -> dict[str, t.Any] | str:
         """Encode input arguments such that they may be saved in a CheckpointPayload
 
         :param inputs: A mapping of the inputs as passed to the process
@@ -770,13 +770,13 @@ class Process(ProcessBase):
         return serialize.serialize(inputs)
 
     @override
-    def _decode_input_args(self, encoded: str) -> dict[str, t.Any]:
+    def _decode_input_args(self, encoded: dict[str, t.Any] | str) -> dict[str, t.Any]:
         """Decode saved input arguments as they came from the saved instance state CheckpointPayload
 
         :param encoded: encoded (serialized) inputs
         :return: The decoded input args
         """
-        return serialize.deserialize_unsafe(encoded)
+        return serialize.deserialize_unsafe(encoded) if isinstance(encoded, str) else encoded
 
     def update_outputs(self) -> None:
         """Attach new outputs to the node since the last call.

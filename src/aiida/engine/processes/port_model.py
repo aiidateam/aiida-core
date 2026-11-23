@@ -37,9 +37,11 @@ class PortField:
     """Metadata for a port, written as ``Annotated[T, PortField(help='...')]``.
 
     :param help: the help displayed for the generated port or namespace.
+    :param durable: whether the port participates in persistent data provenance.
     """
 
     help: str | None = None
+    durable: bool = True
 
 
 @dataclass_transform(frozen_default=True, kw_only_default=True, field_specifiers=(dataclasses.field,))
@@ -103,6 +105,7 @@ class _Field:
     annotation: t.Any
     default: t.Any = UNSPECIFIED
     help: str | None = None
+    durable: bool = True
 
     @property
     def required(self) -> bool:
@@ -210,9 +213,9 @@ def _cached_namedtuple_model(model: type) -> type[PortModel]:
         if adapted is bare:
             _reject_non_json_leaf(name, bare, kind='NamedTuple')
         annotations[name] = adapted
-        help_text = _port_help(hint)
-        if help_text is not None:
-            annotations[name] = t.Annotated[adapted, PortField(help=help_text)]
+        help_text, durable = _port_help(hint), _port_durable(hint)
+        if help_text is not None or not durable:
+            annotations[name] = t.Annotated[adapted, PortField(help=help_text, durable=durable)]
         default = named._field_defaults.get(name, UNSPECIFIED)
         if default is not UNSPECIFIED:
             if adapted is not bare and _is_structured(adapted):
@@ -248,6 +251,7 @@ def _field_from_annotation(
         annotation=_as_port_model(_without_marks(annotation)),
         default=default,
         help=_port_help(annotation) or help,
+        durable=_port_durable(annotation),
     )
 
 
@@ -311,7 +315,7 @@ def _port_model_fields(annotation: t.Any) -> tuple[_Field, ...]:
             default = declared.default_factory
         else:
             default = UNSPECIFIED
-        fields.append(_Field(name=declared.name, annotation=adapted, default=default, help=_port_help(hint)))
+        fields.append(_field_from_annotation(declared.name, hint, default))
     return tuple(fields)
 
 
@@ -362,8 +366,9 @@ def _port_model_from_pydantic(annotation: t.Any) -> type[PortModel]:
             default = _adapted_default(default, bare, adapted, call_factory=info.default_factory is not None)
         annotations[name] = adapted
         help_text = _pydantic_help(hint, info)
-        if help_text is not None:
-            annotations[name] = t.Annotated[adapted, PortField(help=help_text)]
+        durable = _port_durable(hint) and all(mark.durable for mark in info.metadata if isinstance(mark, PortField))
+        if help_text is not None or not durable:
+            annotations[name] = t.Annotated[adapted, PortField(help=help_text, durable=durable)]
         if default is not UNSPECIFIED:
             defaults[name] = default
     return _synthesize_model(annotation.__name__, annotations, defaults)
@@ -448,6 +453,11 @@ def _port_help(annotation: t.Any) -> str | None:
         if isinstance(mark, PortField):
             return mark.help
     return None
+
+
+def _port_durable(annotation: object) -> bool:
+    """Return whether the declaration participates in data provenance."""
+    return all(mark.durable for mark in _marks(annotation) if isinstance(mark, PortField))
 
 
 def _without_marks(annotation: t.Any) -> t.Any:

@@ -28,6 +28,7 @@ from aiida.common.links import LinkType
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.generic.ports import UNSPECIFIED
+from aiida.engine.processes.graphs._checkpoint_outputs import read_outputs
 from aiida.engine.processes.graphs.expressions import evaluate_expression
 from aiida.engine.processes.graphs.inputs import _at, _drops_none_value, _place, _prepare_graph_inputs
 from aiida.engine.processes.graphs.ir import (
@@ -48,9 +49,9 @@ from aiida.engine.processes.graphs.ir import (
 )
 from aiida.engine.processes.graphs.operations import evaluate_operation
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
-from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.ports import PortNamespace, checkpoint_leaves
 from aiida.manage import get_manager
-from aiida.orm import DataDict, DataList, EnumData, Node, from_aiida_type, load_node, to_aiida_type
+from aiida.orm import DataDict, DataList, EnumData, Node, ProcessNode, from_aiida_type, load_node, to_aiida_type
 from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
@@ -118,6 +119,16 @@ def _holds(condition: t.Any) -> bool:
         return bool(condition.value)
     msg = f'graph condition must be a `bool` or `Bool`, not `{type(condition)}`.'
     raise GraphRuntimeError(msg)
+
+
+def _child_outputs(spec: TaskIR, node: Node) -> dict[str, t.Any]:
+    """Read a finished child's recorded outputs in both storage channels."""
+    outputs = node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN)).nested()
+    if any(checkpoint_leaves(spec.outputs)):
+        assert isinstance(node, ProcessNode)
+        for path, value in read_outputs(node).items():
+            _place(outputs, path, value)
+    return outputs
 
 
 def _missing_declared_outputs(declared: NamespaceShape, node: Node) -> list[str]:
@@ -653,8 +664,7 @@ class GraphRun:
             arms = spec.result_shape
             assert isinstance(arms, NamespaceShape)
             success = replace(arms.select('value'), required=not spec.result_nullable)
-            stored = node.base.links.get_outgoing(link_type=LinkType.CREATE).nested()
-            value = stored.get('value')
+            value = _child_outputs(spec, node).get('value')
             if value is None and success.required and isinstance(success, NamespaceShape):
                 # A successful namespace with only optional fields can have no stored links.
                 value = {}
@@ -864,6 +874,8 @@ class GraphRun:
                 }
                 stored['error'] = _error_member(task.spec, label, node)
                 return stored
+            if self._label_ok(label) and any(checkpoint_leaves(task.spec.outputs)):
+                return _child_outputs(task.spec, node)
             if (
                 task.spec.result_errors
                 and not task.spec.result_nullable

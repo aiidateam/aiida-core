@@ -24,7 +24,14 @@ import docstring_parser
 
 from aiida.common.lang import override
 from aiida.engine.processes.generic.ports import UNSPECIFIED
-from aiida.engine.processes.port_model import _Field, _is_structured, _port_help, _without_marks
+from aiida.engine.processes.port_model import (
+    _Field,
+    _fields_of,
+    _is_structured,
+    _port_durable,
+    _port_help,
+    _without_marks,
+)
 from aiida.engine.processes.ports import (
     InputPort,
     PortNamespace,
@@ -615,6 +622,18 @@ def _as_a_node_port(field: _Field) -> dict[str, t.Any]:
     return options
 
 
+def _reject_checkpoint_only(annotation: object) -> None:
+    if not _port_durable(annotation):
+        msg = 'checkpoint-only ports are not supported by legacy process functions.'
+        raise TypeError(msg)
+    bare = _without_marks(annotation)
+    for field in (_fields_of(bare) or ()) if _is_structured(bare) else ():
+        if not field.durable:
+            msg = f'checkpoint-only port `{field.name}` is not supported by legacy process functions.'
+            raise TypeError(msg)
+        _reject_checkpoint_only(field.annotation)
+
+
 class FunctionProcess(FunctionProcessBase):
     """Legacy function process with node-valued inputs, used for ``calcfunction`` and ``workfunction``."""
 
@@ -629,6 +648,7 @@ class FunctionProcess(FunctionProcessBase):
     ) -> None:
         """Declare one function parameter as a node-valued input port or namespace."""
         annotation = annotations.get(parameter.name)
+        _reject_checkpoint_only(annotation)
         valid_type = _infer_node_types(annotation) or (DataNode,)
         help_string = _port_help(annotation)
         if help_string is None:
@@ -702,6 +722,7 @@ class FunctionProcess(FunctionProcessBase):
     @classmethod
     @override
     def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
+        _reject_checkpoint_only(annotations.get('return'))
         # Without a declaration we do not know beforehand what outputs will be returned, so the namespace has
         # to be dynamic and accept `Data` nodes as well as a dictionary, since it can be nested.
         spec.outputs.valid_type = (DataNode, dict)

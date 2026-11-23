@@ -32,7 +32,7 @@ from aiida.engine.processes.graphs.operations import (
     RIGHT_PORT,
     infer_operation_shape,
 )
-from aiida.engine.processes.ports import OutputPort, PortNamespace, _infer_node_types
+from aiida.engine.processes.ports import OutputPort, PortNamespace, _infer_node_types, checkpoint_leaves
 from aiida.orm.nodes.data.datanode import DataNode
 
 if t.TYPE_CHECKING:
@@ -190,6 +190,13 @@ def _validate_map(graph: GraphIR, task: MapControl) -> None:
         raise GraphTypeCheckError(msg)
     if task.body is not None:
         validate_graph(task.body)
+        outputs = task.body.build_output_namespace()
+    else:
+        assert task.spec is not None
+        outputs = task.spec.outputs
+    if any(checkpoint_leaves(outputs)):
+        msg = f'map `{task.name}` cannot collect checkpoint-only outputs into a stored container.'
+        raise GraphTypeCheckError(msg)
     fields = [name for name, _ in task.mapped_inputs.fields]
     if task.element is None:
         if len(fields) != 1:
@@ -334,6 +341,10 @@ def _check_types(source: t.Any, target: t.Any, context: str) -> None:
             raise GraphTypeCheckError(msg)
         _check_namespaces(source, target, context)
         return
+
+    if not source.durable and target.durable:
+        msg = f'{context} cannot wire a checkpoint-only value to a durable port.'
+        raise GraphTypeCheckError(msg)
 
     produced, accepted = _stored_types(source), _stored_types(target)
     if (

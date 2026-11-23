@@ -39,6 +39,12 @@ from aiida.orm.nodes.data.datanode import DataNode
 __all__ = ('CalcJobProcessSpec', 'GraphProcessSpec', 'ProcessSpec')
 
 
+def _require_durable(field: _Field) -> None:
+    if not field.durable:
+        msg = f'checkpoint-only port `{field.name}` is only supported by graphs and function tasks.'
+        raise TypeError(msg)
+
+
 def _require_storable(field: _Field) -> None:
     """Reject model fields whose values cannot reach provenance storage."""
     if _is_storable(field.annotation):
@@ -50,7 +56,8 @@ def _require_storable(field: _Field) -> None:
 
 def _as_a_port(field: _Field) -> dict[str, t.Any]:
     """Return how one model field is declared as a port."""
-    _require_storable(field)
+    if field.durable:
+        _require_storable(field)
     _reject_optional_structured(field.annotation, name=field.name)
     declared = _infer_runtime_types(field.annotation)
     valid_type = declared or (DataNode,)
@@ -64,7 +71,7 @@ def _as_a_port(field: _Field) -> dict[str, t.Any]:
     if not field.required:
         options['default'] = _lazily(field.default)
 
-    return {**options, 'valid_type': valid_type}
+    return {**options, 'valid_type': valid_type, 'durable': field.durable}
 
 
 def _as_an_output_port(field: _Field) -> dict[str, t.Any]:
@@ -73,11 +80,17 @@ def _as_an_output_port(field: _Field) -> dict[str, t.Any]:
     An output holds what a process produced, so unlike an input it carries no serializer and no default: the
     value is a node by the time it is attached.
     """
-    _require_storable(field)
+    if field.durable:
+        _require_storable(field)
     _reject_optional_structured(field.annotation, name=field.name)
-    declared = _infer_node_types(field.annotation)
+    declared = (_infer_node_types if field.durable else _infer_runtime_types)(field.annotation)
 
-    return {'required': field.required, 'help': field.help, 'valid_type': declared or (DataNode,)}
+    return {
+        'required': field.required,
+        'help': field.help,
+        'valid_type': declared or (DataNode,),
+        'durable': field.durable,
+    }
 
 
 def _with_defaults(fields: tuple[_Field, ...], defaults: Mapping[str, t.Any] | None) -> tuple[_Field, ...]:
@@ -118,6 +131,9 @@ def _declare_namespace(
     for field in _with_defaults(fields, defaults):
         path = f'{name}{spec.namespace_separator}{field.name}'
         if _fields_of(field.annotation) is not None:
+            if not field.durable:
+                msg = f'checkpoint-only policy must be set on leaf ports, not namespace `{path}`.'
+                raise TypeError(msg)
             nested = _namespace_defaults(field.default)
             _declare_namespace(
                 spec,
@@ -129,6 +145,8 @@ def _declare_namespace(
                 help=field.help,
             )
         else:
+            if not isinstance(spec, GraphProcessSpec):
+                _require_durable(field)
             spec.input(path, **leaf_options(field))
 
 
@@ -240,7 +258,12 @@ class ProcessSpec(spec.ProcessSpec):
         for field in fields:
             name = field.name if not stem else f'{stem}{separator}{field.name}'
 
+            if not isinstance(self, GraphProcessSpec):
+                _require_durable(field)
             if _fields_of(field.annotation) is not None:
+                if not field.durable:
+                    msg = f'checkpoint-only policy must be set on leaf ports, not namespace `{name}`.'
+                    raise TypeError(msg)
                 self.output_namespace(name, required=field.required, help=field.help)
                 self.outputs_from(field.annotation, prefix=f'{name}{self.namespace_separator}')
                 continue
@@ -341,6 +364,9 @@ class GraphProcessSpec(ProcessSpec):
             valid_type += (type(None),)
 
         if _fields_of(field.annotation) is not None:
+            if not field.durable:
+                msg = f'checkpoint-only policy must be set on leaf ports, not namespace `{name}`.'
+                raise TypeError(msg)
             defaults = _namespace_defaults(field.default)
             self.input_namespace_from(
                 name,
@@ -357,6 +383,7 @@ class GraphProcessSpec(ProcessSpec):
             default=_lazily(field.default) if field.default is not UNSPECIFIED else UNSPECIFIED,
             serializer=to_aiida_type,
             help=field.help,
+            durable=field.durable,
         )
 
 

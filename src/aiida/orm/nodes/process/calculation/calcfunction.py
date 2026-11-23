@@ -50,3 +50,5 @@ class CalcFunctionNode(FunctionCalculationMixin, CalculationNode):
     """ORM class for all nodes representing the execution of a calcfunction."""
 
     _CLS_NODE_LINKS = CalcFunctionNodeLinks
+    CHECKPOINT_OUTPUT_DIGEST = 'checkpoint_output_digest'
+    _updatable_attributes = (*CalculationNode._updatable_attributes, CHECKPOINT_OUTPUT_DIGEST)

@@ -16,9 +16,11 @@ from io import BytesIO
 import pytest
 
 from aiida.common import LinkType, exceptions, timezone
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage import get_manager
 from aiida.orm import CalculationNode, Data, Int, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
+from aiida.orm.utils.node import AbstractNodeMeta
 
 
 class TestNode:
@@ -40,6 +42,34 @@ class TestNode:
         """Test a Node can be instantiated with a specific computer."""
         node = Data(computer=self.computer).store()
         assert node.computer.pk == self.computer.pk
+
+    def test_subclass_logger(self):
+        """Verify that Node and subclasses configure their `_logger` via `__init_subclass__`."""
+        class SubNode(Node):
+            pass
+
+        assert Node._logger.name == f'{Node.__module__}.Node'
+        assert SubNode._logger.name == f'{SubNode.__module__}.SubNode'
+        assert SubNode._MODEL_MAP['read'] is SubNode.ReadModel
+
+    def test_abstract_node_meta_deprecation(self):
+        """Verify that using deprecated `AbstractNodeMeta` issues an `AiidaDeprecationWarning`."""
+        with pytest.warns(AiidaDeprecationWarning, match=r'`AbstractNodeMeta` is deprecated'):
+            class LegacySubNode(metaclass=AbstractNodeMeta):
+                pass
+
+    def test_subclass_without_metaclass_conflict(self):
+        """Verify that subclassing Node alongside ABC classes causes no metaclass conflict."""
+        import abc
+
+        class CustomMixin(abc.ABC):
+            pass
+
+        class CombinedNode(Node, CustomMixin):
+            pass
+
+        assert issubclass(CombinedNode, Node)
+        assert issubclass(CombinedNode, CustomMixin)
 
     def test_repository_garbage_collection(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""

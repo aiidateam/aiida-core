@@ -13,6 +13,7 @@ import warnings
 from abc import ABCMeta
 
 from aiida.common import exceptions
+from aiida.common.warnings import warn_deprecation
 
 __all__ = (
     'AbstractNodeMeta',
@@ -166,9 +167,18 @@ def get_query_type_from_type_string(type_string):
 
 
 class AbstractNodeMeta(ABCMeta):
-    """Some python black magic to set correctly the logger also in subclasses."""
+    """Some python black magic to set correctly the logger also in subclasses.
+
+    .. deprecated:: 3.0.0
+        Use :meth:`~aiida.orm.nodes.node.Node.__init_subclass__` instead of `AbstractNodeMeta`.
+    """
 
     def __new__(mcs, name, bases, namespace, **kwargs):
+        warn_deprecation(
+            '`AbstractNodeMeta` is deprecated and will be removed in v3. Use `__init_subclass__` instead.',
+            version=3,
+            stacklevel=2,
+        )
         newcls = super().__new__(mcs, name, bases, namespace, **kwargs)
         newcls._logger = logging.getLogger(f'{namespace["__module__"]}.{name}')
         return newcls

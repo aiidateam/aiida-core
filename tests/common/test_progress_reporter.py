@@ -26,13 +26,58 @@ from aiida.common.progress_reporter import (
 from aiida.common.warnings import AiidaDeprecationWarning
 
 
-class CustomValidReporter:
-    """A custom reporter satisfying the ProgressReporter protocol."""
+class PropertyReporter:
+    """A custom reporter using read-only properties satisfying ProgressReporter."""
 
-    def __init__(self, *, total: int | None = None, desc: str | None = None, **kwargs: t.Any):
-        self.total = total
-        self.desc = desc
-        self.n: int = 0
+    def __init__(self, *, total: float | int | None = None, desc: str | None = None, **kwargs: t.Any):
+        self._total = total
+        self._desc = desc
+        self._n: float | int = 0
+        self.kwargs = kwargs
+
+    @property
+    def total(self) -> float | int | None:
+        return self._total
+
+    @property
+    def desc(self) -> str | None:
+        return self._desc
+
+    @property
+    def n(self) -> float | int:
+        return self._n
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exctype: type[BaseException] | None,
+        excinst: BaseException | None,
+        exctb: TracebackType | None,
+    ) -> bool | None:
+        return False
+
+    def set_description_str(self, text: str | None = None, /, refresh: bool = True) -> None:
+        self._desc = text
+
+    def update(self, n: float | int = 1) -> bool | None:
+        self._n += n
+        return None
+
+    def reset(self, total: float | int | None = None) -> None:
+        self._n = 0
+        if total is not None:
+            self._total = total
+
+
+class PlainAttributeReporter:
+    """A reporter with plain attributes (like tqdm) satisfying ProgressReporter."""
+
+    def __init__(self, *, total: float | int | None = None, desc: str | None = None, **kwargs: t.Any):
+        self.total: float | int | None = total
+        self.desc: str | None = desc
+        self.n: float | int = 0
         self.kwargs = kwargs
 
     def __enter__(self) -> Self:
@@ -46,13 +91,14 @@ class CustomValidReporter:
     ) -> bool | None:
         return False
 
-    def set_description_str(self, text: str | None = None, refresh: bool = True) -> None:
+    def set_description_str(self, text: str | None = None, /, refresh: bool = True) -> None:
         self.desc = text
 
-    def update(self, n: int = 1) -> None:
+    def update(self, n: float | int = 1) -> bool | None:
         self.n += n
+        return None
 
-    def reset(self, total: int | None = None) -> None:
+    def reset(self, total: float | int | None = None) -> None:
         self.n = 0
         if total is not None:
             self.total = total
@@ -72,8 +118,11 @@ def test_progress_reporter_protocol_conformance():
     null_reporter = ProgressReporterNull(total=10, desc='Test')
     assert isinstance(null_reporter, ProgressReporter)
 
-    custom_reporter = CustomValidReporter(total=10, desc='Test')
-    assert isinstance(custom_reporter, ProgressReporter)
+    prop_reporter = PropertyReporter(total=10, desc='Test')
+    assert isinstance(prop_reporter, ProgressReporter)
+
+    plain_reporter = PlainAttributeReporter(total=10, desc='Test')
+    assert isinstance(plain_reporter, ProgressReporter)
 
     tqdm_reporter = tqdm(total=10, desc='Test')
     try:
@@ -100,6 +149,10 @@ def test_progress_reporter_null():
         assert p.n == 4
         p.set_description_str('Updated Process')
         assert p.desc == 'Updated Process'
+        p.set_description_str(desc='Keyword Desc')
+        assert p.desc == 'Keyword Desc'
+        p.set_description_str(text='Keyword Text')
+        assert p.desc == 'Keyword Text'
         p.reset(total=10)
         assert p.n == 0
         assert p.total == 10
@@ -127,10 +180,10 @@ def test_progress_reporter_abstract_deprecation(monkeypatch):
 def test_set_and_get_progress_reporter():
     """Verify set_progress_reporter and get_progress_reporter lifecycle."""
     try:
-        set_progress_reporter(CustomValidReporter, extra_param='test_val')
+        set_progress_reporter(PropertyReporter, extra_param='test_val')
         reporter_cls = get_progress_reporter()
         with reporter_cls(total=10, desc='Testing') as p:
-            assert isinstance(p, CustomValidReporter)
+            assert isinstance(p, PropertyReporter)
             assert p.kwargs.get('extra_param') == 'test_val'
             assert p.total == 10
 

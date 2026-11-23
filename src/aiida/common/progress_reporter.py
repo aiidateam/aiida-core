@@ -57,9 +57,14 @@ class ProgressReporter(t.Protocol):
 
     """
 
-    total: int | None
-    desc: str | None
-    n: int
+    @property
+    def total(self) -> float | int | None: ...
+
+    @property
+    def desc(self) -> str | None: ...
+
+    @property
+    def n(self) -> float | int: ...
 
     def __enter__(self) -> Self: ...
 
@@ -70,11 +75,11 @@ class ProgressReporter(t.Protocol):
         exctb: TracebackType | None,
     ) -> bool | None: ...
 
-    def set_description_str(self, text: str | None = None, refresh: bool = True) -> None: ...
+    def set_description_str(self, text: str | None = None, /, refresh: bool = True) -> None: ...
 
-    def update(self, n: int = 1) -> None: ...
+    def update(self, n: float | int = 1) -> bool | None: ...
 
-    def reset(self, total: int | None = None) -> None: ...
+    def reset(self, total: float | int | None = None) -> None: ...
 
 
 class ProgressReporterNull:
@@ -83,7 +88,7 @@ class ProgressReporterNull:
     This implementation does not output anything.
     """
 
-    def __init__(self, *, total: int | None = None, desc: str | None = None, **kwargs: t.Any):
+    def __init__(self, *, total: float | int | None = None, desc: str | None = None, **kwargs: t.Any):
         """Initialise the progress reporting contextmanager.
 
         :param total: The number of expected iterations, or None if unknown in advance.
@@ -91,10 +96,10 @@ class ProgressReporterNull:
         """
         self._total = total
         self._desc = desc
-        self._increment: int = 0
+        self._increment: float | int = 0
 
     @property
-    def total(self) -> int | None:
+    def total(self) -> float | int | None:
         """Return the total iterations expected, or None if not known in advance."""
         return self._total
 
@@ -104,7 +109,7 @@ class ProgressReporterNull:
         return self._desc
 
     @property
-    def n(self) -> int:
+    def n(self) -> float | int:
         """Return the current iteration."""
         # note using `n` as the attribute name is necessary for compatibility with tqdm
         return self._increment
@@ -122,22 +127,24 @@ class ProgressReporterNull:
         """Exit the contextmanager."""
         return False
 
-    def set_description_str(self, text: str | None = None, refresh: bool = True) -> None:
+    def set_description_str(self, desc: str | None = None, refresh: bool = True, *, text: str | None = None) -> None:
         """Set the text shown by the progress reporter.
 
-        :param text: The text to show
+        :param desc: The text to show
         :param refresh: Force refresh of the progress reporter
+        :param text: Optional backward-compatible alias for ``desc``
         """
-        self._desc = text
+        self._desc = desc if text is None else text
 
-    def update(self, n: int = 1) -> None:
+    def update(self, n: float | int = 1) -> bool | None:
         """Update the progress counter.
 
         :param n: Increment to add to the internal counter of iterations
         """
         self._increment += n
+        return None
 
-    def reset(self, total: int | None = None) -> None:
+    def reset(self, total: float | int | None = None) -> None:
         """Resets current iterations to 0.
 
         :param total: If not None, update number of expected iterations.
@@ -164,7 +171,7 @@ class ProgressReporterAbstract(ProgressReporterNull):
             stacklevel=2,
         )
 
-    def __init__(self, *, total: int | None = None, desc: str | None = None, **kwargs: t.Any):
+    def __init__(self, *, total: float | int | None = None, desc: str | None = None, **kwargs: t.Any):
         warn_deprecation(
             '`ProgressReporterAbstract` is deprecated and will be removed in v3. '
             'Use `aiida.common.ProgressReporter` protocol instead.',

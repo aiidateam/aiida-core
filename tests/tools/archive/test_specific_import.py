@@ -11,7 +11,31 @@
 import numpy as np
 
 from aiida import orm
+from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
+
+
+def test_graph_output_round_trip(aiida_profile_clean, tmp_path):
+    """Exporting a graph-created result preserves its creator and published output."""
+    graph = orm.GraphNode().store()
+    output = orm.Int(1)
+    output.base.links.add_incoming(graph, LinkType.CREATE, 'result')
+    output.store()
+    output.base.links.add_incoming(graph, LinkType.RETURN, 'result')
+    graph.seal()
+    graph_uuid, output_uuid = graph.uuid, output.uuid
+
+    path = tmp_path / 'graph.aiida'
+    create_archive([output], filename=path)
+    aiida_profile_clean.reset_storage()
+    import_archive(path)
+
+    graph = orm.load_node(graph_uuid)
+    output = orm.load_node(output_uuid)
+    assert isinstance(graph, orm.GraphNode)
+    assert output.creator.uuid == graph.uuid
+    assert graph.outputs.result.uuid == output.uuid
+    assert {link.link_type for link in graph.base.links.get_outgoing().all()} == {LinkType.CREATE, LinkType.RETURN}
 
 
 def test_simple_import(aiida_profile_clean, tmp_path):
@@ -52,8 +76,6 @@ def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
     cleaned the database. Verify that the nodes and their attributes are restored
     properly after importing the created export archive
     """
-    from aiida.common.links import LinkType
-
     test_label = 'Test structure'
     test_cell = [
         [8.34, 0.0, 0.0],

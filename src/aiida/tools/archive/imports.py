@@ -1071,7 +1071,8 @@ def _import_links(
                 if in_id == out_id:
                     msg = f'Cannot add a link to oneself: {in_id}'
                     raise ImportValidationError(msg)
-                if not in_type.startswith(allowed_in_type):
+                graph_creates = link_type is LinkType.CREATE and in_type == orm.GraphNode.class_node_type
+                if not (in_type.startswith(allowed_in_type) or graph_creates):
                     msg = f'Cannot add a {link_type.value!r} link from {in_type} (link {link_id})'
                     raise ImportValidationError(msg)
                 if not out_type.startswith(allowed_out_type):

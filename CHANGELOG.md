@@ -41,6 +41,8 @@ Use `Annotated[NodeType, PortField(mutable=True)]` on the task input and every g
 Graphs now publish inline values directly: the root adds both `CREATE` and `RETURN` for a newly materialized output and only `RETURN` for an existing node.
 Nested scopes do not publish outputs or create provenance nodes of their own.
 `verdi process show` and `verdi node show` list a graph output once.
+Archives preserve both links for graph-created outputs.
+Older versions that restrict `CREATE` to calculations cannot import these graph-created outputs.
 
 #### Graph return annotations are required
 

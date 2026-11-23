@@ -318,7 +318,7 @@ def get_calcjob_report(calcjob: orm.CalcJobNode) -> str:
     return '\n'.join(report)
 
 
-def get_process_function_report(node: orm.CalcFunctionNode | orm.WorkFunctionNode) -> str:
+def get_process_function_report(node: orm.CalcFunctionNode | orm.TaskNode | orm.WorkFunctionNode) -> str:
     """Return a multi line string representation of the log messages and output of a given process function node
 
     :param node: the node

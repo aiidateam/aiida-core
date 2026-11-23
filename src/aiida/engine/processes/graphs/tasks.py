@@ -58,7 +58,7 @@ from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.engine.utils import is_process_function
-from aiida.orm import CalcFunctionNode, CalcJobNode, Data, DataList, EnumData, GraphNode, WorkChainNode, to_aiida_type
+from aiida.orm import CalcJobNode, Data, DataList, EnumData, GraphNode, TaskNode, WorkChainNode, to_aiida_type
 from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
@@ -508,13 +508,13 @@ class FunctionTaskHandle(t.Generic[P, R]):
 
     def __init__(
         self,
-        function: ProcessFunctionType[P, R, CalcFunctionNode],
+        function: ProcessFunctionType[P, R, TaskNode],
         *,
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
         exit_codes: Mapping[str, ExitCode] | None = None,
     ) -> None:
-        self._function: ProcessFunctionType[P, R, CalcFunctionNode] = function
+        self._function: ProcessFunctionType[P, R, TaskNode] = function
         annotation = t.get_type_hints(function, include_extras=True).get('return')
         result = t.get_args(annotation) if t.get_origin(annotation) is Result else ()
         self._task_spec: TaskIR = TaskIR.from_process(
@@ -552,9 +552,9 @@ class FunctionTaskHandle(t.Generic[P, R]):
         return t.cast(type[TaskProcess], self._function.process_class)
 
     @property
-    def node_class(self) -> type[CalcFunctionNode]:
+    def node_class(self) -> type[TaskNode]:
         """Return the provenance node class of task runs."""
-        return CalcFunctionNode
+        return TaskNode
 
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
         """Validate the task inputs through the decorated function."""
@@ -568,7 +568,7 @@ class FunctionTaskHandle(t.Generic[P, R]):
         """Run the task function locally and return its outputs."""
         return self._function.run(*args, **kwargs)
 
-    def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, CalcFunctionNode]:
+    def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, TaskNode]:
         """Run the task function locally and return its outputs with the node."""
         return self._function.run_get_node(*args, **kwargs)
 
@@ -793,7 +793,7 @@ def _build_task(
             function, inputs=inputs, outputs=outputs, exit_codes=exit_codes, error_enums=error_enums
         )
     assert not inspect.isclass(function)
-    decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess)(function)
+    decorated = process_function(node_class=TaskNode, base_class=TaskProcess)(function)
     typevar_inputs, typevar_output = _typevar_positions(function)
     _, exit_codes = _result_contract(t.get_type_hints(function, include_extras=True).get('return'))
     return FunctionTaskHandle(

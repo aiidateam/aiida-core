@@ -12,14 +12,19 @@ import pytest
 
 from aiida.common.datastructures import Orbital
 from aiida.common.exceptions import InvalidEntryPointTypeError
-from aiida.engine import CalcJob, CalcJobImporter, WorkChain, calcfunction, workfunction
-from aiida.orm import CalcFunctionNode, Data, Node, WorkFunctionNode
+from aiida.engine import CalcJob, CalcJobImporter, WorkChain, calcfunction, task, workfunction
+from aiida.orm import CalcFunctionNode, Data, Node, TaskNode, WorkFunctionNode
 from aiida.orm.implementation.storage_backend import StorageBackend
 from aiida.parsers import Parser
 from aiida.plugins import entry_point, factories
 from aiida.schedulers import Scheduler
 from aiida.tools.dbimporters import DbImporter
 from aiida.transports import AsyncTransport, BlockingTransport, Transport
+
+
+@task
+def function_task() -> int:
+    return 1
 
 
 def custom_load_entry_point(group, name):
@@ -36,6 +41,7 @@ def custom_load_entry_point(group, name):
     entry_points = {
         'aiida.calculations': {
             'calc_job': CalcJob,
+            'function_task': function_task,
             'calc_function': calc_function,
             'work_function': work_function,
             'work_chain': WorkChain,
@@ -106,6 +112,9 @@ class TestFactories:
         plugin = factories.CalculationFactory('calc_function')
         assert plugin.is_process_function
         assert plugin.node_class is CalcFunctionNode
+
+        plugin = factories.CalculationFactory('function_task')
+        assert plugin.node_class is TaskNode
 
         plugin = factories.CalculationFactory('calc_job')
         assert plugin is CalcJob

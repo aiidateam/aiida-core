@@ -128,7 +128,7 @@ def CalculationFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPo
 
 
 def CalculationFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[CalcJob] | Callable:
-    """Return the `CalcJob` sub class registered under the given entry point.
+    """Return the `CalcJob`, calcfunction, or function task registered under the given entry point.
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
@@ -137,18 +137,18 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> EntryPoint |
     """
     from inspect import isclass
 
-    from aiida.engine import CalcJob, calcfunction, is_process_function
-    from aiida.orm import CalcFunctionNode
+    from aiida.engine import CalcJob, calcfunction, is_process_function, task
+    from aiida.orm import CalcFunctionNode, TaskNode
 
     entry_point_group = 'aiida.calculations'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
-    valid_classes = (CalcJob, calcfunction)
+    valid_classes = (CalcJob, calcfunction, task)
 
     if not load:
         return entry_point
 
     if (isclass(entry_point) and issubclass(entry_point, CalcJob)) or (
-        is_process_function(entry_point) and entry_point.node_class is CalcFunctionNode  # type: ignore[union-attr]
+        is_process_function(entry_point) and entry_point.node_class in (CalcFunctionNode, TaskNode)  # type: ignore[union-attr]
     ):
         return entry_point
 

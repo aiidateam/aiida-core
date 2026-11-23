@@ -25,7 +25,7 @@ from aiida.common.exceptions import (
     MissingRequiredInputsError,
 )
 from aiida.common.links import LinkType
-from aiida.engine import dataflow, expose, task
+from aiida.engine import calcfunction, dataflow, expose, task
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import Endpoint, GraphIR, InlineOperation, LoopControl, Route
 from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
@@ -1018,6 +1018,32 @@ def test_task_handle_call_raises() -> None:
     """A task handle declares work; a direct call raises and points at `run` and `run_get_node`."""
     with pytest.raises(GraphError, match='declares a task'):
         tasks.add(x=1, y=2)
+
+
+def test_task_node_round_trips_as_a_distinct_calculation_type(aiida_profile_clean, tmp_path) -> None:
+    """Task nodes can be queried separately and retain their type and links in an archive."""
+    from aiida.tools.archive import create_archive, import_archive
+
+    @calcfunction
+    def add(x: Int, y: Int) -> Int:
+        return x + y
+
+    task_result, task_node = run_get_node(tasks.add, x=2, y=3)
+    _, calc_node = add.run_get_node(x=Int(2), y=Int(3))
+    assert orm.QueryBuilder().append(orm.TaskNode).all(flat=True) == [task_node]
+    assert orm.QueryBuilder().append(orm.CalcFunctionNode).all(flat=True) == [calc_node]
+    assert orm.QueryBuilder().append(orm.CalculationNode).count() == 2
+
+    task_uuid, result_uuid = task_node.uuid, task_result.uuid
+    path = tmp_path / 'task.aiida'
+    create_archive([task_node], filename=path)
+    aiida_profile_clean.reset_storage()
+    import_archive(path)
+
+    restored = orm.load_node(task_uuid)
+    assert isinstance(restored, orm.TaskNode)
+    assert restored.outputs.result.uuid == result_uuid
+    assert restored.outputs.result.creator.uuid == task_uuid
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

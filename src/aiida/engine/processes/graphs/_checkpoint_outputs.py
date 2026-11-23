@@ -13,10 +13,10 @@ import typing as t
 from aiida.common.exceptions import GraphRuntimeError
 from aiida.engine._checkpoint_pickle import dumps, loads_unsafe
 from aiida.engine.processes.persistence import CheckpointPayload
-from aiida.orm import CalcFunctionNode, GraphNode, ProcessNode
+from aiida.orm import GraphNode, ProcessNode, TaskNode
 from aiida.orm.implementation.checkpoint_store import CheckpointBytes
 
-_OUTPUT_DIGEST = CalcFunctionNode.CHECKPOINT_OUTPUT_DIGEST
+_OUTPUT_DIGEST = TaskNode.CHECKPOINT_OUTPUT_DIGEST
 
 
 def _is_active(owner: GraphNode) -> bool:

@@ -598,6 +598,16 @@ class TestVerdiProcess:
             r'None<.*> Running\n    ├── None<.* | call_label> Finished\n    └── None<.*> Finished\n', result.output
         )
 
+    def test_task_report(self, run_cli_command):
+        """Display logs for a task just as for other process functions."""
+        from aiida.orm import TaskNode
+
+        node = TaskNode().store()
+        node.logger.log(LOG_LEVEL_REPORT, 'task report message')
+
+        result = run_cli_command(cmd_process.process_report, [str(node.pk)])
+        assert 'task report message' in result.output
+
     def test_report(self, run_cli_command):
         """Test the report command."""
         grandparent = WorkChainNode().store()

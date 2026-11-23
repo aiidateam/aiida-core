@@ -22,6 +22,12 @@ Graph bodies accept a general `partial(...)` input binding that needs no import:
 
 ### Breaking changes
 
+#### Function-backed tasks have a dedicated node type
+
+New function-backed `@task` runs, including `par_map` collectors, are recorded as `aiida.orm.TaskNode` instead of `aiida.orm.CalcFunctionNode`.
+Query `TaskNode` for new task runs or `CalculationNode` to include both calculation types.
+Existing records retain their original type. `@calcfunction` runs, wrapped `CalcJob`s and `WorkChain`s, and graph inline operations are unchanged.
+
 #### Graph input annotations are required
 
 Every `@graph` now requires a type annotation for each parameter, and `typing.Any` is rejected like a missing annotation.

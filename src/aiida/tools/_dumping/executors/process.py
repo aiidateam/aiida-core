@@ -652,7 +652,7 @@ class ReadmeGenerator:
             report = get_calcjob_report(process_node)
         elif isinstance(process_node, orm.WorkChainNode):
             report = get_workchain_report(node=process_node, levelname='REPORT', indent_size=2, max_depth=None)
-        elif isinstance(process_node, (orm.CalcFunctionNode, orm.WorkFunctionNode)):
+        elif isinstance(process_node, (orm.CalcFunctionNode, orm.TaskNode, orm.WorkFunctionNode)):
             report = get_process_function_report(process_node)
         else:
             report = 'N/A'

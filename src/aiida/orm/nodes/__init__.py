@@ -65,6 +65,7 @@ __all__ = (
     'Site',
     'Str',
     'StructureData',
+    'TaskNode',
     'TrajectoryData',
     'UpfData',
     'WorkChainNode',

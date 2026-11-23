@@ -138,7 +138,7 @@ def validate_link(
     :raise ValueError: if the proposed link is invalid
     """
     from aiida.common.links import LinkType, validate_link_label
-    from aiida.orm import CalculationNode, Node, WorkflowNode
+    from aiida.orm import CalculationNode, GraphNode, Node, WorkflowNode
     from aiida.orm.nodes.data.datanode import DataNode
 
     type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
@@ -174,7 +174,7 @@ def validate_link(
     link_mapping: dict[LinkType, tuple[tuple[type[Node], ...], tuple[type[Node], ...], str, str]] = {
         LinkType.CALL_CALC: ((WorkflowNode,), (CalculationNode,), 'unique_triple', 'unique'),
         LinkType.CALL_WORK: ((WorkflowNode,), (WorkflowNode,), 'unique_triple', 'unique'),
-        LinkType.CREATE: ((CalculationNode,), data_or_container, 'unique_pair', 'unique'),
+        LinkType.CREATE: ((CalculationNode, GraphNode), data_or_container, 'unique_pair', 'unique'),
         LinkType.INPUT_CALC: (data_or_container, (CalculationNode,), 'unique_triple', 'unique_pair'),
         LinkType.INPUT_WORK: (data_or_container, (WorkflowNode,), 'unique_triple', 'unique_pair'),
         LinkType.RETURN: ((WorkflowNode,), data_or_container, 'unique_pair', 'unique_triple'),

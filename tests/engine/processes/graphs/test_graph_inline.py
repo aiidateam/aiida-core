@@ -151,8 +151,8 @@ def test_mixed_inline_and_real_tasks_count_dispatches() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_graph_outputs_reject_computed_scalars_but_allow_existing_data() -> None:
-    """The root cannot RETURN a newly computed primitive; passthrough stays allowed."""
+def test_graph_outputs_materialize_computed_scalars_and_reuse_existing_data() -> None:
+    """Only newly computed values receive a CREATE link from the graph."""
     from aiida.engine.processes.graphs.process import GraphProcess
 
     op_add = _inline('total', 'add', {'left': (int,), 'right': (int,)})
@@ -166,10 +166,10 @@ def test_graph_outputs_reject_computed_scalars_but_allow_existing_data() -> None
     state = run_mod.GraphRun(computed, given={'x': 2, 'y': 3})
     state.step()
     assert state.outputs() == {'result': 5}
-    _, failed_node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(computed, {'x': 2, 'y': 3}))
-    assert failed_node.is_failed and not failed_node.is_excepted
-    assert failed_node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
-    assert '@task' in (failed_node.exit_message or '')
+    outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(computed, {'x': 2, 'y': 3}))
+    assert node.is_finished_ok
+    assert outputs['result'].value == 5
+    assert outputs['result'].creator.uuid == node.uuid
 
     passthrough = _graph(
         [],
@@ -196,15 +196,8 @@ def test_graph_outputs_reject_computed_scalars_but_allow_existing_data() -> None
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_computed_primitive_cannot_escape_through_nested_scopes() -> None:
-    """A computed primitive stays a primitive through nested scopes, so the root rejects it.
-
-    Regression for provenance laundering: nodeifying an inline result at an inner boundary
-    would let the root `RETURN` a newly created standalone `Data` without a `CREATE` link.
-    Both a nested passthrough and each branch arm must keep the primitive with provenance on,
-    while explicit materialization through a real `@task` stays allowed. Step-level probes feed
-    ORM `Int`/`Bool` scalars to prove the evaluator unwraps stored scalars inline.
-    """
+def test_computed_scalar_materializes_only_at_root_output() -> None:
+    """Nested passthrough and branch arms keep the primitive until the root publishes it."""
     from aiida.engine.processes.graphs.process import GraphProcess
     from aiida.orm import Node
 
@@ -236,10 +229,11 @@ def test_computed_primitive_cannot_escape_through_nested_scopes() -> None:
     assert orm_probe.outputs() == {'result': 5}
     assert orm_probe.scopes['root/nested']['given'] == {'value': 5}
     assert not isinstance(orm_probe.scopes['root/nested']['given']['value'], Node)
-    _, failed_node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(laundered, {'x': 2, 'y': 3}))
-    assert failed_node.is_failed and not failed_node.is_excepted
-    assert failed_node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
-    assert '@task' in (failed_node.exit_message or '')
+    outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(laundered, {'x': 2, 'y': 3}))
+    assert node.is_finished_ok
+    assert outputs['result'].value == 5
+    assert outputs['result'].creator.uuid == node.uuid
+    assert not node.called
 
     taken_body = _graph(
         [],
@@ -285,10 +279,11 @@ def test_computed_primitive_cannot_escape_through_nested_scopes() -> None:
         assert orm_probe.scopes[orm_child]['given'] == {'value': 5}
         assert not isinstance(orm_probe.scopes[orm_child]['given']['value'], Node)
         launch = GraphProcess._launch_inputs(branched, {'x': 2, 'y': 3, 'condition': condition})
-        _, failed_node = run_get_node(GraphProcess, **launch)
-        assert failed_node.is_failed and not failed_node.is_excepted
-        assert failed_node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
-        assert '@task' in (failed_node.exit_message or '')
+        outputs, node = run_get_node(GraphProcess, **launch)
+        assert node.is_finished_ok
+        assert outputs['result'].value == 5
+        assert outputs['result'].creator.uuid == node.uuid
+        assert not node.called
 
     materialized = _graph(
         [op_add, _process('first', program_tasks.add)],
@@ -599,8 +594,8 @@ def test_nested_namespace_outputs_return_existing_nodes() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_nested_inline_primitive_leaf_rejected_with_nested_path() -> None:
-    """A computed primitive nested inside a namespace fails naming its dotted path."""
+def test_inline_primitive_leaf_materialized_at_nested_path() -> None:
+    """The graph creates only the inline leaf of a mixed output namespace."""
     from aiida.engine.processes.graphs.process import GraphProcess
     from aiida.orm import Node
 
@@ -630,11 +625,11 @@ def test_nested_inline_primitive_leaf_rejected_with_nested_path() -> None:
     resolved = probe.outputs()
     assert resolved['outer']['bad'] == 5
     assert isinstance(resolved['outer']['good'], Node)
-    _, failed_node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(graph, {'x': 2, 'y': 3, 'z': 4}))
-    assert failed_node.is_failed and not failed_node.is_excepted
-    assert failed_node.exit_status == 401  # ERROR_GRAPH_RUNTIME per the graph runtime exit-code spec.
-    assert 'outer.bad' in (failed_node.exit_message or '')
-    assert '@task' in (failed_node.exit_message or '')
+    outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(graph, {'x': 2, 'y': 3, 'z': 4}))
+    assert node.is_finished_ok
+    assert outputs['outer']['bad'].value == 5
+    assert outputs['outer']['bad'].creator.uuid == node.uuid
+    assert outputs['outer']['good'].creator.uuid == node.called[0].uuid
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

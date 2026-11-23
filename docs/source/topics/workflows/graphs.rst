@@ -167,7 +167,7 @@ Each ``WorkChain`` concept has a counterpart in a graph:
 * ``spec.outline`` steps become straight-line code: ``if_`` becomes ``if``, ``while_`` becomes ``while``, with no step functions to name and order (see :ref:`topics:workflows:graphs:control_flow`);
 * ``self.submit(...)`` plus ``to_context`` becomes a direct call: outputs arrive as named values, so downstream wiring is type-checked instead of looked up in ``self.ctx`` at run time (see :ref:`topics:workflows:graphs:task_kinds`);
 * ``self.ctx`` resume state becomes carried loop state and inline values: counters and flags checkpoint without stored nodes (see :ref:`topics:workflows:graphs:inline`);
-* ``self.out(...)`` becomes ``return``: the graph returns existing nodes instead of attaching outputs by hand (see :ref:`topics:workflows:graphs:outputs`);
+* ``self.out(...)`` becomes ``return``: the graph publishes returned values instead of attaching outputs by hand (see :ref:`topics:workflows:graphs:outputs`);
 * ``spec.exit_code`` for expected failures becomes ``Result[..., Errors]`` with ``Err`` returns, or ``errors=`` on a task wrapping a process class: declared outcomes branch and retry in the graph instead of needing a restart work chain (see :ref:`topics:workflows:graphs:declared_failures` and :ref:`topics:workflows:graphs:retries`).
 
 As compared to work chains, graphs provide: less code to write, static pre-runtime validation with actionable error messages, and on-the-fly construction without the need for entry point registration. Tasks stay processes with full provenance, executed by daemon workers.
@@ -313,9 +313,9 @@ Only finite numbers, strings, booleans, and ``None`` bind; anything else (format
 
 Inline results are ephemeral orchestration state, not scientific data:
 
-* **No provenance:** inline values never become data nodes and never carry links. Only task outputs are stored.
+* **No intermediate provenance:** evaluating an inline value does not store or link a data node.
 * **Checkpointed, not stored:** the scheduler keeps inline values in its scope state, so restarts resume counters and conditions, but the provenance graph shows only the tasks that ran.
-* **Root graphs never return a newly computed scalar:** returning ``n`` above would publish a value with no creator, breaking the rule that workflows return existing data while only tasks create new data. A root graph returns task outputs, graph inputs, or collector-built containers, or nothing, declared explicitly with ``return {}``. Use an explicit task for a scientific result computed from inline state. Returning a bound literal directly fails when the graph is built, for the same reason.
+* **Output materialization:** returning ``n`` from the root stores it as a new data node with both ``CREATE`` and ``RETURN`` links from the graph. Nested scopes forward inline values without storing them.
 * **Nested helpers may return control state:** a subgraph can return an inline value for its caller to consume as orchestration state, since the caller scope, not the provenance, receives it.
 * **Explicit tasks are never inlined:** a ``@task`` function always runs as its own child process, even when its body is a single expression. Inlining never invents a calculation absent from the source.
 * **Cheap by construction:** inline expressions run inside the graph process, so keep them to the supported operators. Anything else (formatting, method calls, nested task calls, slices, set and generator comprehensions, private attribute reads) belongs in a task and still raises ``GraphLanguageError``. Division by zero and non-finite results fail the run.
@@ -354,8 +354,8 @@ A comprehension over a task-produced list reads the packing task's element hint 
 Comprehensions over owned members keep the owned contract when they forward the members themselves, so ``[item for item in values]`` over ``list[Int]`` validates against a downstream ``list[Int]`` consumer; unwrapped or computed members fall back to plain contracts, so ``[item.value + 1 for item in values]`` feeds a ``list[int]`` consumer instead.
 Inline indexing and comprehensions require Python container hints such as ``list[orm.Int]``. Pass ``orm.DataList`` and ``orm.DataList[T]`` wires whole instead.
 Task or method calls inside an expression, slices, set or generator comprehensions, private attribute reads, and nested boolean combinations or conditional expressions inside a comprehension all stay task concerns and fail the build.
-The engine semantics match scalar inline operations: expressions evaluate inside the graph process with no child processes, no ``CREATE`` links, and no provenance of their own; their values checkpoint with the scope while only task outputs are stored.
-A root graph never returns a newly computed collection or scalar; route the value through a task and return the task output instead.
+Like scalar inline operations, these expressions evaluate inside the graph process and checkpoint with the scope without creating child processes or intermediate data nodes.
+The root materializes a returned collection only when it publishes its outputs.
 Returning an existing owned member itself stays under the unchanged owned-container contract and fails at launch, so consume it in a task first.
 
 .. _topics:workflows:graphs:control_flow:
@@ -510,9 +510,8 @@ Graphs can be launched like any other process, with a loaded AiiDA profile:
 * Calling ``multiply_add(x=2, y=3, z=4)`` directly raises a :py:class:`~aiida.common.exceptions.GraphError`, because the graph body is never executed as Python.
 * Graph inputs are the function parameters; an input omitted at launch takes its literal default.
 * Graphs and tasks take no ``*args`` or ``**kwargs``, because every input needs its own declared port.
-* Graph outputs can be task outputs or graph inputs; a graph with no outputs ends with an explicit ``return {}``.
-  A root graph never returns a newly computed inline scalar (use an explicit task for a scientific result); a nested graph may return inline control state for its caller (see :ref:`topics:workflows:graphs:inline`).
-* A graph is a workflow, so it returns existing data nodes -- the recipe's ``summarize`` report, for example; only tasks create new data (see :ref:`topics:provenance:concepts`).
+* Graph outputs can reference task outputs, graph inputs, or new inline values; a graph with no outputs ends with an explicit ``return {}``.
+* Only the root materializes inline return values; a nested graph may return inline control state for its caller without storing a node (see :ref:`topics:workflows:graphs:inline`).
 
 Tasks can be run independently: ``run_get_node(add, x=1, y=2)`` launches a single task.
 Function-based tasks require a type annotation for every parameter, including those with defaults, and for the return value.
@@ -894,6 +893,20 @@ To pass a subset of fields or replace one, wire the ports one by one, such as ``
 
 Static type checkers such as mypy and pyright reject a variable as an annotation; the graph lowering resolves it when the graph is built.
 
+Mutable data inputs
+-------------------
+
+Function tasks receive stored ORM inputs by default, so setters on scientific data raise an error.
+Annotate an input with ``Annotated[NodeType, PortField(mutable=True)]`` to give the task its own unstored clone while linking the original as its input.
+Import ``Annotated`` from ``typing`` and ``PortField`` from ``aiida.engine``.
+Each writable port gets a separate clone, even when several ports share one source.
+The task can return its clone as a fresh calculation output; otherwise the clone is discarded.
+The annotation does not change Python scalar arguments or hide setters from a type checker.
+
+Every declared graph input along the path to a writable port must also opt in with ``PortField(mutable=True)``.
+A graph does not clone on entry, and returning a binding from an inline scope does not change its permission.
+A fresh calculation output can feed a writable port directly.
+
 .. _topics:workflows:graphs:outputs:
 
 Outputs
@@ -952,8 +965,10 @@ Only a direct member annotation of one ``DataNode`` subclass is mapped.
         return total(values=packed)
 
 A graph returning one value declares one output named ``result``, and a graph returning a ``dict`` declares one output per key.
-A nested ``dict`` declares nested outputs, and returning a whole namespace regroups its existing leaves under one output without creating data.
-A leaf without a node, such as a ``None`` value for a nullable field, stays out of the emitted outputs.
+A nested ``dict`` declares nested outputs, and returning a whole namespace regroups its leaves under one output.
+The root graph reuses any existing stored node and attaches only a ``RETURN`` link.
+It materializes a new inline value as a data node with both ``CREATE`` and ``RETURN`` links to the same UUID.
+A ``None`` value for a nullable field stays out of the emitted outputs.
 
 Every graph declares a return annotation, and the final return and every early return must agree with it when the graph is built:
 

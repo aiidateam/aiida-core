@@ -120,15 +120,13 @@ def test_const_templates_round_trip_through_json(declaration: GraphHandle) -> No
 @pytest.mark.parametrize(
     ('declaration', 'message'),
     [
-        pytest.param(constants.root_constant, 'scalar constant held as orchestration state', id='root-constant'),
-        pytest.param(constants.const_source, 'scalar constant held as orchestration state', id='nested-source-root'),
         pytest.param(constants.nonfinite_constant, 'inline numbers must be finite', id='nonfinite'),
         pytest.param(constants.list_constant, 'provide collections as graph inputs', id='list'),
         pytest.param(constants.fstring_constant, 'build this text in a task', id='fstring'),
     ],
 )
 def test_rejected_constants_fail_during_build(declaration: GraphHandle, message: str) -> None:
-    """Constants outside the finite-scalar contract, and constant root outputs, fail at build."""
+    """Constants outside the finite-scalar contract fail at build."""
     with pytest.raises(GraphLanguageError, match=message):
         declaration.build()
 

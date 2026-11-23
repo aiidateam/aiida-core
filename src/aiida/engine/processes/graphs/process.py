@@ -23,7 +23,8 @@ from aiida.common.processes import ProcessState
 from aiida.engine.execution import RetryPolicy
 from aiida.engine.processes.calcjobs.calcjob import CalcJob
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.engine.processes.generic.ports import UNSPECIFIED
+from aiida.engine.processes.generic.ports import UNSPECIFIED, Port
+from aiida.engine.processes.generic.ports import PortNamespace as GenericPortNamespace
 from aiida.engine.processes.graphs.inputs import _at, _prepare_graph_inputs
 from aiida.engine.processes.graphs.ir import GraphIR, InlineOperation, MapControl, ProcessTask, _input_ports_at
 from aiida.engine.processes.graphs.par_map import _collect_dict, _collect_list
@@ -39,11 +40,11 @@ from aiida.engine.processes.graphs.recovery import (
 from aiida.engine.processes.graphs.run import GraphRun, _GraphRunState, _Start
 from aiida.engine.processes.graphs.runtime_config import _bind_runtime_config, _merge_runtime_inputs
 from aiida.engine.processes.graphs.tasks import TaskProcess
-from aiida.engine.processes.ports import PortNamespace, checkpoint_leaves
+from aiida.engine.processes.ports import PortNamespace, _runtime_value, checkpoint_leaves
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.orm import CalcJobNode, Dict, GraphNode, Node, load_node
+from aiida.orm import CalcJobNode, Dict, GraphNode, Node, load_node, to_aiida_type
 
 __all__ = ('GraphProcess',)
 
@@ -53,9 +54,8 @@ def _store_run_nodes(data: t.Any) -> None:
 
     Nested scopes normalize their inputs into ORM nodes (defaults included), mirroring what a nested
     child process used to store as its own inputs. The single root process never links these scope
-    inputs: workflows must not `CREATE` scientific outputs, and scope labels would collide with the
-    root inputs. Standalone storage keeps the nodes YAML-serializable for checkpoints while leaving
-    provenance to the child tasks that consume them.
+    inputs. Standalone storage keeps those nodes YAML-serializable for checkpoints while leaving
+    input provenance to the child tasks that consume them.
     """
     if isinstance(data, Node):
         if not data.is_stored:
@@ -507,27 +507,19 @@ class GraphProcess(Process):
             return self.exit_codes.ERROR_TASK_FAILED.format(task=failure.label)
         try:
             for name, value in state.outputs().items():
-                self._validate_output(name, value)
-                self.out(name, value)
+                self.out(name, self._materialize_output(self.output_ports[name], value))
         except GraphRuntimeError as exc:
             return self.exit_codes.ERROR_GRAPH_RUNTIME.format(message=str(exc))
         return None
 
-    def _validate_output(self, path: str, value: t.Any) -> None:
-        """Reject newly computed primitives, allowing nested namespaces of existing nodes."""
+    def _materialize_output(self, port: Port | GenericPortNamespace, value: t.Any) -> t.Any:
+        """Convert inline output values to nodes without changing existing node identity."""
+        if isinstance(port, GenericPortNamespace):
+            return {name: self._materialize_output(port[name], child) for name, child in value.items()}
         if isinstance(value, Node):
-            return
-        if isinstance(value, Mapping):
-            for field, child in value.items():
-                self._validate_output(f'{path}.{field}', child)
-            return
-        msg = (
-            f'graph output `{path}` is a Python `{type(value).__name__}` computed inside the graph; '
-            'graphs cannot RETURN a newly computed scalar as scientific data: '
-            'create the value in a `@task` and return the task output instead. '
-            'Passthrough of existing data and real task outputs stays allowed.'
-        )
-        raise GraphRuntimeError(msg)
+            return value
+        converted = _runtime_value(port.valid_type, value)
+        return converted if isinstance(converted, Node) else to_aiida_type(converted)
 
     @override
     def _build_process_label(self) -> str:

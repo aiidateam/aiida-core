@@ -27,6 +27,14 @@ Graph bodies accept a general `partial(...)` input binding that needs no import:
 Every `@graph` now requires a type annotation for each parameter, and `typing.Any` is rejected like a missing annotation.
 Previously unannotated parameters silently became unconstrained inputs.
 Annotate each parameter with its intended type.
+
+#### Graph port mutability and output provenance
+
+Function tasks receive stored data-node inputs by default and cannot change their scientific data.
+Use `Annotated[NodeType, PortField(mutable=True)]` on the task input and every graph input along its path to give the task an unstored private clone while linking the original.
+Graphs now publish inline values directly: the root adds both `CREATE` and `RETURN` for a newly materialized output and only `RETURN` for an existing node.
+Nested scopes do not publish outputs or create provenance nodes of their own.
+
 #### Graph return annotations are required
 
 Every `@graph` now declares a return annotation, and its final return and every early return must agree with it when the graph is built.
@@ -38,8 +46,8 @@ Add the annotation to existing graphs; stored declarations and checkpoints need 
 
 Graph bodies now accept inline collection expressions over typed `list[T]`/`dict[str, T]` collections: integer indexing of lists with negatives, string-key lookup of mappings with runtime keys, public annotated item reads such as `item.value`, one-type list/dict literals within collection expressions, and filtered, nested list/dict comprehensions with `mapping.items()` pair iteration.
 Previously each of these forms failed at build time with a diagnostic telling authors to pass whole collections or write out one call per value; each form now lowers to an `expression` inline placement that evaluates inside the graph process.
-The engine semantics match scalar inline operations: no child processes, no `CREATE` links, checkpointed scope values, and only task outputs entering the provenance.
-A root graph cannot return a newly computed collection or scalar, and returning an existing owned member itself still fails at launch under the unchanged owned-container contract.
+Like scalar inline operations, these expressions evaluate in the graph process and checkpoint as scope values without creating child processes.
+A root graph can materialize a newly computed collection or scalar at publication; returning an existing owned member itself still fails at launch under the unchanged owned-container contract.
 Still rejected at build time are task or method calls inside an expression, slices, set/generator comprehensions, private attribute reads, missing element annotations, and inline collection expressions on `DataList[T]` wires (use `list[orm.Int]` hints for inline expressions, or pass `orm.DataList` wires whole).
 Templates carrying expressions serialize as graph declaration version `0.3`, while existing scalar-only `0.2` and no-op `0.1` declarations remain readable; stored declarations and checkpoints that avoid the new forms need no migration.
 

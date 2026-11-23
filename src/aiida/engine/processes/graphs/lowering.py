@@ -1150,14 +1150,7 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, Outp
         lowered = _lower_return_value(state, expression)
         assert isinstance(lowered, dict)
         return lowered
-    reference = _lower_value(state, expression, allow_call=True)
-    if not isinstance(reference, _Reference) or (
-        not reference.port and not isinstance(reference.shape, NamespaceShape)
-    ):
-        msg = 'graphs return existing nodes rather than creating data; ' + 'return a task output or graph input instead'
-        _reject(state, node=expression, reason=msg)
-    assert isinstance(reference, _Reference)
-    _reject_const_return(state, reference, node=expression)
+    reference = _return_reference(state, expression)
     if isinstance(reference.shape, NamespaceShape):
         return {'result': _endpoint_tree(reference, preserve_optional_namespaces=True)}
     port = reference.port.split('.')[-1]
@@ -1182,13 +1175,17 @@ def _lower_return_value(state: _LoweringState, expression: ast.expr) -> OutputTr
         return nested
     if isinstance(expression, ast.Call) and _calls_intrinsic(state, expression, forward_outputs):
         return _lower_forward_outputs(state, expression)
-    reference = _lower_value(state, expression, allow_call=True)
-    if not isinstance(reference, _Reference):
-        msg = 'graphs return existing nodes rather than creating data; ' + 'return a task output or graph input instead'
-        _reject(state, node=expression, reason=msg)
-    assert isinstance(reference, _Reference)
-    _reject_const_return(state, reference, node=expression)
-    return _endpoint_tree(reference, preserve_optional_namespaces=True)
+    return _endpoint_tree(_return_reference(state, expression), preserve_optional_namespaces=True)
+
+
+def _return_reference(state: _LoweringState, expression: ast.expr) -> _Reference:
+    """Keep returned literals inline until the root publishes its outputs."""
+    value = _lower_value(state, expression, allow_call=True)
+    if not isinstance(value, _Reference):
+        return _place_constant(state, value=value, node=expression)
+    if not value.port and not isinstance(value.shape, NamespaceShape):
+        _reject(state, node=expression, reason='return a declared value or output namespace')
+    return value
 
 
 def _calls_intrinsic(state: _LoweringState, node: ast.Call, intrinsic: object) -> bool:
@@ -3560,35 +3557,6 @@ def _lower_operand(state: _LoweringState, expression: ast.expr) -> _Reference | 
         _reject(state, node=expression, reason=msg)
     # Signed literals fold in `_lower_value`; anything else unary places an operation there.
     return _lower_value(state, expression)
-
-
-def _const_task(state: _LoweringState, reference: _Reference) -> InlineOperation | None:
-    """Return the `const` placement a reference resolves to, or `None` for other wires."""
-    if reference.task is None:
-        return None
-    for placed in state.tasks:
-        if placed.name == reference.task:
-            return placed if isinstance(placed, InlineOperation) and placed.operation == 'const' else None
-    return None
-
-
-def _reject_const_return(state: _LoweringState, reference: _Reference, node: ast.AST) -> None:
-    """Reject a bound scalar literal as a root graph output.
-
-    Constants are ephemeral orchestration state, never stored data: returning one would publish
-    a value with no creating task, breaking the rule that workflows return existing data while
-    only tasks create new data. Only the root return is rejected here: a nested graph lowers
-    through this same path with a deeper stack, and may thread constants as control state for
-    its caller to consume, with the runtime root boundary still guarding the final outputs.
-    """
-    if len(state.stack) != 1 or _const_task(state, reference) is None:
-        return
-    msg = (
-        'graphs return existing nodes rather than creating data; '
-        + 'this name binds a scalar constant held as orchestration state, not a stored node; '
-        + 'create the value in a `@task` and return the task output instead'
-    )
-    _reject(state, node=node, reason=msg)
 
 
 def _place_constant(state: _LoweringState, *, value: int | float | str | bool | None, node: ast.AST) -> _Reference:

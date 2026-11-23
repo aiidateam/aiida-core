@@ -16,7 +16,7 @@ The `tests/engine/processes/graphs/programs/` fixtures include historical edge c
 * `@graph` bodies wire names, literals, and inline expressions only; no science in the root.
 * Keep the step placement local to the `while` body; branch on a comparison, bind a status literal, then report.
 * One meaningful `@task` summary records value, target, attempts, and status; the root returns that existing node.
-* Root returns task outputs, graph inputs, or collector containers; never a new inline scalar.
+* Root returns task outputs and graph inputs by reference, and materializes returned inline values itself.
 * Stored graph node keeps flat inputs (`root.inputs.initial`); `outputs['result']` reads the report.
 
 ## Testing

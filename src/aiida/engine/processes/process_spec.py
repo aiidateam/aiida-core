@@ -66,7 +66,7 @@ def _as_a_port(field: _Field) -> dict[str, t.Any]:
     # A default always wins: the port coerces defaulted inputs to not required, so `required`
     # survives only for default-less fields.
     required = field.required or type(None) not in valid_type
-    options: dict[str, t.Any] = {'required': required, 'help': field.help}
+    options: dict[str, t.Any] = {'required': required, 'help': field.help, 'mutable': field.mutable}
 
     if not field.required:
         options['default'] = _lazily(field.default)
@@ -384,6 +384,7 @@ class GraphProcessSpec(ProcessSpec):
             serializer=to_aiida_type,
             help=field.help,
             durable=field.durable,
+            mutable=field.mutable,
         )
 
 

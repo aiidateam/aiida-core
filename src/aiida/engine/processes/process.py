@@ -745,9 +745,10 @@ class Process(ProcessBase):
                         self.out(label, entry.node)
                     # This is needed for CalcJob. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
-                    for entry in self.node.base.links.get_outgoing(link_type=LinkType.CREATE):
-                        label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
-                        self.out(label, entry.node)
+                    if isinstance(self.node, orm.CalculationNode):
+                        for entry in self.node.base.links.get_outgoing(link_type=LinkType.CREATE):
+                            label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
+                            self.out(label, entry.node)
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass
@@ -787,9 +788,8 @@ class Process(ProcessBase):
             return
 
         outputs_flat = self._flat_outputs()
-        outputs_stored = self.node.base.links.get_outgoing(
-            link_type=(LinkType.CREATE, LinkType.RETURN)
-        ).all_link_labels()
+        link_type = LinkType.RETURN if isinstance(self.node, orm.WorkflowNode) else LinkType.CREATE
+        outputs_stored = self.node.base.links.get_outgoing(link_type=link_type).all_link_labels()
         outputs_new = set(outputs_flat.keys()) - set(outputs_stored)
 
         for link_label, output in outputs_flat.items():
@@ -813,8 +813,10 @@ class Process(ProcessBase):
                 # never return owned children (including owned nested
                 # containers); outputs are not copied automatically.
                 self._reject_owned_workflow_output(output)
+                if isinstance(self.node, orm.GraphNode) and not output.is_stored:
+                    output.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
+                    output.store()
                 output.base.links.add_incoming(self.node, LinkType.RETURN, link_label)
-                output.store()
 
     def _detach_owned_output(self, output: t.Any) -> t.Any:
         """Return the recordable calculation output for ``output`` (spec §7).
@@ -1193,8 +1195,8 @@ class Process(ProcessBase):
         output_key_map = {}
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
-        link_types = (LinkType.CREATE, LinkType.RETURN)
-        process_outputs_dict = node.base.links.get_outgoing(link_type=link_types).nested()
+        link_type = LinkType.RETURN if isinstance(node, orm.WorkflowNode) else LinkType.CREATE
+        process_outputs_dict = node.base.links.get_outgoing(link_type=link_type).nested()
 
         for port_name in process_outputs_dict:
             top_namespace = port_name.split(namespace_separator)[0]

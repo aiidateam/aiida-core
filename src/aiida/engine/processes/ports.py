@@ -191,8 +191,9 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
     process their specific keywords.
     """
 
-    def __init__(self, *args, durable: bool = True, **kwargs) -> None:
+    def __init__(self, *args, durable: bool = True, mutable: bool = False, **kwargs) -> None:
         """Override the constructor to check the type of the default if set and warn if not immutable."""
+        self.mutable = mutable
         self.durable = durable
         if not durable:
             kwargs['non_db'] = True

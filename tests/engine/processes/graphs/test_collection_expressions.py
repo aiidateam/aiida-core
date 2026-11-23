@@ -230,15 +230,12 @@ def test_selected_owned_member_rejected_at_launch(serialized: bool) -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_computed_scalar_cannot_launder_through_selection() -> None:
-    """Selecting then shifting a member value is a computed scalar, so the root rejects it."""
-    try:
-        collection_expressions.laundered_scalar.build()
-    except (GraphLanguageError, GraphTypeCheckError):
-        return
-    _, node = run_get_node(collection_expressions.laundered_scalar, values=[Int(1)])
-    assert node.exit_status == 401
-    assert node.exit_message is not None and 'task' in node.exit_message.lower()
+def test_computed_scalar_from_selected_member() -> None:
+    """The root creates the shifted value, not the selected member."""
+    outputs, node = run_get_node(collection_expressions.shifted_scalar, values=[Int(1)])
+    assert node.is_finished_ok
+    assert outputs['result'].value == 2
+    assert outputs['result'].creator.uuid == node.uuid
 
 
 @pytest.mark.parametrize(

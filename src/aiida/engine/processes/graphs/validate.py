@@ -13,6 +13,7 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common.exceptions import GraphTypeCheckError
+from aiida.engine.processes.graphs.bindings import validate_bindings
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
     Endpoint,
@@ -70,6 +71,7 @@ def validate_graph(graph: GraphIR) -> None:
         for site in graph.success_returns():
             _check_types(site.build_return_namespace(), expected, 'early return')
     _validate_acyclic(graph)
+    validate_bindings(graph)
 
 
 def _validate_inputs(graph: GraphIR, boundary: PortNamespace) -> None:

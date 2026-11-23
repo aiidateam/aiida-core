@@ -236,7 +236,6 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(branches.loop_arm_two_names, 'exposes one wire', id='loop-arm-names'),
         pytest.param(parameters.variadic_parameters, 'list each input separately', id='variadic'),
         pytest.param(parameters.infinite_default, 'finite JSON', id='infinite-default'),
-        pytest.param(ports.literal_return, 'return a task output or graph input', id='literal'),
         pytest.param(ports.make_config, "unregistered call 'Configuration'", id='make-config'),
         pytest.param(ports.missing_final_return, 'end the graph with a return', id='missing-return'),
         pytest.param(ports.nonfinite_dict_value, 'finite JSON', id='nonfinite-dict'),

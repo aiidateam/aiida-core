@@ -14,12 +14,13 @@ import functools
 import inspect
 import typing as t
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import UnionType
 
 from typing_extensions import is_typeddict
 
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
+from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import override
 from aiida.common.links import validate_link_label
 from aiida.common.loaders import get_object_loader
@@ -45,6 +46,7 @@ from aiida.engine.processes.port_model import (
     _without_marks,
 )
 from aiida.engine.processes.ports import (
+    InputPort,
     PortNamespace,
     _infer_node_types,
     _infer_runtime_types,
@@ -209,6 +211,18 @@ def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
     )
 
 
+def _task_input(port: Port | PortNamespace, value: t.Any) -> t.Any:
+    """Copy each writable node leaf independently, leaving the input links untouched."""
+    if isinstance(port, PortNamespace) and isinstance(value, Mapping):
+        return AttributesFrozendict({name: _task_input(port[name], child) for name, child in value.items()})
+    if isinstance(port, InputPort) and isinstance(value, DataNode):
+        if port.durable and not value.is_stored:
+            value.store()
+        if port.mutable:
+            return value.clone()
+    return value
+
+
 class TaskProcess(FunctionProcessBase):
     """Task process with plain Python inputs and static outputs."""
 
@@ -231,16 +245,13 @@ class TaskProcess(FunctionProcessBase):
         if not isinstance(spec, GraphProcessSpec):
             msg = f'task inputs need a graph spec, not `{type(spec).__name__}`.'
             raise TypeError(msg)
-        annotation = _expanded_annotation(annotations.get(parameter.name))
-        spec.input_from_field(
+        field = _field_from_annotation(
             parameter.name,
-            _field_from_annotation(
-                parameter.name,
-                annotation,
-                parameter.default if parameter.default is not parameter.empty else UNSPECIFIED,
-                param_help_string.get(parameter.name),
-            ),
+            annotations.get(parameter.name),
+            parameter.default if parameter.default is not parameter.empty else UNSPECIFIED,
+            param_help_string.get(parameter.name),
         )
+        spec.input_from_field(parameter.name, replace(field, annotation=_expanded_annotation(field.annotation)))
 
     @classmethod
     @override
@@ -311,6 +322,8 @@ class TaskProcess(FunctionProcessBase):
             kind = _owned_container_type(hints.get(name))
             if kind is not None and isinstance(value, kind):
                 bound.arguments[name] = list(value) if kind is DataList else dict(value.items())
+            elif (port := self.spec().inputs.get(name)) is not None:
+                bound.arguments[name] = _task_input(port, value)
         return list(bound.args), bound.kwargs
 
     @override

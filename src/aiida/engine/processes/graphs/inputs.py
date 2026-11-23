@@ -66,7 +66,9 @@ def _shape_from_port(port: InputPort | OutputPort | PortNamespace) -> Shape:
     if not isinstance(port, PortNamespace):
         kinds = port.valid_type
         types = (kinds,) if isinstance(kinds, type) else kinds
-        return LeafShape(types=types, durable=port.durable, **options)
+        return LeafShape(
+            types=types, durable=port.durable, mutable=isinstance(port, InputPort) and port.mutable, **options
+        )
     return NamespaceShape(
         fields=tuple(
             (name, _shape_from_port(child)) for name, child in port.items() if not getattr(child, 'is_metadata', False)
@@ -85,7 +87,7 @@ def _port_for_shape(name: str, shape: Shape) -> InputPort | PortNamespace:
         else:
             options['default'] = value
     if isinstance(shape, LeafShape):
-        port = InputPort(name, valid_type=shape.types, durable=shape.durable, **options)
+        port = InputPort(name, valid_type=shape.types, durable=shape.durable, mutable=shape.mutable, **options)
         # The constructor normalizes `valid_type`; restore the exact shape.
         port.valid_type = shape.types
         if not shape.required and port.valid_type is not None and type(None) not in port.valid_type:

@@ -1321,7 +1321,7 @@ def test_begin_loop_missing_condition_port_names_loop() -> None:
     spec = compile_graph(loops.countdown)
     state = GraphRun(spec, given={'value': 3, 'condition': True})
     with pytest.raises(GraphRuntimeError, match='loop `loop_1` is missing its condition port'):
-        state._begin_loop('root', spec.tasks[0], {})
+        state._begin_loop('root', spec.tasks[0], {}, {})
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

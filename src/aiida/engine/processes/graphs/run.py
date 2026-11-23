@@ -29,6 +29,16 @@ from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs._checkpoint_outputs import read_outputs
+from aiida.engine.processes.graphs.bindings import (
+    Permission,
+    check_permissions,
+    declared_permissions,
+    inline_permissions,
+    output_permissions,
+    process_permissions,
+    select_permission,
+    wired_permissions,
+)
 from aiida.engine.processes.graphs.expressions import evaluate_expression
 from aiida.engine.processes.graphs.inputs import _at, _drops_none_value, _place, _prepare_graph_inputs
 from aiida.engine.processes.graphs.ir import (
@@ -66,9 +76,8 @@ def _prepared_scope_given(body: GraphIR, raw: dict[str, t.Any]) -> dict[str, t.A
     Nested graphs previously launched as child `GraphProcess` nodes, so every boundary ran
     `_prepare_graph_inputs` plus input-namespace and per-consumer validation. Scopes keep the
     same contract: defaults fill here and unknown or mistyped inputs fail loudly on entry.
-    Wired values keep their runtime identity: nodeifying a computed inline primitive into
-    a standalone `Data` node would let the root `RETURN` it as scientific data without a
-    `CREATE` link. Only filled defaults serialize into nodes for checkpoint checkout, like
+    Wired values keep their runtime identity, so inline values only materialize if
+    a task consumes them or the root publishes them. Filled defaults serialize for checkpoints, like
     root inputs serialize for their own `INPUT_WORK` links; existing `Node` inputs keep
     their identity. Real tasks convert their inputs through the process machinery at
     dispatch time.
@@ -287,6 +296,7 @@ class _ScopeState(t.TypedDict, total=False):
     selector: str
     prefix: str
     given: dict[str, t.Any]
+    permissions: dict[str, Permission]
     instances: dict[str, list[str]]
     frames: dict[str, list[str]]
     collectors: dict[str, str]
@@ -582,6 +592,7 @@ class GraphRun:
         selector: str,
         given: dict[str, t.Any],
         prefix: str,
+        permissions: dict[str, Permission],
     ) -> str:
         """Create one child scope and return its key, deterministic in its lineage."""
         sibling = sum(
@@ -595,6 +606,7 @@ class GraphRun:
         self.scopes[key] = _new_scope_state(
             parent=parent, placement=placement, kind=kind, selector=selector, prefix=prefix, given=given
         )
+        self.scopes[key]['permissions'] = permissions
         self._invalidate()
         return key
 
@@ -1108,6 +1120,7 @@ class GraphRun:
                     'selector': scope.get('selector', ''),
                     'prefix': scope.get('prefix', ''),
                     **({'given': scope['given']} if 'given' in scope else {}),
+                    **({'permissions': scope['permissions']} if 'permissions' in scope else {}),
                     **({'failure': scope['failure']} if 'failure' in scope else {}),
                     **({'return_origin': scope['return_origin']} if 'return_origin' in scope else {}),
                     'instances': {name: list(labels) for name, labels in scope.get('instances', {}).items()},
@@ -1137,6 +1150,8 @@ class GraphRun:
             )
             if 'given' in saved:
                 state['given'] = dict(saved['given'])
+            if 'permissions' in saved:
+                state['permissions'] = saved['permissions']
             if 'failure' in saved:
                 failure = saved['failure']
                 state['failure'] = failure if isinstance(failure, str) else (failure[0], failure[1])
@@ -1167,14 +1182,18 @@ class GraphRun:
             self._run_inline(scope_key, task)
             return
         inputs = self._inputs_for(scope_key, task)
+        permissions = self._input_permissions(scope_key, task)
+        if isinstance(task, (SubgraphTask, ProcessTask)):
+            for ports in task.input_ports():
+                check_permissions(ports, permissions, task.name, values=inputs)
         if isinstance(task, SubgraphTask):
             self._begin_subgraph(scope_key, task, inputs)
         elif isinstance(task, BranchControl):
-            self._begin_branch(scope_key, task, inputs)
+            self._begin_branch(scope_key, task, inputs, permissions)
         elif isinstance(task, LoopControl):
-            self._begin_loop(scope_key, task, inputs)
+            self._begin_loop(scope_key, task, inputs, permissions)
         elif isinstance(task, MapControl):
-            self._begin_map(scope_key, task, inputs, step)
+            self._begin_map(scope_key, task, inputs, permissions, step)
         else:
             label = self._claim(scope['prefix'] + name)
             scope.setdefault('instances', {}).setdefault(name, []).append(label)
@@ -1232,11 +1251,14 @@ class GraphRun:
             selector='',
             given=_prepared_scope_given(task.body, raw),
             prefix=f'{scope["prefix"]}{task.name}__',
+            permissions=declared_permissions(task.body.build_input_namespace()),
         )
         scope.setdefault('frames', {}).setdefault(task.name, []).append(child)
         self._invalidate()
 
-    def _begin_branch(self, scope_key: str, task: BranchControl, inputs: dict[str, t.Any]) -> None:
+    def _begin_branch(
+        self, scope_key: str, task: BranchControl, inputs: dict[str, t.Any], permissions: dict[str, Permission]
+    ) -> None:
         """Enter the taken side of a branch as one child scope; empty sides settle at once.
 
         `condition_test` decides selection without truthiness coercion: `is_none` and
@@ -1264,12 +1286,15 @@ class GraphRun:
             kind='branch',
             selector=selector,
             given=_prepared_scope_given(taken, raw),
+            permissions=permissions,
             prefix=f'{scope["prefix"]}{task.name}__',
         )
         scope.setdefault('frames', {}).setdefault(task.name, []).append(child)
         self._invalidate()
 
-    def _begin_loop(self, scope_key: str, task: LoopControl, inputs: dict[str, t.Any]) -> None:
+    def _begin_loop(
+        self, scope_key: str, task: LoopControl, inputs: dict[str, t.Any], permissions: dict[str, Permission]
+    ) -> None:
         """Start iterating a loop, or settle a never-entered loop with its initial state."""
         if task.condition_port not in inputs:
             msg = f'loop `{task.name}` is missing its condition port `{task.condition_port}`.'
@@ -1282,7 +1307,7 @@ class GraphRun:
             }
             self._invalidate()
             return
-        self._begin_iteration(scope_key, task, inputs)
+        self._begin_iteration(scope_key, task, inputs, permissions)
 
     def _continue_loop(self, scope_key: str, task: LoopControl) -> None:
         """Dispatch the next iteration once the previous scope finished successfully."""
@@ -1304,7 +1329,18 @@ class GraphRun:
             msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations; check that its condition terminates.'
             raise GraphMaxIterationsError(msg)
         carried = _regroup_carried_outputs(task.body.outputs, outputs)
-        self._begin_iteration(scope_key, task, {**self._inputs_for(scope_key, task), **outputs, **carried})
+        permissions = self._scope_permissions(last)
+        assert isinstance(permissions, dict)
+        self._begin_iteration(
+            scope_key,
+            task,
+            {**self._inputs_for(scope_key, task), **outputs, **carried},
+            {
+                **self._input_permissions(scope_key, task),
+                **permissions,
+                **_regroup_carried_outputs(task.body.outputs, permissions),
+            },
+        )
 
     def _map_collection(self, scope_key: str, task: MapControl, inputs: dict[str, t.Any]) -> DataList | DataDict:
         """Return the owned container one map iterates, failing loudly on anything else."""
@@ -1324,7 +1360,14 @@ class GraphRun:
             raise GraphRuntimeError(msg)
         return collection
 
-    def _begin_map(self, scope_key: str, task: MapControl, inputs: dict[str, t.Any], step: _Step) -> None:
+    def _begin_map(
+        self,
+        scope_key: str,
+        task: MapControl,
+        inputs: dict[str, t.Any],
+        permissions: dict[str, Permission],
+        step: _Step,
+    ) -> None:
         """Dispatch one task run per element in a single step, collecting empty maps at once.
 
         Task-mapped items run directly as child processes; graph-mapped elements run as
@@ -1339,9 +1382,12 @@ class GraphRun:
         item_input = task.element if task.element is not None else task.mapped_inputs.fields[0][0]
         fixed = {port: value for port, value in inputs.items() if port != 'collection'}
         template = self._template_of(scope_key)
+        item_permissions = {**permissions, item_input: select_permission(permissions, 'collection')}
+        ports = task.mapped_input_ports()
         for index, element in enumerate(elements):
             base = self._item_base(template, task.name, index)
             item_inputs = {**fixed, item_input: element}
+            check_permissions(ports, item_permissions, task.name, values=item_inputs)
             if task.spec is not None:
                 label = self._claim(scope['prefix'] + base)
                 scope.setdefault('instances', {}).setdefault(task.name, []).append(label)
@@ -1359,6 +1405,7 @@ class GraphRun:
                     kind='map',
                     selector=f'elem:{index}',
                     given=_prepared_scope_given(task.body, item_inputs),
+                    permissions=declared_permissions(ports),
                     prefix=f'{scope["prefix"]}{base}__',
                 )
                 scope.setdefault('frames', {}).setdefault(task.name, []).append(child)
@@ -1419,7 +1466,9 @@ class GraphRun:
                 return
         self._begin_collect(scope_key, task, self._inputs_for(scope_key, task), step)
 
-    def _begin_iteration(self, scope_key: str, task: LoopControl, inputs: dict[str, t.Any]) -> None:
+    def _begin_iteration(
+        self, scope_key: str, task: LoopControl, inputs: dict[str, t.Any], permissions: dict[str, Permission]
+    ) -> None:
         """Enter one numbered loop iteration as a child scope; its tasks dispatch like any scope."""
         scope = self.scopes[scope_key]
         children = scope.setdefault('frames', {}).setdefault(task.name, [])
@@ -1432,9 +1481,61 @@ class GraphRun:
             selector=f'iter:{index}',
             given=_prepared_scope_given(task.body, raw),
             prefix=f'{scope["prefix"]}{task.name}_iteration_{index}__',
+            permissions=permissions,
         )
         children.append(child)
         self._invalidate()
+
+    def _given_permissions(self, scope_key: str) -> dict[str, Permission]:
+        if scope_key == _ROOT_SCOPE:
+            return declared_permissions(self.graph.build_input_namespace())
+        return self.scopes[scope_key].get('permissions', {})
+
+    def _input_permissions(self, scope_key: str, task: GraphTask) -> dict[str, Permission]:
+        return wired_permissions(
+            self._template_of(scope_key),
+            task,
+            self._given_permissions(scope_key),
+            lambda name: self._placement_permissions(scope_key, name),
+        )
+
+    def _scope_permissions(self, scope_key: str) -> Permission:
+        origin = self.scopes[scope_key].get('return_origin')
+        if origin is None:
+            tree = self._template_of(scope_key).outputs
+        else:
+            scope_key = origin
+            returned = self._template_of(origin).return_outputs
+            assert returned is not None
+            tree = returned
+        given = self._given_permissions(scope_key)
+        return output_permissions(
+            tree,
+            lambda end: select_permission(
+                given if end.task is None else self._placement_permissions(scope_key, end.task), end.port
+            ),
+        )
+
+    def _placement_permissions(self, scope_key: str, name: str) -> Permission:
+        task = self._template_of(scope_key).task(name)
+        if isinstance(task, ProcessTask):
+            return process_permissions(task)
+        if isinstance(task, InlineOperation):
+            return inline_permissions(task, self._input_permissions(scope_key, task)) if task.expression else True
+        if isinstance(task, (SubgraphTask, BranchControl, LoopControl)):
+            scope = self.scopes[scope_key]
+            if isinstance(task, LoopControl) and name in scope.get('passed', {}):
+                return self._input_permissions(scope_key, task)
+            children = scope.get('frames', {}).get(name)
+            if not children:
+                return None
+            child = children[-1]
+            if isinstance(task, SubgraphTask) and task.capture_error:
+                if self.scopes[child].get('failure') is not None:
+                    return {'error': True}
+                return {'value': select_permission(self._scope_permissions(child), task.body.result_port)}
+            return self._scope_permissions(child)
+        return True
 
     def _inputs_for(self, scope_key: str, task: GraphTask) -> dict[str, t.Any]:
         """Wire scope inputs and dependency outputs into one task's declared inputs."""

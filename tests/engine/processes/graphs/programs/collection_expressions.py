@@ -199,10 +199,10 @@ def select_member(values: list[Int]) -> Int:
     return values[0]
 
 
-# rejected at lowering: computed scalars never leave through the root; materialize them in a task instead.
+# The root publishes the computed scalar, not the owned member itself.
 @graph
-def laundered_scalar(values: list[Int]) -> int:
-    """Read then shift a member value inline; return a task output instead."""
+def shifted_scalar(values: list[Int]) -> int:
+    """Read then shift a member value inline."""
     return values[0].value + 1
 
 

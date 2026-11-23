@@ -13,13 +13,26 @@ import typing as t
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.orm.nodes.data.dict import Dict
-from aiida.orm.nodes.process.workflow.workflow import WorkflowNode
+from aiida.orm.nodes.process.workflow.workflow import WorkflowNode, WorkflowNodeLinks
 from aiida.orm.utils.managers import NodeLinksManager
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.builder import ProcessBuilder
+    from aiida.orm import Node
 
 __all__ = ('GraphNode',)
+
+
+class GraphNodeLinks(WorkflowNodeLinks):
+    """Link constraints for graphs, which can create their own inline outputs."""
+
+    @override
+    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
+        """Only claim creation of data that has not already been stored."""
+        super().validate_outgoing(target, link_type, link_label)
+        if link_type is LinkType.CREATE and target.is_stored:
+            msg = 'a graph cannot create an already stored node; return it instead.'
+            raise ValueError(msg)
 
 
 class GraphNode(WorkflowNode):
@@ -28,6 +41,8 @@ class GraphNode(WorkflowNode):
     Graphs share one process class with the definition recorded on the node, so the node records which workflow
     ran where `process_type` alone cannot.
     """
+
+    _CLS_NODE_LINKS = GraphNodeLinks
 
     GRAPH_DEFINITION_KEY = 'graph_definition'
     RUNTIME_CONFIG_KEY = 'graph_runtime_config_v1'

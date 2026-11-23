@@ -379,7 +379,7 @@ class Config:
                 filepath_backup = cls._backup(filepath)
                 echo.echo_warning(f'original backed up to `{filepath_backup}`')
 
-            config = Config(filepath, check_and_migrate_config(config))
+            config = Config(filepath, check_and_migrate_config(config, filepath=filepath))
 
             if migrated:
                 echo.echo_report(

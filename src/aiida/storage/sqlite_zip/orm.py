@@ -186,7 +186,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         attrpath: list[str],
         cast: str | None = None,
     ) -> ColumnElement | InstrumentedAttribute:
-        if not (attrpath or column_name in ('attributes', 'extras')):
+        if not (attrpath or column_name in ('attributes', 'extras', 'repository_metadata')):
             return get_column(column_name, alias)
 
         entity = get_column(column_name, alias)[attrpath]

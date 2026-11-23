@@ -40,6 +40,7 @@ Function tasks receive stored data-node inputs by default and cannot change thei
 Use `Annotated[NodeType, PortField(mutable=True)]` on the task input and every graph input along its path to give the task an unstored private clone while linking the original.
 Graphs now publish inline values directly: the root adds both `CREATE` and `RETURN` for a newly materialized output and only `RETURN` for an existing node.
 Nested scopes do not publish outputs or create provenance nodes of their own.
+`verdi process show` and `verdi node show` list a graph output once.
 
 #### Graph return annotations are required
 

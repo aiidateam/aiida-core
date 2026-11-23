@@ -26,7 +26,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
 from sqlalchemy.sql.elements import BinaryExpression, Cast, ColumnClause, ColumnElement, Label
 from sqlalchemy.sql.expression import case, text
-from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
+from sqlalchemy.types import JSON, Boolean, DateTime, Float, Integer, String
 
 from aiida.common.exceptions import NotExistent
 from aiida.orm.entities import EntityTypes
@@ -394,7 +394,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         cast: str | None = None,
     ) -> ColumnElement | InstrumentedAttribute:
         """Return projectable entity for a given alias and column name."""
-        if not (attrpath or column_name in ('attributes', 'extras')):
+        if not (attrpath or column_name in ('attributes', 'extras', 'repository_metadata')):
             return get_column(column_name, alias)
 
         entity: ColumnElement = get_column(column_name, alias)[attrpath]
@@ -446,7 +446,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 column_name = path_spec.split('.')[0]
 
                 attr_key = path_spec.split('.')[1:]
-                is_jsonb = bool(attr_key) or column_name in ('dict', 'attributes', 'extras')
+                is_jsonb = bool(attr_key) or column_name in ('dict', 'attributes', 'extras', 'repository_metadata')
                 column: InstrumentedAttribute | None
                 try:
                     column = get_column(column_name, alias)
@@ -455,6 +455,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         column = None
                     else:
                         raise
+                if column is not None and not is_jsonb and isinstance(getattr(column, 'type', None), (JSON, JSONB)):
+                    is_jsonb = True
                 if not isinstance(filter_operation_dict, dict):
                     filter_operation_dict = {'==': filter_operation_dict}  # noqa: PLW2901
                 for operator, value in filter_operation_dict.items():

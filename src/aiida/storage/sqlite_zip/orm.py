@@ -186,7 +186,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         attrpath: list[str],
         cast: str | None = None,
     ) -> ColumnElement | InstrumentedAttribute:
-        if not (attrpath or column_name in ('attributes', 'extras')):
+        if not (attrpath or column_name in ('attributes', 'extras', 'repository_metadata')):
             return get_column(column_name, alias)
 
         entity = get_column(column_name, alias)[attrpath]
@@ -299,8 +299,9 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             # Original implementation:
             #   return func.json_contains(database_entity, json.dumps(value))
 
+            path = '.'.join(['$'] + attr_key)
             return case(
-                (func.json_extract(column, '$.' + '.'.join(attr_key)).is_(null()), null()),
+                (func.json_extract(column, path).is_(null()), null()),
                 else_=func.json_contains(database_entity, json.dumps(value)),
             )
 

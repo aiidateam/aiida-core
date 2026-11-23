@@ -2162,3 +2162,54 @@ class TestJsonFilters:
             {'dict': {f'attributes.{key}': {'order': 'asc', 'cast': cast_type}}}
         )
         assert qbuilder.all(flat=True) == [dict2.pk, dict1.pk, dict3.pk]
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_repository_metadata_has_key(self):
+        """Test QueryBuilder filters with `has_key` on Node.repository_metadata."""
+        import io
+
+        node = orm.FolderData()
+        node.base.repository.put_object_from_filelike(io.BytesIO(b'dummy content'), 'file.txt')
+        node.store()
+
+        # Query top-level key with dictionary syntax
+        qb = orm.QueryBuilder().append(orm.Node, filters={'repository_metadata': {'has_key': 'o'}})
+        assert qb.count() == 1
+
+        # Query top-level key with QbField syntax
+        qb = orm.QueryBuilder().append(orm.Node, filters=orm.Node.fields.repository_metadata.has_key('o'))
+        assert qb.count() == 1
+
+        # Query non-existent top-level key
+        qb = orm.QueryBuilder().append(orm.Node, filters={'repository_metadata': {'has_key': 'non_existent'}})
+        assert qb.count() == 0
+
+        # Query negated top-level key
+        qb = orm.QueryBuilder().append(orm.Node, filters={'repository_metadata': {'!has_key': 'non_existent'}})
+        assert qb.count() == 1
+
+        # Query nested key inside repository_metadata
+        qb = orm.QueryBuilder().append(orm.Node, filters={'repository_metadata.o': {'has_key': 'file.txt'}})
+        assert qb.count() == 1
+
+        # Query nested key with QbField item subscription
+        qb = orm.QueryBuilder().append(orm.Node, filters=orm.Node.fields.repository_metadata['o'].has_key('file.txt'))
+        assert qb.count() == 1
+
+        # Query project repository_metadata
+        qb = orm.QueryBuilder().append(orm.Node, project=['repository_metadata'])
+        res = qb.all()
+        assert len(res) == 1
+        assert 'o' in res[0][0]
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_root_level_contains(self):
+        """Test QueryBuilder root-level contains filter on JSON columns without trailing dot."""
+        node = orm.Data().store()
+        node.base.extras.set('test_key', 'test_val')
+
+        qb = orm.QueryBuilder().append(orm.Data, filters={'extras': {'contains': {'test_key': 'test_val'}}})
+        assert qb.count() == 1
+
+        qb = orm.QueryBuilder().append(orm.Data, filters={'extras': {'contains': {'test_key': 'wrong_val'}}})
+        assert qb.count() == 0

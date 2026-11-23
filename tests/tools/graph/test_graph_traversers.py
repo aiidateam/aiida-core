@@ -11,7 +11,7 @@
 import pytest
 
 from aiida.common.links import LinkType
-from aiida.common.progress_reporter import ProgressReporterAbstract, set_progress_reporter
+from aiida.common.progress_reporter import ProgressReporterNull, set_progress_reporter
 from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
 
 
@@ -422,7 +422,7 @@ def reporter_events():
     """Install a progress reporter that logs every call it receives, and yield the log."""
     events: list[tuple] = []
 
-    class Recorder(ProgressReporterAbstract):
+    class Recorder(ProgressReporterNull):
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             events.append(('init', kwargs))

@@ -78,6 +78,7 @@ __all__ = (
     'ParsingError',
     'PluginInternalError',
     'ProfileConfigurationError',
+    'ProgressReporter',
     'ProgressReporterAbstract',
     'RemoteOperationError',
     'StashMode',

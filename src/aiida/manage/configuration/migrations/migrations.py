@@ -681,19 +681,19 @@ def config_needs_migrating(config, filepath: str | None = None):
     oldest_compatible_version = get_oldest_compatible_version(config)
 
     if oldest_compatible_version > CURRENT_CONFIG_VERSION:
-        filepath = filepath if filepath else ''
+        file_str = f' `{filepath}`' if filepath else ''
         can_downgrade = config_can_be_downgraded(config)
         if can_downgrade:
             msg = (
-                f'The AiiDA configuration file {filepath} has version {current_version} which is not compatible with '
-                f'the current aiida version supporting up to version {CURRENT_CONFIG_VERSION}. '
+                f'The AiiDA configuration file{file_str} has version {current_version}, which is not compatible with '
+                f'the current AiiDA version (which supports configuration schema versions up to {CURRENT_CONFIG_VERSION}). '
                 f'Run `verdi config downgrade {CURRENT_CONFIG_VERSION}` to rewrite it for this version. See '
                 f'{URL_CONFIG_SCHEMA_COMPATIBILITY} for the compatibility table.'
             )
         else:
             msg = (
-                f'The AiiDA configuration file {filepath} has version {current_version} which is not compatible with '
-                f'the current aiida version supporting up to version {CURRENT_CONFIG_VERSION}. '
+                f'The AiiDA configuration file{file_str} has version {current_version}, which is not compatible with '
+                f'the current AiiDA version (which supports configuration schema versions up to {CURRENT_CONFIG_VERSION}). '
                 'Before switching to an older AiiDA version, use a newer AiiDA version that supports '
                 f'configuration version {current_version} and run `verdi config downgrade {CURRENT_CONFIG_VERSION}` '
                 'to rewrite it for this version. See '

@@ -89,6 +89,62 @@ def test_config_needs_migrating_incompatible_version(monkeypatch):
         check_and_migrate_config(config, filepath='/tmp/config.json')
 
     assert exception.value._can_downgrade
+    expected_msg = (
+        f'The AiiDA configuration file `/tmp/config.json` has version {MAXIMUM_DOWNGRADE_CONFIG_VERSION}, which is not compatible '
+        f'with the current AiiDA version (which supports configuration schema versions up to {MAXIMUM_DOWNGRADE_CONFIG_VERSION - 1}). '
+        f'Run `verdi config downgrade {MAXIMUM_DOWNGRADE_CONFIG_VERSION - 1}` to rewrite it for this version.'
+    )
+    assert expected_msg in str(exception.value)
+
+
+def test_config_needs_migrating_incompatible_version_no_filepath(monkeypatch):
+    """An incompatible configuration without filepath should not contain double spaces and should be formatted properly."""
+    from aiida.manage.configuration.migrations import migrations
+
+    monkeypatch.setattr(migrations, 'CURRENT_CONFIG_VERSION', MAXIMUM_DOWNGRADE_CONFIG_VERSION - 1)
+    config = {
+        'CONFIG_VERSION': {
+            'CURRENT': MAXIMUM_DOWNGRADE_CONFIG_VERSION,
+            'OLDEST_COMPATIBLE': MAXIMUM_DOWNGRADE_CONFIG_VERSION,
+        }
+    }
+
+    with pytest.raises(ConfigurationVersionError) as exception:
+        check_and_migrate_config(config)
+
+    assert exception.value._can_downgrade
+    expected_msg = (
+        f'The AiiDA configuration file has version {MAXIMUM_DOWNGRADE_CONFIG_VERSION}, which is not compatible '
+        f'with the current AiiDA version (which supports configuration schema versions up to {MAXIMUM_DOWNGRADE_CONFIG_VERSION - 1}). '
+        f'Run `verdi config downgrade {MAXIMUM_DOWNGRADE_CONFIG_VERSION - 1}` to rewrite it for this version.'
+    )
+    assert expected_msg in str(exception.value)
+    assert 'file  has version' not in str(exception.value)
+
+
+def test_config_needs_migrating_incompatible_version_cannot_downgrade(monkeypatch):
+    """An incompatible configuration that cannot be downgraded should guide the user to use a newer AiiDA version."""
+    from aiida.manage.configuration.migrations import migrations
+
+    monkeypatch.setattr(migrations, 'CURRENT_CONFIG_VERSION', 10)
+    config = {
+        'CONFIG_VERSION': {
+            'CURRENT': MAXIMUM_DOWNGRADE_CONFIG_VERSION + 1,
+            'OLDEST_COMPATIBLE': MAXIMUM_DOWNGRADE_CONFIG_VERSION + 1,
+        }
+    }
+
+    with pytest.raises(ConfigurationVersionError) as exception:
+        check_and_migrate_config(config, filepath='/tmp/config.json')
+
+    assert not exception.value._can_downgrade
+    expected_msg = (
+        f'The AiiDA configuration file `/tmp/config.json` has version {MAXIMUM_DOWNGRADE_CONFIG_VERSION + 1}, which is not compatible '
+        'with the current AiiDA version (which supports configuration schema versions up to 10). '
+        f'Before switching to an older AiiDA version, use a newer AiiDA version that supports configuration version {MAXIMUM_DOWNGRADE_CONFIG_VERSION + 1} '
+        'and run `verdi config downgrade 10` to rewrite it for this version.'
+    )
+    assert expected_msg in str(exception.value)
 
 
 def test_config_can_be_downgraded():

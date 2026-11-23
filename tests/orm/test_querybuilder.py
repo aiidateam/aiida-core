@@ -2201,3 +2201,15 @@ class TestJsonFilters:
         res = qb.all()
         assert len(res) == 1
         assert 'o' in res[0][0]
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_root_level_contains(self):
+        """Test QueryBuilder root-level contains filter on JSON columns without trailing dot."""
+        node = orm.Data().store()
+        node.base.extras.set('test_key', 'test_val')
+
+        qb = orm.QueryBuilder().append(orm.Data, filters={'extras': {'contains': {'test_key': 'test_val'}}})
+        assert qb.count() == 1
+
+        qb = orm.QueryBuilder().append(orm.Data, filters={'extras': {'contains': {'test_key': 'wrong_val'}}})
+        assert qb.count() == 0

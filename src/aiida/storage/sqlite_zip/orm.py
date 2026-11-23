@@ -299,8 +299,9 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             # Original implementation:
             #   return func.json_contains(database_entity, json.dumps(value))
 
+            path = '.'.join(['$'] + attr_key)
             return case(
-                (func.json_extract(column, '$.' + '.'.join(attr_key)).is_(null()), null()),
+                (func.json_extract(column, path).is_(null()), null()),
                 else_=func.json_contains(database_entity, json.dumps(value)),
             )
 

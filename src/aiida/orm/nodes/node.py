@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import pathlib
 import typing as t
 from collections.abc import Callable, Iterator
@@ -41,7 +42,6 @@ from aiida.orm.qb_fields import QbAttributesField, QbFields, add_field
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.users import User
 from aiida.orm.utils.node import (
-    AbstractNodeMeta,
     get_query_type_from_type_string,
     get_type_string_from_class,
 )
@@ -149,7 +149,7 @@ class NodeBase:
         return self._node._CLS_NODE_LINKS(self._node)
 
 
-class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNodeMeta):
+class Node(Entity['BackendNode', NodeCollection['Node']]):
     """Base class for all nodes in AiiDA.
 
     Stores attributes starting with an underscore.
@@ -185,8 +185,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             cls.__query_type_string = get_query_type_from_type_string(cls._plugin_type_string)  # type: ignore[misc]
         return cls.__query_type_string
 
-    # This will be set by the metaclass call but we set default
-    _logger: AiidaLoggerType = AIIDA_LOGGER
+    # Configured by __init_subclass__ on subclasses, default for Node base class
+    _logger: AiidaLoggerType = logging.getLogger('aiida.orm.nodes.node.Node')
 
     # A tuple of attribute names that can be updated even after node is stored
     # Requires Sealable mixin, but needs empty tuple for base class
@@ -350,12 +350,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             self.base.extras.set_many(extras)
 
     def __init_subclass__(cls, **kwargs) -> None:
-        """Patch subclass models."""
+        """Patch subclass models and configure subclass logger."""
+        super().__init_subclass__(**kwargs)
+        cls._logger = logging.getLogger(f'{cls.__module__}.{cls.__name__}')
         cls._COMPAT_MODEL = None
         cls._patch_attributes_model()
         cls._patch_read_model()
         cls._patch_constructor_model()
-        super().__init_subclass__(**kwargs)
 
     @classmethod
     def _patch_compat_model(cls) -> None:

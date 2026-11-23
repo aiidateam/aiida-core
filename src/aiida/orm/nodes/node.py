@@ -351,12 +351,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']]):
 
     def __init_subclass__(cls, **kwargs) -> None:
         """Patch subclass models and configure subclass logger."""
-        super().__init_subclass__(**kwargs)
         cls._logger = logging.getLogger(f'{cls.__module__}.{cls.__name__}')
         cls._COMPAT_MODEL = None
         cls._patch_attributes_model()
         cls._patch_read_model()
         cls._patch_constructor_model()
+        super().__init_subclass__(**kwargs)
 
     @classmethod
     def _patch_compat_model(cls) -> None:

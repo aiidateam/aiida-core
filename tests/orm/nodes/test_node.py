@@ -50,6 +50,7 @@ class TestNode:
 
         assert Node._logger.name == f'{Node.__module__}.Node'
         assert SubNode._logger.name == f'{SubNode.__module__}.SubNode'
+        assert SubNode._MODEL_MAP['read'] is SubNode.ReadModel
 
     def test_abstract_node_meta_deprecation(self):
         """Verify that using deprecated `AbstractNodeMeta` issues an `AiidaDeprecationWarning`."""

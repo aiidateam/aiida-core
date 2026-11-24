@@ -64,6 +64,7 @@ def test_caching_replay_keeps_class_spec():
 
     assert node_clone.base.caching.is_created_from_cache
     assert node_clone.base.caching.get_cache_source() == node_original.uuid
+    assert node_clone.base.links.get_outgoing().nested()['alphas']['filled'].value == 1
     assert 'alphas' not in spec_outputs
 
     _, node_leaf = emit_alphas.run_get_node(namespaced=Bool(False))

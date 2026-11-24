@@ -220,7 +220,14 @@ class SqliteTempBackend(StorageBackend):
         entering. Transactions can be nested.
         """
         session = self.get_session()
-        if session.in_transaction():
+        if session.in_nested_transaction():
+            # Already inside an explicit transaction: join it and let the outermost transaction own the commit, so
+            # nested work rolls back together with the outer transaction on failure.
+            with session.begin_nested():
+                yield session
+        elif session.in_transaction():
+            # An autobegun transaction (for example from preceding reads) is active, but no explicit outer
+            # transaction owns the commit, so commit on successful exit as before.
             with session.begin_nested():
                 yield session
             session.commit()

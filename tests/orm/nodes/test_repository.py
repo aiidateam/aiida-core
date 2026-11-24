@@ -62,6 +62,29 @@ def test_store():
     assert node.base.repository.hash() == hash_unstored
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_unreferenced_cleanup_preserves_live_content(backend):
+    """Maintenance removes orphaned repository content without touching referenced files."""
+    live = Data()
+    live.base.repository.put_object_from_bytes(b'live', 'file.txt')
+    live.store()
+
+    orphan = Data()
+    orphan.base.repository.put_object_from_bytes(b'orphan', 'file.txt')
+    with pytest.raises(RuntimeError, match='boom'):
+        with backend.transaction():
+            orphan.store()
+            raise RuntimeError('boom')
+
+    with pytest.raises(exceptions.NotExistent):
+        load_node(uuid=orphan.uuid)
+    assert len(backend.get_unreferenced_keyset(check_consistency=False)) == 1
+
+    backend.maintain(full=False)
+    assert backend.get_unreferenced_keyset(check_consistency=False) == set()
+    assert load_node(uuid=live.uuid).base.repository.get_object_content('file.txt') == 'live'
+
+
 def test_load():
     """Test the repository after loading."""
     node = Data()

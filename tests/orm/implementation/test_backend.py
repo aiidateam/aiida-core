@@ -53,6 +53,22 @@ class TestBackend:
             assert user.email == 'pre-failure@email.com'
         assert user.email == 'pre-failure@email.com'
 
+    def test_nested_transaction_outer_failure_rolls_back_inner(self):
+        """A successful nested transaction must still roll back if the outer transaction fails."""
+        outer = orm.Data()
+        inner = orm.Data()
+
+        with pytest.raises(RuntimeError, match='outer'):
+            with self.backend.transaction():
+                outer.store()
+                with self.backend.transaction():
+                    inner.store()
+                raise RuntimeError('outer')
+
+        for node_uuid in (outer.uuid, inner.uuid):
+            with pytest.raises(exceptions.NotExistent):
+                orm.load_node(uuid=node_uuid)
+
     def test_transaction(self):
         """Test that transaction nesting works."""
         user1 = orm.User('user1@email.com').store()

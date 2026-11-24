@@ -69,6 +69,34 @@ class TestBackend:
             with pytest.raises(exceptions.NotExistent):
                 orm.load_node(uuid=node_uuid)
 
+    def test_integrity_error_in_nested_transaction_preserves_outer_work(self):
+        """A unique-constraint failure in a nested transaction must not take outer work down with it."""
+        email = f'{uuid.uuid4().hex}@example.com'
+
+        with self.backend.transaction():
+            user = orm.User(email).store()
+            with pytest.raises(exceptions.IntegrityError, match=r'(?i)unique'):
+                with self.backend.transaction():
+                    orm.User(email).store()
+
+            # The session remains usable: further writes succeed and the outer transaction commits.
+            later = orm.Data().store()
+
+        assert orm.User.collection.get(email=email).pk == user.pk
+        assert orm.load_node(uuid=later.uuid).pk == later.pk
+
+    def test_integrity_error_without_transaction_keeps_session_usable(self):
+        """A constraint failure outside any explicit transaction does not poison the session."""
+        email = f'{uuid.uuid4().hex}@example.com'
+        user = orm.User(email).store()
+
+        with pytest.raises(exceptions.IntegrityError, match=r'(?i)unique'):
+            orm.User(email).store()
+
+        node = orm.Data().store()
+        assert orm.load_node(uuid=node.uuid).pk == node.pk
+        assert orm.User.collection.get(email=email).pk == user.pk
+
     def test_transaction(self):
         """Test that transaction nesting works."""
         user1 = orm.User('user1@email.com').store()

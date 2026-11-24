@@ -536,6 +536,28 @@ class TestOwnershipDeletion:
         assert session.query(membership_model).filter(membership_model.owner_id == owner_pk).count() == 0
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestArchiveExportGuard:
+    """Archive export strips ownership columns and rejects ownership units."""
+
+    def test_plain_export_unaffected(self, backend, tmp_path):
+        from aiida.tools.archive.create import _assert_no_ownership_members
+
+        node = Float(1.0).store()
+        _assert_no_ownership_members(backend, {node.pk})
+
+    def test_ownership_unit_export_rejected(self, backend):
+        from aiida.tools.archive.create import _assert_no_ownership_members
+        from aiida.tools.archive.exceptions import ExportValidationError
+
+        owner, children = _make_graph()
+        backend.create_container_membership(owner.pk, _specs(children))
+        with pytest.raises(ExportValidationError, match='ownership'):
+            _assert_no_ownership_members(backend, {owner.pk})
+        with pytest.raises(ExportValidationError, match='ownership'):
+            _assert_no_ownership_members(backend, {children[0].pk})
+
+
 def test_integration_notes_present():
     """Deferred integrations are recorded at the contract module, not silently dropped."""
     assert 'QueryBuilder' in ownership.OWNERSHIP_INTEGRATION_NOTES

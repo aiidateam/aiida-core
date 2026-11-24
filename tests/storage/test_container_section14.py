@@ -58,6 +58,18 @@ def _spec(child_pk, child_type, position, key=None):
     return {'child_id': child_pk, 'child_node_type': child_type, 'position': position, 'key': key}
 
 
+class TestRealOrmTypesAccepted:
+    """F1 regression: the backend contract accepts the real ORM container identifiers."""
+
+    def test_real_datalist_datatdict_types(self, backend):
+        from aiida.orm import DataDict, DataList
+
+        assert DataList.class_node_type in ownership.CONTAINER_NODE_TYPES
+        assert DataDict.class_node_type in ownership.CONTAINER_NODE_TYPES
+        owner, child = _stored_nodes(backend, DataList.class_node_type, FLOAT_TYPE)[0:2]
+        _attach(backend, owner.pk, [_spec(child.pk, FLOAT_TYPE, 0)])
+
+
 class TestLowLevelAgreement:
     """§14: owner/membership agreement through low-level paths."""
 
@@ -176,6 +188,30 @@ class TestDeletionClosureRevalidation:
         _attach(backend, owner.pk, [_spec(child.pk, FLOAT_TYPE, 0)])
         expanded = ownership.expand_ownership_closure(backend.get_session(), *backend._ownership_models(), [child.pk])
         assert expanded == {owner.pk, child.pk}
+
+
+class TestArchiveExportRejection:
+    """§14/§11: ownership-unit export safe-rejection (accepted per F5)."""
+
+    def test_plain_export_unaffected(self, backend, tmp_path):
+        from aiida.orm import Data
+        from aiida.tools.archive import create_archive
+
+        node = Data().store()
+        path = str(tmp_path / 'plain.aiida')
+        create_archive([node], filename=path)
+        assert True
+
+    def test_ownership_export_rejected(self, backend, tmp_path):
+        from aiida.tools.archive import create_archive
+
+        owner, child = _stored_nodes(backend, STORAGE_LIST_TYPE, FLOAT_TYPE)[0:2]
+        _attach(backend, owner.pk, [_spec(child.pk, FLOAT_TYPE, 0)])
+        from aiida.orm import load_node
+
+        path = str(tmp_path / 'owned.aiida')
+        with pytest.raises(Exception, match=r'[Oo]wned|[Cc]ontainer|[Oo]wnership'):
+            create_archive([load_node(owner.pk)], filename=path)
 
 
 class TestMigrationColumns:

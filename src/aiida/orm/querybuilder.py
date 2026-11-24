@@ -1338,18 +1338,22 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
     :returns: dictionary in QueryBuilder filter language to pass into {"type": ... }
     """
     from aiida.common.escaping import escape_for_sql_like
+    from aiida.orm.nodes.data.container import Container
     from aiida.orm.utils.node import get_query_type_from_type_string
+    from aiida.storage.ownership import CONTAINER_NODE_TYPES
 
     value = classifiers.ormclass_type_string
 
     if not subclassing:
-        filters = {'==': value}
-    else:
-        # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
-        # the query type string
-        filters = {'like': f'{escape_for_sql_like(get_query_type_from_type_string(value))}%'}
+        return {'==': value}
 
-    return filters
+    # The closed container types retain their existing identifiers rather than sharing a module prefix.
+    if value == Container.class_node_type:
+        return {'in': sorted(CONTAINER_NODE_TYPES)}
+
+    # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
+    # the query type string
+    return {'like': f'{escape_for_sql_like(get_query_type_from_type_string(value))}%'}
 
 
 def _get_process_type_filter(classifiers: Classifier, subclassing: bool) -> dict:

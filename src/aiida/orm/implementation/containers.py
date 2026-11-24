@@ -9,7 +9,7 @@
 """Abstract ``BackendContainer`` storage entity for owned data containers.
 
 Containers share the common node identity (``DbNode`` row, ``node_type``
-string, provenance links) but are decoupled from ``Data`` semantics:
+string, provenance links) but use a dedicated persistence path:
 they are never persisted through :meth:`BackendNode.store
 <aiida.orm.implementation.nodes.BackendNode.store>`. Leaf data goes
 through ``BackendNode.store``; containers go through

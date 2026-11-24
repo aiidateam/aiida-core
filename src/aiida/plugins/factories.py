@@ -21,6 +21,7 @@ __all__ = (
     'BrokerFactory',
     'CalcJobImporterFactory',
     'CalculationFactory',
+    'ContainerFactory',
     'DataFactory',
     'DbImporterFactory',
     'GroupFactory',
@@ -40,6 +41,7 @@ if t.TYPE_CHECKING:
     from aiida.engine import CalcJob, CalcJobImporter, WorkChain
     from aiida.orm import Data, Group
     from aiida.orm.implementation import StorageBackend
+    from aiida.orm.nodes.data.container import Container
     from aiida.parsers import Parser
     from aiida.schedulers import Scheduler
     from aiida.tools.dbimporters import DbImporter
@@ -213,6 +215,41 @@ def DataFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[D
         return entry_point
 
     if isclass(entry_point) and issubclass(entry_point, Data):
+        return entry_point
+
+    raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
+
+
+@t.overload
+def ContainerFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[Container]: ...
+
+
+@t.overload
+def ContainerFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
+
+
+def ContainerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Container]:
+    """Return the `Container` sub class registered under the given entry point.
+
+    Containers are data nodes registered in a separate entry point group.
+
+    :param entry_point_name: the entry point name.
+    :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
+    :return: sub class of :py:class:`~aiida.orm.nodes.data.container.Container`
+    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    """
+    from inspect import isclass
+
+    from aiida.orm.nodes.data.container import Container
+
+    entry_point_group = 'aiida.container'
+    entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
+    valid_classes = (Container,)
+
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, Container):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)

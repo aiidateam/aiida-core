@@ -4,6 +4,12 @@
 
 ### Breaking changes
 
+`aiida.orm.Container` now derives from `aiida.orm.Data`. Replace `aiida.orm.DataNode` with `aiida.orm.Data` in type checks, process ports, and queries. Queries for `Data` include containers; stored node type strings are unchanged.
+
+`DataList` and `DataDict` retain inserted nodes instead of cloning them. Ownership is claimed at `store()`, which rejects multiple memberships and already-owned nodes without committing a partial subtree. Use `node.clone()` to insert an independent copy explicitly. A `DataList` can still link to stored standalone leaf data without owning it.
+
+`DataDict` keys do not follow process port naming rules. Storing a `DataDict` with a key longer than 255 characters or containing a NUL character raises a storage error on every backend. Existing stored keys remain readable, and `Dict` is unchanged.
+
 Profile storage migrations for PostgreSQL and SQLite are now upgrade-only: `migrate_down()` raises `NotImplementedError`. SQLite archives also no longer support downgrading from schema revision `main_0003`.
 
 `Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.

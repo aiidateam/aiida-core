@@ -93,7 +93,7 @@ class TestEligibility:
     def test_data_types_eligible_as_children(self):
         assert is_data_node_type('data.Data.')
         assert is_data_node_type(FLOAT_TYPE)
-        # Containers share node identity but are decoupled from ``Data``: they are ownable children via
+        # Containers are ownable children via
         # ``is_ownable_node_type``, not leaf data.
         assert not is_data_node_type(LIST_OWNER_TYPE)
         assert is_ownable_node_type(LIST_OWNER_TYPE)
@@ -561,3 +561,12 @@ class TestArchiveExportGuard:
 def test_integration_notes_present():
     """Deferred integrations are recorded at the contract module, not silently dropped."""
     assert 'QueryBuilder' in ownership.OWNERSHIP_INTEGRATION_NOTES
+
+
+def test_container_node_types_match_orm():
+    """Storage owner eligibility strings equal the real ORM container type strings (F1)."""
+    from aiida.orm import DataDict, DataList
+
+    assert set(ownership.CONTAINER_NODE_TYPES) == {DataList.class_node_type, DataDict.class_node_type}
+    assert ownership.is_container_node_type(DataList.class_node_type)
+    assert ownership.is_container_node_type(DataDict.class_node_type)

@@ -108,6 +108,10 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.cmdline.data.structure.import']
 
+[project.entry-points.'aiida.container']
+'core.data_dict' = 'aiida.orm.nodes.data.container:DataDict'
+'core.data_list' = 'aiida.orm.nodes.data.container:DataList'
+
 [project.entry-points.'aiida.data']
 'core.array' = 'aiida.orm.nodes.data.array.array:ArrayData'
 'core.array.bands' = 'aiida.orm.nodes.data.array.bands:BandsData'

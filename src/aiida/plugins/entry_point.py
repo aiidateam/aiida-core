@@ -85,6 +85,7 @@ ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.cmdline.data': 'aiida.cmdline.data',
     'aiida.cmdline.data.structure.import': 'aiida.cmdline.data.structure.import',
     'aiida.data': 'aiida.orm.nodes.data',
+    'aiida.container': 'aiida.orm.nodes.data',
     'aiida.groups': 'aiida.orm.groups',
     'aiida.orm': 'aiida.orm',
     'aiida.node': 'aiida.orm.nodes',
@@ -139,6 +140,7 @@ DEPRECATED_ENTRY_POINTS_MAPPING = {
 ENTRY_POINT_GROUP_FACTORY_MAPPING = {
     'aiida.calculations': factories.CalculationFactory,
     'aiida.data': factories.DataFactory,
+    'aiida.container': factories.ContainerFactory,
     'aiida.groups': factories.GroupFactory,
     'aiida.parsers': factories.ParserFactory,
     'aiida.schedulers': factories.SchedulerFactory,

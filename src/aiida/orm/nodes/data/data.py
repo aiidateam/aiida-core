@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing_extensions import Self
+
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
@@ -68,7 +70,8 @@ class Data(Node):
         """
         return self.clone()
 
-    def clone(self):
+    @override
+    def clone(self) -> Self:
         """Create a clone of the Data node.
 
         :returns: an unstored clone of this Data node

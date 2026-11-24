@@ -38,7 +38,7 @@ def node_and_data_entry_points() -> list[tuple[str, str]]:
     """Return a list of available entry points."""
     _eps: list[tuple[str, str]] = []
     eps = entry_points()
-    for group in ['aiida.node', 'aiida.data']:
+    for group in ['aiida.node', 'aiida.data', 'aiida.container']:
         _eps.extend((group, ep.name) for ep in eps.select(group=group))
     return _eps
 

@@ -594,10 +594,11 @@ class TestMetadataInputsProcess(Process):
 def test_metadata_inputs(runner):
     """Test that explicitly passed ``is_metadata`` inputs are stored in the attributes.
 
-    This is essential to make it possible to recreate a builder for the process with the original inputs.
+    A mapping-valued metadata input is a single port and must survive rebuilding the process inputs.
     """
+    mapping_input = {'key': 'value'}
     inputs = {
-        'metadata_port': 'value',
+        'metadata_port': mapping_input,
         'metadata_port_non_serializable': orm.Data().store(),
         'metadata_portnamespace': {'without_default': 100},
     }
@@ -606,9 +607,10 @@ def test_metadata_inputs(runner):
     # The ``is_metadata`` inputs should only have stored the "raw" inputs (so not including any defaults) and any inputs
     # that are not JSON-serializable should also have been filtered out.
     assert process.node.get_metadata_inputs() == {
-        'metadata_port': 'value',
+        'metadata_port': mapping_input,
         'metadata_portnamespace': {'without_default': 100},
     }
+    assert process.node.get_builder_restart().metadata_port == mapping_input
 
 
 class CachableProcess(Process):

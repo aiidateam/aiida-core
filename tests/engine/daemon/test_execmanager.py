@@ -18,7 +18,7 @@ from aiida.common.exceptions import StashingError
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.engine.daemon import execmanager
-from aiida.orm import CalcJobNode, FolderData, Int, PortableCode, RemoteData, SinglefileData
+from aiida.orm import CalcJobNode, Computer, FolderData, Int, PortableCode, RemoteData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -946,3 +946,86 @@ async def test_stashing(
 
         assert existing_archive.read_text() == 'tampered'
         assert any('already exists' in message for message in caplog.messages)
+
+
+@pytest.mark.asyncio
+async def test_copy_remote_files_same_hostname(aiida_localhost, tmp_path):
+    """Test `_copy_remote_files` between two different computers with the same hostname (#6136)."""
+    computer_same_host = Computer(
+        label='localhost-alt',
+        hostname=aiida_localhost.hostname,
+        transport_type='core.local',
+        workdir=str(tmp_path / 'alt_workdir'),
+    ).store()
+
+    node = CalcJobNode(computer=aiida_localhost).store()
+    workdir = tmp_path / 'calc_workdir'
+    workdir.mkdir()
+
+    source_dir = tmp_path / 'source_dir'
+    source_dir.mkdir()
+    source_file = source_dir / 'source.txt'
+    source_file.write_text('content from source')
+
+    remote_copy_list = [(computer_same_host.uuid, str(source_file), 'copied.txt')]
+    remote_symlink_list = [(computer_same_host.uuid, str(source_file), 'symlinked.txt')]
+
+    logger = logging.getLogger('test_execmanager')
+
+    async with aiida_localhost.get_transport() as transport:
+        await execmanager._copy_remote_files(
+            logger,
+            node,
+            aiida_localhost,
+            transport,
+            remote_copy_list,
+            remote_symlink_list,
+            workdir,
+        )
+
+    assert (workdir / 'copied.txt').read_text() == 'content from source'
+    assert (workdir / 'symlinked.txt').is_symlink()
+    assert (workdir / 'symlinked.txt').read_text() == 'content from source'
+
+
+@pytest.mark.asyncio
+async def test_copy_remote_files_different_hostname(aiida_localhost, tmp_path):
+    """Test `_copy_remote_files` between two computers with different hostnames raises appropriate errors (#6136)."""
+    computer_diff_host = Computer(
+        label='remote-cluster',
+        hostname='remote.cluster.domain.org',
+        transport_type='core.local',
+        workdir=str(tmp_path / 'remote_workdir'),
+    ).store()
+
+    node = CalcJobNode(computer=aiida_localhost).store()
+    workdir = tmp_path / 'calc_workdir'
+    workdir.mkdir()
+
+    source_file = tmp_path / 'source.txt'
+    source_file.write_text('content')
+
+    logger = logging.getLogger('test_execmanager')
+
+    async with aiida_localhost.get_transport() as transport:
+        with pytest.raises(NotImplementedError, match='Remote copy between two different machines is not implemented'):
+            await execmanager._copy_remote_files(
+                logger,
+                node,
+                aiida_localhost,
+                transport,
+                [(computer_diff_host.uuid, str(source_file), 'dest.txt')],
+                [],
+                workdir,
+            )
+
+        with pytest.raises(OSError, match='It is not possible to create a symlink between two different machines'):
+            await execmanager._copy_remote_files(
+                logger,
+                node,
+                aiida_localhost,
+                transport,
+                [],
+                [(computer_diff_host.uuid, str(source_file), 'dest_symlink.txt')],
+                workdir,
+            )

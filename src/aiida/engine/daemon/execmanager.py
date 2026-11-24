@@ -33,7 +33,7 @@ from aiida.common.links import LinkType
 from aiida.common.typing import FilePath
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
-from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
+from aiida.orm import CalcJobNode, Code, Computer, FolderData, Node, PortableCode, RemoteData, load_computer, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.transports.transport import has_magic
@@ -292,8 +292,22 @@ async def upload_calculation(
 
 async def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir: Path):
     """Perform the copy instructions of the ``remote_copy_list`` and ``remote_symlink_list``."""
-    for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
+    computers: dict[str, Computer] = {computer.uuid: computer}
+
+    def is_same_machine(remote_computer_uuid: str) -> bool:
         if remote_computer_uuid == computer.uuid:
+            return True
+
+        if remote_computer_uuid not in computers:
+            try:
+                computers[remote_computer_uuid] = load_computer(uuid=remote_computer_uuid)
+            except (exceptions.NotExistent, ValueError):
+                return False
+
+        return bool(computers[remote_computer_uuid].hostname == computer.hostname)
+
+    for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
+        if is_same_machine(remote_computer_uuid):
             logger.debug(
                 f'[submission of calculation {node.pk}] copying {dest_rel_path} '
                 f'remotely, directly on the machine {computer.label}'
@@ -319,7 +333,7 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
             raise NotImplementedError(msg)
 
     for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
-        if remote_computer_uuid == computer.uuid:
+        if is_same_machine(remote_computer_uuid):
             logger.debug(
                 f'[submission of calculation {node.pk}] copying {dest_rel_path} remotely, '
                 f'directly on the machine {computer.label}'

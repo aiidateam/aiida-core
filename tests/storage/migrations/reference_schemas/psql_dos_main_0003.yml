@@ -962,6 +962,13 @@ indexes:
     - child_id
     dialect_options:
       postgresql_include: []
+      postgresql_using: hash
+    name: ix_membership_child_hash
+    unique: false
+  - column_names:
+    - child_id
+    dialect_options:
+      postgresql_include: []
     duplicates_constraint: uq_db_dbmembership_child_id
     name: uq_db_dbmembership_child_id
     unique: true

@@ -277,6 +277,8 @@ class DbMembership(Base):
     key = Column(String(255), nullable=True, index=True)
 
     __table_args__ = (
+        # Point lookups can use the hash index; the unique B-tree still enforces exclusive ownership.
+        Index('ix_membership_child_hash', 'child_id', postgresql_using='hash'),
         UniqueConstraint('child_id', name='uq_db_dbmembership_child_id'),
         UniqueConstraint('owner_id', 'position', name='uq_db_dbmembership_owner_id_position'),
         UniqueConstraint('owner_id', 'key', name='uq_db_dbmembership_owner_id_key'),

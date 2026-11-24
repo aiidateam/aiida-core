@@ -46,3 +46,5 @@ def create_ownership_schema() -> None:
         sa.CheckConstraint('position >= 0', name='ck_db_dbmembership_position_nonnegative'),
         sa.CheckConstraint('owner_id != child_id', name='ck_db_dbmembership_no_self_ownership'),
     )
+    if op.get_bind().dialect.name == 'postgresql':
+        op.create_index('ix_membership_child_hash', 'db_dbmembership', ['child_id'], postgresql_using='hash')

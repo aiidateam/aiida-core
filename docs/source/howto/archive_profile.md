@@ -37,19 +37,17 @@ See {ref}`how-to:share:migrate` for details.
 ```{code-cell} ipython3
 :tags: [remove-cell]
 
-!verdi profile show howto-inspect-archive-source > /dev/null 2>&1 || verdi profile setup core.sqlite_dos -n --profile-name howto-inspect-archive-source --email aiida@example.com --first-name AiiDA --last-name Tutorial --institution AiiDA
-```
-
-```{code-cell} ipython3
 from aiida import load_profile
+from aiida.storage.sqlite_temp import SqliteTempBackend
 
-load_profile('howto-inspect-archive-source')
+load_profile(SqliteTempBackend.create_profile('howto-inspect-archive-source'), allow_switch=True)
 ```
 
 ```{code-cell} ipython3
 :tags: [remove-cell]
 
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from aiida import orm
 from aiida.engine import calcfunction
@@ -67,30 +65,19 @@ def multiply(x, y):
 
 
 result = multiply(add(orm.Int(1), orm.Int(2)), orm.Int(3))
-archive_path = Path.cwd().parents[1] / 'build' / 'howto-inspect-archive.aiida'
-if not archive_path.exists():
-    create_archive([result], filename=archive_path, overwrite=True)
-```
-
-```{code-cell} ipython3
-:tags: [hide-output]
-
-!verdi profile show howto-inspect-archive > /dev/null 2>&1 || verdi profile setup core.sqlite_zip -n --profile-name howto-inspect-archive --filepath {archive_path}
-```
-
-```{code-cell} ipython3
-:tags: [remove-cell]
-
-from aiida.manage.configuration import reset_config
-
-reset_config()
+archive_dir = TemporaryDirectory()
+archive_path = Path(archive_dir.name) / 'howto-inspect-archive.aiida'
+create_archive([result], filename=archive_path)
 ```
 
 ```{code-cell} ipython3
 from aiida import load_profile
+from aiida.storage.sqlite_zip import SqliteZipBackend
 
-load_profile('howto-inspect-archive', allow_switch=True)
+load_profile(SqliteZipBackend.create_profile(archive_path), allow_switch=True)
 ```
+
+To inspect your own archive, replace `archive_path` with the path to your archive file.
 
 ```{warning}
 A profile using the `core.sqlite_zip` storage is read-only.
@@ -122,5 +109,4 @@ graph.recurse_ancestors(process, annotate_links='both', include_process_outputs=
 graph.graphviz
 ```
 
-The mounted archive profile is read-only and the archive file itself only exists for this Python session.
-The `howto-inspect-archive` and `howto-inspect-archive-source` profiles are regular persistent profiles and stay in your configuration; remove them with `verdi profile delete howto-inspect-archive howto-inspect-archive-source` once you no longer need them.
+The example archive and both profiles are temporary and do not need to be removed from your configuration.

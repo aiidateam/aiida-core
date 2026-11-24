@@ -33,7 +33,7 @@ from aiida.common.links import LinkType
 from aiida.common.typing import FilePath
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
-from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
+from aiida.orm import CalcJobNode, Code, Computer, FolderData, Node, PortableCode, RemoteData, User, load_computer, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.transports.transport import has_magic
@@ -290,10 +290,57 @@ async def upload_calculation(
     return None
 
 
+def _get_connection_endpoint(
+    computer: Computer, user: User | None = None
+) -> tuple[str, str, str | None]:
+    """Return a tuple representing the effective connection endpoint for a computer.
+
+    For SSH transports, the effective host is determined by the `host` auth parameter if set,
+    falling back to ``computer.hostname``. The optional ``data_node_host`` auth parameter is also
+    checked when present.
+
+    :param computer: The computer instance.
+    :param user: The user to resolve authentication parameters for.
+    :return: A tuple of ``(transport_type, host, data_node_host)``.
+    """
+    transport_type = computer.transport_type
+    host = computer.hostname
+    data_node_host = None
+
+    if user is not None and computer.is_stored:
+        try:
+            authinfo = computer.get_authinfo(user)
+            auth_params = authinfo.get_auth_params()
+            host = auth_params.get('host') or host
+            data_node_host = auth_params.get('data_node_host')
+            if data_node_host == 'None':
+                data_node_host = None
+        except exceptions.NotExistent:
+            pass
+
+    return (transport_type, host, data_node_host)
+
+
 async def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir: Path):
     """Perform the copy instructions of the ``remote_copy_list`` and ``remote_symlink_list``."""
-    for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
+    computers: dict[str, Computer] = {computer.uuid: computer}
+    user = getattr(node, 'user', None)
+    target_endpoint = _get_connection_endpoint(computer, user)
+
+    def is_same_machine(remote_computer_uuid: str) -> bool:
         if remote_computer_uuid == computer.uuid:
+            return True
+
+        if remote_computer_uuid not in computers:
+            try:
+                computers[remote_computer_uuid] = load_computer(uuid=remote_computer_uuid)
+            except (exceptions.NotExistent, ValueError):
+                return False
+
+        return _get_connection_endpoint(computers[remote_computer_uuid], user) == target_endpoint
+
+    for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
+        if is_same_machine(remote_computer_uuid):
             logger.debug(
                 f'[submission of calculation {node.pk}] copying {dest_rel_path} '
                 f'remotely, directly on the machine {computer.label}'
@@ -319,7 +366,7 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
             raise NotImplementedError(msg)
 
     for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
-        if remote_computer_uuid == computer.uuid:
+        if is_same_machine(remote_computer_uuid):
             logger.debug(
                 f'[submission of calculation {node.pk}] copying {dest_rel_path} remotely, '
                 f'directly on the machine {computer.label}'

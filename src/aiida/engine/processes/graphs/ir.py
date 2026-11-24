@@ -20,8 +20,6 @@ from copy import copy, deepcopy
 from dataclasses import dataclass, field, replace
 from functools import cached_property
 
-from typing_extensions import is_typeddict
-
 from aiida.common import _callables as callables
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
@@ -386,17 +384,6 @@ def _task_func_annotations(process_class: type[Process]) -> dict[str, t.Any] | N
         return None
 
 
-def _shape_for_success(annotation: t.Any) -> Shape | None:
-    """Expand a success annotation, naming `TypedDict` outputs per key."""
-    if not is_typeddict(annotation):
-        return shape_for_annotation(annotation)
-    try:
-        hints = t.get_type_hints(annotation, include_extras=True)
-    except (NameError, TypeError, SyntaxError):
-        return None
-    return NamespaceShape(fields=tuple((key, shape_for_annotation(hints.get(key))) for key in hints))
-
-
 def _with_input_elements(process_class: type[Process], shape: NamespaceShape) -> NamespaceShape:
     """Overlay hint members onto input ``shape``; ports keep types and requiredness."""
     hints = _task_func_annotations(process_class)
@@ -416,9 +403,7 @@ def _with_result_elements(process_class: type[Process], shape: Shape) -> Shape:
     if not hints or 'return' not in hints:
         return shape
     success, _ = _result_contract(hints['return'])
-    annotated = _shape_for_success(success)
-    if annotated is None:
-        return shape
+    annotated = shape_for_annotation(success)
     if t.get_origin(hints['return']) is Result and isinstance(shape, NamespaceShape):
         return replace(
             shape,

@@ -918,25 +918,26 @@ Outputs
 Task outputs are fixed by the return annotation:
 
 * A single-value annotation, such as ``-> int`` or ``-> list[int]``, declares one output named ``result``.
-* A ``TypedDict`` annotation with all keys required declares one output per key.
 * A ``PortModel`` annotation declares a nested output namespace, stored field by field.
 * ``-> None`` declares no outputs, for tasks run for their side effects.
 
+Use ``PortModel`` rather than ``TypedDict`` to declare fixed named outputs for a task or graph.
+
 .. code:: python
 
-    from typing import TypedDict
+    from aiida.engine import PortModel, graph, task
 
-    class Pair(TypedDict):
+    class Pair(PortModel):
         sum: int
         product: int
 
-    class Statistics(TypedDict):
+    class Statistics(PortModel):
         total: int
         product: int
 
     @task
     def arithmetic(x: int, y: int) -> Pair:
-        return {'sum': x + y, 'product': x * y}
+        return Pair(sum=x + y, product=x * y)
 
     @graph
     def statistics(x: int, y: int) -> Statistics:
@@ -980,8 +981,8 @@ A ``None`` value for a nullable field stays out of the emitted outputs.
 Every graph declares a return annotation, and the final return and every early return must agree with it when the graph is built:
 
 * A single-value annotation, such as ``-> int``, requires one returned value.
-* A ``TypedDict`` or ``PortModel`` annotation requires the returned mapping, or the returned namespace, to produce exactly its fields, also when nested.
-* Fields marked ``NotRequired``, fields with defaults, and ``X | None`` annotations may be absent from the return.
+* A ``PortModel`` annotation requires the returned mapping, or the returned namespace, to produce exactly its fields, also when nested.
+* Fields with defaults may be omitted from the return mapping; a namespace annotated ``Model | None`` may also be absent.
 * In a returned mapping, the annotated types of top-level fields are checked against the stored types of the returned values.
 * ``-> dict[str, T]`` declares no fields, so the returned keys are free.
 * ``-> typing.Any`` fails the build, since it declares no outputs to check.
@@ -990,12 +991,12 @@ Use ``forward_outputs`` in the final return mapping to forward a static output n
 
 .. code-block:: python
 
-    from aiida.engine import forward_outputs, graph
+    from aiida.engine import PortModel, forward_outputs, graph
 
-    class Sum(TypedDict):
+    class Sum(PortModel):
         sum: int
 
-    class Summary(TypedDict):
+    class Summary(PortModel):
         arithmetic: Sum
 
     @graph

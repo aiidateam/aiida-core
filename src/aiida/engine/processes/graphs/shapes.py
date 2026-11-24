@@ -16,6 +16,9 @@ import operator
 import typing as t
 from collections.abc import Mapping
 from dataclasses import dataclass
+from types import UnionType
+
+from typing_extensions import is_typeddict
 
 from aiida.common.exceptions import GraphLanguageError, GraphTypeCheckError
 from aiida.common.loaders import get_object_loader
@@ -241,6 +244,17 @@ def _element_shape(annotation: t.Any) -> Shape | None:
     return None
 
 
+def _reject_typed_dict_output(annotation: object) -> None:
+    """Reject TypedDict as an output declaration, including in a union."""
+    annotation = _without_marks(annotation)
+    if is_typeddict(annotation):
+        msg = 'TypedDict does not declare output ports; use a PortModel for named outputs.'
+        raise GraphTypeCheckError(msg)
+    if t.get_origin(annotation) in (t.Union, UnionType):
+        for member in t.get_args(annotation):
+            _reject_typed_dict_output(member)
+
+
 def shape_for_annotation(
     annotation: object,
     *,
@@ -248,8 +262,12 @@ def shape_for_annotation(
     default: object = UNSPECIFIED,
     help: str | None = None,
     mutable: bool = False,
+    for_output: bool = False,
 ) -> Shape:
-    """Capture a Python declaration without constructing engine input or output ports."""
+    """Capture a Python declaration without constructing engine input or output ports.
+
+    Graph returns, unlike inputs, can declare a nullable namespace with ``Model | None``.
+    """
     if default is not UNSPECIFIED:
         if callable(default):
             try:
@@ -267,6 +285,13 @@ def shape_for_annotation(
     annotation = _without_marks(annotation)
     annotation = _expanded_annotation(annotation)
     fields = _fields_of(annotation)
+    if for_output:
+        _reject_typed_dict_output(annotation)
+        members = t.get_args(annotation) if t.get_origin(annotation) in (t.Union, UnionType) else ()
+        if len(members) == 2 and type(None) in members:
+            fields = _fields_of(next(member for member in members if member is not type(None)))
+            if fields is not None:
+                required = False
     if fields is None:
         return LeafShape(
             types=_infer_runtime_types(annotation) or None,
@@ -290,6 +315,7 @@ def shape_for_annotation(
                     default=field.default,
                     help=field.help,
                     mutable=field.mutable,
+                    for_output=for_output,
                 ),
             )
             for field in fields

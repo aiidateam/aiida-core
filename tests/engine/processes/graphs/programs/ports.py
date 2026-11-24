@@ -10,8 +10,7 @@
 
 import typing as t
 
-from typing_extensions import NotRequired, TypedDict
-
+from aiida.engine import PortModel
 from aiida.engine.processes.graphs.lowering import graph
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.nodes.data.int import Int
@@ -37,41 +36,41 @@ from tests.engine.processes.graphs.programs.tasks import (
 )
 
 
-class OnlyOutput(t.TypedDict):
+class OnlyOutput(PortModel):
     """One named graph output."""
 
     only: int
 
 
-class PairOutputs(TypedDict):
+class PairOutputs(PortModel):
     """The sum and product of a pair under the names `total` and `product`."""
 
     total: int
     product: int
 
 
-class TextPairOutputs(TypedDict):
+class TextPairOutputs(PortModel):
     """A `total` declared as text, which a stored integer cannot fill."""
 
     total: str
     product: int
 
 
-class OptionalProductOutputs(TypedDict):
+class OptionalProductOutputs(PortModel):
     """A `total` with a `product` that the return may leave out."""
 
     total: int
-    product: NotRequired[int]
+    product: int | None = None
 
 
-class TextSumPair(TypedDict):
+class TextSumPair(PortModel):
     """A `sum` declared as text, which a stored integer cannot fill."""
 
     sum: str
     product: int
 
 
-class NestedTextSumPair(TypedDict):
+class NestedTextSumPair(PortModel):
     """A nested `pair` whose `sum` the annotation mistypes."""
 
     pair: TextSumPair
@@ -92,9 +91,21 @@ def named(x: int, y: int) -> dict[str, int]:
 
 @graph
 def single_named_scalar(value: int) -> OnlyOutput:
-    """Return one named output declared by a `TypedDict`."""
+    """Return one named output declared by a `PortModel`."""
     out = add(x=value, y=0)
     return {'only': out}
+
+
+class LegacyOutput(t.TypedDict):
+    """A legacy named output declaration that must no longer expand to ports."""
+
+    only: int
+
+
+@graph
+def legacy_graph_output(value: int) -> LegacyOutput:
+    """Use a TypedDict as the graph return annotation."""
+    return {'only': value}
 
 
 @graph
@@ -356,7 +367,7 @@ def mistyped_nested_mapping(x: int, y: int) -> NestedTextSumPair:
 
 @graph
 def optional_output_absent(x: int, y: int) -> OptionalProductOutputs:
-    """Leave out an output the annotation marks `NotRequired`."""
+    """Leave out an output the annotation gives a default."""
     pair = arithmetic_pair(x=x, y=y)
     return {'total': pair.sum}
 

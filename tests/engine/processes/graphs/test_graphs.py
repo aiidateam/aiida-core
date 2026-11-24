@@ -1083,8 +1083,8 @@ def test_task_body_runs_plain_python() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_single_key_typeddict_task_unpacks_output() -> None:
-    """A single-key `TypedDict` task stores its value under the named port, not the whole mapping."""
+def test_single_field_port_model_task_unpacks_output() -> None:
+    """A single-field `PortModel` task stores its value under the named port, not the whole mapping."""
     outputs, node = run_get_node(tasks.mismatched_alpha, value=2)
     assert node.is_finished_ok
     assert isinstance(outputs['alpha'], Int)
@@ -1111,15 +1111,22 @@ def test_named_task_output_mismatches_fail(declaration: t.Any, inputs: dict[str,
 @pytest.mark.parametrize(
     'declaration, match',
     [
-        pytest.param(tasks.partial_outputs, 'must be total', id='nontotal-typeddict'),
+        pytest.param(tasks.legacy_task_output, 'use a PortModel', id='typeddict'),
+        pytest.param(tasks.legacy_result_output, 'use a PortModel', id='typeddict-result'),
         pytest.param(tasks.pair_outputs, 'instead of a tuple', id='tuple-outputs'),
         pytest.param(tasks.bare_tuple_outputs, 'instead of a tuple', id='bare-tuple-outputs'),
     ],
 )
 def test_output_declarations_rejected(declaration: t.Any, match: str) -> None:
-    """Output declarations outside total `TypedDict` names fail."""
+    """Unsupported task output annotations fail."""
     with pytest.raises(GraphTypeCheckError, match=match):
         task(declaration)
+
+
+def test_typeddict_graph_outputs_rejected() -> None:
+    """A TypedDict cannot declare named graph outputs."""
+    with pytest.raises(GraphTypeCheckError, match='use a PortModel'):
+        ports.legacy_graph_output.build()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

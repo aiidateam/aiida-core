@@ -22,6 +22,13 @@ Graph bodies accept a general `partial(...)` input binding that needs no import:
 
 ### Breaking changes
 
+#### TypedDict no longer declares graph or task output ports
+
+Replace `TypedDict` return annotations with `aiida.engine.PortModel` subclasses to declare named outputs in `@task` and `@graph`, including in `Result` success annotations.
+For optional fields, declare a default instead of using `NotRequired`, for example `count: int | None = None`.
+Task functions can return a model instance and graph bodies still return mappings or existing namespaces.
+Existing compiled declarations and stored nodes need no migration.
+
 #### Nested graph invocations have provenance nodes
 
 Explicit nested graph calls and mapped graph items now each get a `GraphNode` with their own input, output, and call links, while still running inside the root `GraphProcess`.
@@ -57,7 +64,7 @@ Recursive scientific ancestry and cycle checks now follow `INPUT_WORK` links int
 
 Every `@graph` now declares a return annotation, and its final return and every early return must agree with it when the graph is built.
 Previously the annotation was optional and only typed a single returned value, so a `TypedDict` annotation could name keys the return never produced.
-A single-value annotation requires one returned value; a `TypedDict` or `PortModel` annotation requires exactly its fields, with `NotRequired`, defaulted, and `X | None` fields allowed to be absent; `dict[str, T]` leaves the keys free, and `typing.Any` is rejected.
+A single-value annotation requires one returned value; a `PortModel` annotation declares the allowed fields, with defaulted fields and nullable namespaces allowed to be absent; `dict[str, T]` leaves the keys free, and `typing.Any` is rejected.
 Add the annotation to existing graphs; stored declarations and checkpoints need no migration.
 
 #### Inline collection expressions in source graphs

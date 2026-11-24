@@ -11,7 +11,6 @@
 import json
 
 import pytest
-from typing_extensions import NotRequired, TypedDict
 
 from aiida.common.exceptions import GraphLanguageError
 from aiida.common.links import LinkType
@@ -69,45 +68,45 @@ class ScoreReport(PortModel):
     report: str
 
 
-class Selected(TypedDict):
+class Selected(PortModel):
     """A selection of `Report` under `summary`."""
 
     summary: Summary
 
 
-class SelectedSubtree(TypedDict):
+class SelectedSubtree(PortModel):
     """A `Report` without `details` under `summary`."""
 
     summary: ScoreReport
 
 
-class SelectedAll(TypedDict):
+class SelectedAll(PortModel):
     """A whole `Report` under `summary`."""
 
     summary: Report
 
 
-class SelectedOptional(TypedDict):
+class SelectedOptional(PortModel):
     """A selection of an optional `Report` next to its error arm."""
 
-    summary: NotRequired[Summary]
-    error: NotRequired[Errors]
+    summary: Summary | None = None
+    error: Errors | None = None
 
 
-class Captured(TypedDict):
+class Captured(PortModel):
     """Both arms of a captured `produce` call."""
 
-    value: NotRequired[Report]
-    error: NotRequired[Errors]
+    value: Report | None = None
+    error: Errors | None = None
 
 
-class CapturedValue(TypedDict):
+class CapturedValue(PortModel):
     """The value arm of a captured `produce` call."""
 
-    value: NotRequired[Report]
+    value: Report | None = None
 
 
-class SelectedChild(TypedDict):
+class SelectedChild(PortModel):
     """The value arm of `captured` under `summary`."""
 
     summary: CapturedValue
@@ -149,18 +148,18 @@ def captured(mode: int) -> Captured:
     return {'value': result, 'error': error}
 
 
-class ShortReport(TypedDict):
+class ShortReport(PortModel):
     """A `Report` without its `report` field."""
 
     details: Details
     score: float
 
 
-class CapturedShort(TypedDict):
+class CapturedShort(PortModel):
     """Both arms of a captured call with a short value selection."""
 
-    value: NotRequired[ShortReport]
-    error: NotRequired[Errors]
+    value: ShortReport | None = None
+    error: Errors | None = None
 
 
 @graph
@@ -170,11 +169,11 @@ def captured_short(mode: int) -> CapturedShort:
     return {'value': result, 'error': error}
 
 
-class CapturedRequired(TypedDict):
+class CapturedRequired(PortModel):
     """Both arms of a captured call with a required value arm."""
 
     value: Report
-    error: NotRequired[Errors]
+    error: Errors | None = None
 
 
 @graph
@@ -361,7 +360,7 @@ def test_forward_outputs_rejects_invalid_selection(declaration, message):
     'declaration, message',
     [
         (captured_short, '`value.report` is not declared'),
-        (captured_required, 'mark `value` `NotRequired`'),
+        (captured_required, 'mark `value` nullable'),
     ],
 )
 def test_forward_outputs_rejects_mismatched_optional_namespace(declaration, message):

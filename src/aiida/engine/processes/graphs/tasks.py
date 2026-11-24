@@ -17,8 +17,6 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from types import UnionType
 
-from typing_extensions import is_typeddict
-
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import override
@@ -36,6 +34,7 @@ from aiida.engine.processes.graphs.shapes import (
     _expanded_annotation,
     _exposed_inputs,
     _is_type_var,
+    _reject_typed_dict_output,
 )
 from aiida.engine.processes.port_model import (
     _as_port_model,
@@ -174,8 +173,8 @@ def _output_options(annotation: object, *, fallback: type[DataNode] = DataNode) 
 def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
     """Declare static output ports from the return annotation.
 
-    A scalar annotation declares one ``result`` port; a total ``TypedDict`` declares one
-    port per key. Task registration rejects missing declarations and dynamic namespaces.
+    A scalar annotation declares one ``result`` port; a ``PortModel`` declares one
+    port per field. Task registration rejects missing declarations and dynamic namespaces.
 
     :param return_annotation: the return annotation of the wrapped function, if it has one.
     :param spec: the spec to declare them on.
@@ -187,20 +186,12 @@ def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
         raise GraphTypeCheckError(msg)
     return_annotation = _expanded_annotation(return_annotation)
     bare = _without_marks(return_annotation)
-    if (is_typeddict(bare) or _is_structured(bare)) and not _port_durable(return_annotation):
+    _reject_typed_dict_output(bare)
+    if _is_structured(bare) and not _port_durable(return_annotation):
         msg = 'checkpoint-only policy must be set on leaf outputs, not a namespace.'
         raise GraphTypeCheckError(msg)
-    if is_typeddict(bare):
-        hints = t.get_type_hints(bare, include_extras=True)
-        if set(hints) != set(bare.__required_keys__):
-            msg = 'TypedDict task outputs must be total; declare every output.'
-            raise GraphTypeCheckError(msg)
-        for key, raw in hints.items():
-            hint = _expanded_annotation(raw)
-            spec.output(key, **_output_options(hint))
-        return
     if t.get_origin(return_annotation) is tuple or return_annotation is tuple:
-        msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
+        msg = 'name multiple task outputs with a PortModel instead of a tuple.'
         raise GraphTypeCheckError(msg)
     if _is_structured(return_annotation):
         spec.outputs_from(return_annotation)
@@ -230,7 +221,7 @@ class TaskProcess(FunctionProcessBase):
     """Task children checkpoint on daemon workers; the generated class travels as bytes."""
 
     _spec_class: type[GraphProcessSpec] = GraphProcessSpec
-    # Set at declaration: a total `TypedDict` or a `PortModel` return declares one port per field.
+    # Set at declaration: a `PortModel` return declares one port per field.
     _named_outputs: t.ClassVar[bool] = False
 
     @classmethod
@@ -265,6 +256,7 @@ class TaskProcess(FunctionProcessBase):
             assert code.message is not None
             spec.exit_code(code.status, label, code.message, invalidates_cache=code.invalidates_cache)
         if t.get_origin(return_annotation) is Result:
+            _reject_typed_dict_output(annotation)
             success = _result_model(annotation)
             if _is_structured(success):
                 spec.outputs_from(t.cast(type, success), prefix='value.')
@@ -277,7 +269,7 @@ class TaskProcess(FunctionProcessBase):
             return
         _declare_output_ports(return_annotation, spec)
         spec.outputs.dynamic = False
-        cls._named_outputs = is_typeddict(return_annotation) or _is_structured(return_annotation)
+        cls._named_outputs = _is_structured(return_annotation)
 
     @classmethod
     def checkpoint_ports(cls) -> dict[str, tuple[str, ...]]:
@@ -763,7 +755,7 @@ def _check_task_contract(
     returned = hints.get('return', inspect.Signature.empty)
     annotation, _ = _result_contract(returned)
     if t.get_origin(returned) is Result and (t.get_origin(annotation) is tuple or annotation is tuple):
-        msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
+        msg = 'name multiple task outputs with a PortModel instead of a tuple.'
         raise GraphTypeCheckError(msg)
     if annotation is inspect.Signature.empty:
         msg = (

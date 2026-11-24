@@ -29,8 +29,6 @@ from dataclasses import dataclass, field, replace
 from itertools import pairwise
 from types import ModuleType, UnionType
 
-from typing_extensions import NotRequired, Required, get_type_hints, is_typeddict
-
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
 from aiida.common.loaders import get_object_loader
@@ -798,7 +796,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
     if 'return' not in state.definition.hints:
         msg = (
             'graph outputs are checked against the return annotation, so every graph declares one; '
-            + 'annotate the return, such as `-> int` or a `TypedDict`'
+            + 'annotate the return, such as `-> int` or a `PortModel`'
         )
         _reject(state, node=function, reason=msg)
     boundary = _declare_graph_inputs(state, function=function)
@@ -811,7 +809,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
     if state.success_annotation is t.Any:
         msg = (
             '`Any` declares no outputs, so the return cannot be checked against it; '
-            + 'annotate the outputs, such as `-> int` or a `TypedDict`'
+            + 'annotate the outputs, such as `-> int` or a `PortModel`'
         )
         _reject(state, node=function, reason=msg)
     if errors:
@@ -868,7 +866,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
         result = _return_expression(state, returned)
         if result is not None:
             outputs, output_typehints = _lower_outputs(state, result=result)
-    declaration = _declared_return_shape(state.success_annotation)
+    declaration = shape_for_annotation(state.success_annotation, for_output=True)
     checkpoint_outputs = (
         tuple(_checkpoint_paths(declaration))
         if isinstance(declaration, NamespaceShape)
@@ -958,7 +956,7 @@ def _lower_outputs(
 ) -> tuple[dict[str, OutputTree], dict[str, tuple[type, ...]]]:
     """Lower the return statement to named endpoints and their type hints, checked against the annotation."""
     outputs = _lower_return(state, expression=result)
-    returned = _declared_return_shape(state.success_annotation)
+    returned = shape_for_annotation(state.success_annotation, for_output=True)
     mapping = isinstance(result, ast.Dict)
     if len(outputs) == 1 and not mapping:
         outputs = {'result': next(iter(outputs.values()))}
@@ -992,31 +990,6 @@ def _checkpoint_paths(shape: NamespaceShape, prefix: str = '') -> t.Iterator[str
             yield path
 
 
-def _declared_return_shape(annotation: object, *, required: bool = True) -> Shape:
-    """Return the output contract of a graph return annotation.
-
-    A `TypedDict` declares one field per key, also when nested, and `X | None` declares
-    `X` as optional, so structured annotations compare field by field with the return.
-    """
-    if t.get_origin(annotation) in (Required, NotRequired):
-        annotation = t.get_args(annotation)[0]
-    # `is_typeddict` narrows nothing for type checkers, so the TypedDict attributes read through `Any`.
-    bare: t.Any = t.get_args(annotation)[0] if t.get_origin(annotation) is t.Annotated else annotation
-    if is_typeddict(bare):
-        keys = bare.__required_keys__
-        hints = get_type_hints(bare, include_extras=True)
-        return NamespaceShape(
-            fields=tuple((key, _declared_return_shape(hint, required=key in keys)) for key, hint in hints.items()),
-            required=required,
-        )
-    members = t.get_args(bare) if t.get_origin(bare) in (t.Union, UnionType) else ()
-    if type(None) in members and len(members) == 2:
-        declared = _declared_return_shape(next(member for member in members if member is not type(None)))
-        if isinstance(declared, NamespaceShape):
-            return replace(declared, required=False)
-    return shape_for_annotation(annotation, required=required)
-
-
 def _check_return_agreement(
     state: _LoweringState, declared: Shape, tree: OutputTree, *, node: ast.AST, path: str
 ) -> None:
@@ -1031,7 +1004,7 @@ def _check_return_agreement(
             produced = ', '.join(f'`{name}`' for name in tree) if isinstance(tree, dict) else 'a namespace'
             msg = (
                 f'the return annotation declares {where} as one value, so the return must produce one value there; '
-                + f'the return produces {produced}; return one value, or annotate those outputs with a `TypedDict`'
+                + f'the return produces {produced}; return one value, or annotate those outputs with a `PortModel`'
             )
             _reject(state, node=node, reason=msg)
         if path:
@@ -1050,7 +1023,7 @@ def _check_return_agreement(
             if declared.required:
                 msg = (
                     'a returned namespace may be absent at runtime, so the annotation must allow that; '
-                    + f'mark {where} `NotRequired` or nullable (`X | None`) instead'
+                    + f'mark {where} nullable (`X | None`) instead'
                 )
                 _reject(state, node=node, reason=msg)
             declared_names = {name for name, _ in declared.fields}
@@ -1068,7 +1041,7 @@ def _check_return_agreement(
                 if name not in preserved and shape.required:
                     msg = (
                         f'the return annotation declares output `{location}`, so the return must produce it; '
-                        + f'the return omits `{location}`; return `{location}`, or mark it `NotRequired`'
+                        + f'the return omits `{location}`; return `{location}`, or give the field a default'
                     )
                     _reject(state, node=node, reason=msg)
             return
@@ -1093,7 +1066,7 @@ def _check_return_agreement(
         if name not in tree and shape.required:
             msg = (
                 f'the return annotation declares output `{location}`, so the return must produce it; '
-                + f'the return omits `{location}`; return `{location}`, or mark it `NotRequired`'
+                + f'the return omits `{location}`; return `{location}`, or give the field a default'
             )
             _reject(state, node=node, reason=msg)
 

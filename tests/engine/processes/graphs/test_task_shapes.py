@@ -9,7 +9,6 @@
 """TaskIR annotation elements and declaration round-trips."""
 
 import json
-import typing as t
 
 from aiida.engine import ExitCode, ExitCodeEnum, Result, task
 from aiida.engine.processes.graphs.ir import GraphIR, TaskIR
@@ -31,7 +30,7 @@ def collect(n: int) -> list[int]:
     return list(range(n))
 
 
-class NamedLists(t.TypedDict):
+class NamedLists(PortModel):
     """Named outputs with one collection member."""
 
     first: list[int]
@@ -41,7 +40,7 @@ class NamedLists(t.TypedDict):
 @task
 def named_lists(n: int) -> NamedLists:
     """Return a collection and a scalar as named outputs."""
-    return {'first': list(range(n)), 'second': n}
+    return NamedLists(first=list(range(n)), second=n)
 
 
 class Inner(PortModel):
@@ -76,7 +75,7 @@ def test_scalar_collection_result_carries_element() -> None:
     assert collect._task_spec.result_shape == LeafShape(types=(List,), element=LeafShape(types=(int,)))
 
 
-def test_typeddict_result_expands_named_members() -> None:
+def test_port_model_result_expands_named_members() -> None:
     """Named outputs overlay elements per field, not on the namespace."""
     shape = named_lists._task_spec.result_shape
     assert isinstance(shape, NamespaceShape)

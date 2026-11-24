@@ -13,9 +13,7 @@ tasks and nested graphs over `DataList`/`DataDict` wires, including empty and
 task-produced collections, downstream chaining, and invalid declarations.
 """
 
-import typing as t
-
-from aiida.engine import WorkChain, graph, par_map, task
+from aiida.engine import PortModel, WorkChain, graph, par_map, task
 from aiida.orm import DataDict, DataList, StructureData
 from aiida.orm.nodes.data.int import Int
 
@@ -160,7 +158,7 @@ def two_inputs(x: int, y: int) -> int:
     return x + y
 
 
-class Pair(t.TypedDict):
+class Pair(PortModel):
     """Two named outputs; mapping it is rejected as multi-output."""
 
     first: int
@@ -170,7 +168,7 @@ class Pair(t.TypedDict):
 @task
 def pair_outputs(x: int) -> Pair:
     """Return two named outputs."""
-    return {'first': x, 'second': x}
+    return Pair(first=x, second=x)
 
 
 @task

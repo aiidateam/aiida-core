@@ -12,9 +12,7 @@ Authoring examples illustrate the recommended shapes, including the inline retry
 regression fixtures preserve historical edge-case behavior.
 """
 
-from typing_extensions import NotRequired, TypedDict
-
-from aiida.engine import WorkChain, calcfunction, expose, task
+from aiida.engine import PortModel, WorkChain, calcfunction, expose, task
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph
 from aiida.orm import Bool, Float, Int
@@ -65,11 +63,11 @@ class OptionalInputWorkChain(WorkChain):
 optional_input_chain = task(OptionalInputWorkChain)
 
 
-class OptionalBundle(TypedDict):
+class OptionalBundle(PortModel):
     """The inputs of `OptionalInputWorkChain` returned as one namespace."""
 
     x: int
-    y: NotRequired[int]
+    y: int | None = None
 
 
 @graph

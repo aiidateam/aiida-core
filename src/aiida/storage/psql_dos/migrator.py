@@ -27,6 +27,7 @@ from alembic.runtime.environment import EnvironmentContext
 from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, Engine, MetaData, String, column, desc, insert, inspect, select, table
+from sqlalchemy.engine import Transaction
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
@@ -338,14 +339,28 @@ class PsqlDosMigrator:
             metadata = MetaData()
             metadata.reflect(bind=self.connection)
 
-            # The ``sorted_tables`` property returns the tables sorted by their foreign-key dependencies, with those
-            # that are dependent on others first. Iterate over the list in reverse to ensure that the tables with
-            # the independent rows are deleted first.
-            for schema_table in reversed(metadata.sorted_tables):
-                if schema_table.name in exclude_tables:
-                    continue
-                self.connection.execute(schema_table.delete())
-            self.connection.commit()
+            # Run all deletes inside a single explicit transaction so that deferred foreign keys -
+            # including the self-referential ownership reference on ``db_dbnode`` - are only checked at
+            # commit time. Without this, drivers that commit each statement separately (e.g. SQLite)
+            # enforce the constraints per statement and wiping rows with ownership edges fails.
+            transaction: Transaction
+            if self.connection.in_transaction():
+                transaction = self.connection.begin_nested()
+            else:
+                transaction = self.connection.begin()
+            with transaction:
+                # The ``sorted_tables`` property returns the tables sorted by their foreign-key dependencies,
+                # with those that are dependent on others first. Iterate over the list in reverse to ensure that
+                # the tables with the independent rows are deleted first.
+                for schema_table in reversed(metadata.sorted_tables):
+                    if schema_table.name in exclude_tables:
+                        continue
+                    self.connection.execute(schema_table.delete())
+            # Committing the savepoint alone does not persist the deletes when joining an already-open
+            # transaction, so commit the enclosing transaction as well. This preserves the previous behavior,
+            # which unconditionally committed after the deletes.
+            if self.connection.in_transaction():
+                self.connection.commit()
 
     def migrate(self) -> None:
         """Migrate the storage for this profile to the head version.

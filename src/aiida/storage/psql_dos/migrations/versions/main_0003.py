@@ -9,10 +9,11 @@
 
 Migration steps:
 
-1. :func:`~aiida.storage.migrations.legacy_ssh.migrate_ssh_transports`: migrate SSH computers to the
+1. Create storage for owned containers.
+2. :func:`~aiida.storage.migrations.legacy_ssh.migrate_ssh_transports`: migrate SSH computers to the
    asynchronous ``core.ssh`` transport plugin.
-2. :func:`_migrate_legacy_codes`: migrate the deprecated ``Code`` data plugin.
-3. :func:`_migrate_code_hidden_extra`: rename the visibility extra on built-in Code nodes.
+3. :func:`_migrate_legacy_codes`: migrate the deprecated ``Code`` data plugin.
+4. :func:`_migrate_code_hidden_extra`: rename the visibility extra on built-in Code nodes.
 
 The legacy paramiko-based ``core.ssh`` transport plugin was removed in v3.0, and the asynchronous plugin (formerly
 ``core.ssh_async``) took over its entry point name. Consequently:
@@ -40,6 +41,7 @@ from sqlalchemy import text
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.migrations.legacy_code import INSTALLED_NODE_TYPE, LEGACY_NODE_TYPE, PORTABLE_NODE_TYPE
 from aiida.storage.migrations.legacy_ssh import migrate_ssh_transports
+from aiida.storage.migrations.owned_containers import create_ownership_schema
 
 revision = 'main_0003'
 down_revision = 'main_0002'
@@ -128,6 +130,8 @@ def _migrate_code_hidden_extra(conn):
 
 def upgrade():
     """Migrations for the upgrade."""
+    # PostgreSQL cannot alter db_dbnode after data updates have queued deferred trigger events.
+    create_ownership_schema()
     conn = op.get_bind()
     migrate_ssh_transports(conn)
     _migrate_legacy_codes(conn)

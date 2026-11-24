@@ -14,6 +14,7 @@ Migration steps:
    asynchronous ``core.ssh`` transport plugin.
 3. :func:`_migrate_legacy_codes`: migrate the deprecated ``Code`` data plugin.
 4. Rename the visibility extra on built-in Code nodes.
+5. Create storage for owned containers.
 
 See the ``main_0003`` revision of the ``psql_dos`` backend for the rationale of the transport
 rename, which likewise has no inverse. Downgrades are therefore not supported.
@@ -36,6 +37,7 @@ from aiida.storage.migrations.legacy_code import (
     check_sqlite_executables,
 )
 from aiida.storage.migrations.legacy_ssh import migrate_ssh_transports
+from aiida.storage.migrations.owned_containers import create_ownership_schema
 
 revision = 'main_0003'
 down_revision = 'main_0002'
@@ -104,6 +106,8 @@ def upgrade():
     migrate_ssh_transports(conn)
     _migrate_legacy_codes(conn)
     conn.execute(text(SQLITE_HIDDEN_UPGRADE_STATEMENT))
+    # Run after the data migrations so a failed conversion does not leave ownership DDL behind.
+    create_ownership_schema()
 
 
 def downgrade() -> None:

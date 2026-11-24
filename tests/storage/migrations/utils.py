@@ -7,7 +7,10 @@
 ###########################################################################
 """Utilities for storage migration schema tests."""
 
-from sqlalchemy import inspect
+import re
+from contextlib import nullcontext
+
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import Connection, Engine
 
 
@@ -15,6 +18,17 @@ def reflect_schema(bind: Connection | Engine) -> dict:
     """Create a backend-independent representation of a database schema."""
     inspector = inspect(bind)
     table_names = sorted(inspector.get_table_names())
+
+    # SQLAlchemy reflects the columns of an inline SQLite foreign key, but
+    # misses its name and options. Read the declaration to compare it with
+    # the equivalent table-level constraint created on fresh profiles.
+    inline_owner_fk = None
+    if bind.dialect.name == 'sqlite' and 'db_dbnode' in table_names:
+        with bind.connect() if isinstance(bind, Engine) else nullcontext(bind) as connection:
+            ddl = connection.execute(text("SELECT sql FROM sqlite_master WHERE name = 'db_dbnode'")).scalar_one()
+        inline_owner_fk = re.search(
+            r'owner_id INTEGER CONSTRAINT (\w+) REFERENCES db_dbnode \(id\) DEFERRABLE INITIALLY (\w+)', ddl
+        )
 
     columns = {}
     primary_keys = {}
@@ -40,9 +54,14 @@ def reflect_schema(bind: Connection | Engine) -> dict:
         check_constraints[table_name] = sorted(
             inspector.get_check_constraints(table_name), key=lambda constraint: constraint['name'] or ''
         )
+        reflected_fks = inspector.get_foreign_keys(table_name)
+        if table_name == 'db_dbnode' and inline_owner_fk:
+            for constraint in reflected_fks:
+                if constraint['constrained_columns'] == ['owner_id'] and constraint['name'] is None:
+                    constraint['name'] = inline_owner_fk[1]
+                    constraint['options'] = {'deferrable': True, 'initially': inline_owner_fk[2]}
         foreign_keys[table_name] = sorted(
-            inspector.get_foreign_keys(table_name),
-            key=lambda constraint: (constraint['name'] or '', constraint['constrained_columns']),
+            reflected_fks, key=lambda constraint: (constraint['name'] or '', constraint['constrained_columns'])
         )
         # PostgreSQL indexes carry a legacy `include_columns` key in SQLAlchemy 2.0 that 2.1 drops; the same columns
         # remain under `dialect_options['postgresql_include']`.

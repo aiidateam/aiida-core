@@ -34,7 +34,7 @@ from aiida.engine.processes.ports import (
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec, _declare_namespace, _mapping_of, _require_storable
 from aiida.manage import get_manager
-from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
+from aiida.orm import CalcFunctionNode, Data, Node, ProcessNode, WorkFunctionNode, to_aiida_type
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 if t.TYPE_CHECKING:
@@ -639,7 +639,7 @@ class FunctionProcess(FunctionProcessBase):
         # done lazily using a lambda, just as any port defaults should not define node instances directly as is
         # also checked by the ``spec.input`` call.
         # Port defaults are lazy: values become callables producing fresh serialized nodes per launch.
-        def _to_aiida_type(value: t.Any = default) -> Data:
+        def _to_aiida_type(value: t.Any = default) -> Node:
             return to_aiida_type(value)
 
         indirect_default: t.Any

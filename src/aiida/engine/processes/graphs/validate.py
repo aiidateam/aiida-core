@@ -15,7 +15,7 @@ import typing as t
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.engine.processes.graphs.ir import BranchControl, Endpoint, LoopControl, OutputTree, _input_ports_at, _port_at
 from aiida.engine.processes.ports import OutputPort, PortNamespace, _infer_node_types
-from aiida.orm import Data
+from aiida.orm.nodes.data.data import Data
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.graphs.ir import Dependency, GraphIR, GraphTask, Route

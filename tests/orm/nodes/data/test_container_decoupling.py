@@ -13,6 +13,7 @@ from unittest import mock
 import pytest
 
 from aiida.common.exceptions import IntegrityError
+from aiida.common.links import LinkType
 from aiida.orm import Container, Data, DataDict, DataList, Int, Node, load_node
 
 INT_TYPE = Int.class_node_type
@@ -137,3 +138,47 @@ def test_nested_failure_rolls_back_and_retries():
     assert outer.is_stored
     reloaded = load_node(outer.pk)
     assert [[child.value for child in nested] for nested in reloaded] == [[1, 2], [3]]
+
+
+@pytest.mark.requires_broker
+def test_process_container_io_retains_root_provenance():
+    """Process container inputs/outputs link at the container root with values preserved."""
+    from aiida.engine import calcfunction
+
+    @calcfunction
+    def wrap_in_list(value):
+        """Wrap one value in a new container (returned as the process output)."""
+        result = DataList()
+        result.append(value)
+        return result
+
+    @calcfunction
+    def copy_input(value):
+        """Produce a new output from an already detached input."""
+        return value.clone()
+
+    source = Int(7)
+    result, calc_node = wrap_in_list.run_get_node(source)
+
+    # The output is a stored container linked at the root; provenance is CREATE, values preserved.
+    assert isinstance(result, DataList)
+    assert isinstance(result, Data)
+    assert result.is_stored
+    assert [child.value for child in result] == [7]
+    incoming = result.base.links.get_incoming(link_type=LinkType.CREATE).all()
+    assert len(incoming) == 1
+    assert incoming[0].node.uuid == calc_node.uuid
+    assert calc_node.is_stored
+
+    # Owned children passed as inputs are detached to standalone copies (new identity, same content).
+    outer = DataList([Int(11)]).store()
+    owned = outer[0]
+    echoed, echo_node = copy_input.run_get_node(owned)
+    assert echoed.value == 11
+    recorded = echo_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC).all()
+    assert len(recorded) == 1
+    assert recorded[0].node.uuid != owned.uuid
+    assert echoed.uuid != recorded[0].node.uuid
+    # The original container keeps the original node.
+    assert outer[0] is owned
+    assert outer[0].value == 11

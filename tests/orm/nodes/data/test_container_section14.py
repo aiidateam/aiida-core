@@ -295,6 +295,93 @@ class TestFreezeRollbackRetained:
         assert _values(load_node(container.pk)) == [1, 2, 3]
 
 
+class TestProcessBoundariesStrict:
+    """§14/§7: process input copies and calculation output copies (implemented)."""
+
+    def test_calcfunction_input_owned_child_copied(self):
+        """An owned child passed as input executes as the recorded standalone copy."""
+        from aiida.engine import calcfunction
+        from aiida.orm.nodes.data.container import is_owned
+
+        container = DataList([Int(1)]).store()
+        child = container[0]
+        received_uuids = []
+
+        @calcfunction
+        def copy_input(x):
+            received_uuids.append(x.uuid)
+            return x.clone()
+
+        out, calc = copy_input.run_get_node(child)
+        assert out.value == 1
+        recorded = calc.inputs.x
+        assert received_uuids == [recorded.uuid]
+        assert recorded.value == 1
+        assert recorded.uuid != child.uuid  # independent standalone copy recorded
+        assert recorded.is_stored
+        assert not is_owned(recorded)
+
+    def test_calcfunction_output_owned_child_copied(self):
+        """Exposing an owned child as a calculation output records a copy via CREATE."""
+        from aiida.common.links import LinkType
+        from aiida.engine import calcfunction
+        from aiida.orm.nodes.data.container import is_owned
+
+        @calcfunction
+        def first(x):
+            return x[0]
+
+        container = DataList([Int(7)])
+        source_uuid = container[0].uuid
+        out, calc = first.run_get_node(container)
+        assert out.value == 7
+        recorded_outputs = calc.base.links.get_outgoing(link_type=LinkType.CREATE).all()
+        assert len(recorded_outputs) == 1
+        recorded_out = recorded_outputs[0].node
+        assert recorded_out.value == 7
+        assert recorded_out.uuid != source_uuid  # independent standalone copy recorded
+        assert not is_owned(recorded_out)
+        assert [child.value for child in container] == [7]
+
+    def test_exposed_output_handle_is_recorded_copy(self):
+        """Exposing an owned child records a standalone copy and the caller receives that recorded copy."""
+        from aiida.common.links import LinkType
+        from aiida.engine import calcfunction
+
+        @calcfunction
+        def first(x):
+            return x[0]
+
+        container = DataList([Int(7)])
+        out, calc = first.run_get_node(container)
+        recorded_out = calc.base.links.get_outgoing(link_type=LinkType.CREATE).one().node
+        assert out.uuid == recorded_out.uuid
+
+    @pytest.mark.parametrize('port', ['nested.value', 'literal__value'])
+    def test_owned_output_preserves_port_path(self, port):
+        """The caller receives the recorded copy at the original output port."""
+        from aiida.common.links import LinkType
+        from aiida.engine import calcfunction
+
+        @calcfunction
+        def first(container):
+            return {port: container[0]}
+
+        container = DataList([Int(7)]).store()
+        outputs, calc = first.run_get_node(container)
+        recorded = calc.base.links.get_outgoing(link_type=LinkType.CREATE).one()
+        if port == 'nested.value':
+            assert set(outputs) == {'nested'}
+            assert set(outputs['nested']) == {'value'}
+            output = outputs['nested']['value']
+            assert recorded.link_label == 'nested__value'
+        else:
+            assert set(outputs) == {port}
+            output = outputs[port]
+            assert recorded.link_label == port
+        assert output.uuid == recorded.node.uuid != container[0].uuid
+
+
 class TestLowLevelLinkRejectionStrict:
     """§14/§7: direct low-level provenance links to owned children are rejected."""
 
@@ -466,6 +553,31 @@ class TestPlainListDictUnchanged:
         plain_dict.store()
         assert load_node(plain_list.pk).get_list() == [1, 2]
         assert load_node(plain_dict.pk).get_dict() == {'a': 1}
+
+
+class TestDeferredStayDeferred:
+    """Spec §13: deferred items stay deferred; rejected items stay absent."""
+
+    def test_slicing_still_unsupported(self):
+        with pytest.raises(TypeError):
+            DataList([Int(1), Int(2)])[0:1]  # type: ignore[index]
+
+    def test_no_parameterized_port_types(self):
+        # Port validation checks the container class, not its member types.
+        from aiida.engine import ProcessSpec
+
+        spec = ProcessSpec()
+        spec.input('data', valid_type=DataList)
+        assert spec.inputs['data'].valid_type is DataList
+
+    def test_no_source_copy_tracking(self):
+        clone = DataList([Int(1)]).clone()
+        assert 'source_uuid' not in clone.base.extras.all
+        assert not clone.base.links.get_incoming().all()
+
+    def test_no_container_serialization_schema(self):
+        assert not hasattr(DataList, 'get_list')
+        assert not hasattr(DataDict, 'get_dict')
 
 
 class TestPerfMeasurements:

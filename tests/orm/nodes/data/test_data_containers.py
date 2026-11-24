@@ -182,12 +182,16 @@ def test_store_rejects_membership_cycle(aiida_profile_clean):
 
 
 def test_heterogeneous_list_round_trip():
-    """Owned and referenced entries reload in order without changing the referenced node."""
+    """Owned and referenced entries reload in order and can be used as process inputs."""
     from aiida.engine import calcfunction
 
     @calcfunction
     def produce():
         return Int(3)
+
+    @calcfunction
+    def consume(numbers):
+        return Int(numbers[2].value)
 
     source = produce()
     container = DataList([Int(1)])
@@ -201,6 +205,7 @@ def test_heterogeneous_list_round_trip():
     assert [child.value for child in reloaded] == ['first', 2, 3]
     assert reloaded[2].uuid == source.uuid
     assert reloaded[2].creator.uuid == source.creator.uuid
+    assert consume(reloaded).value == 3
     builder = QueryBuilder().append(DataList, filters={'id': reloaded.pk}, tag='owner')
     builder.append(Int, with_members='owner', project='id')
     assert set(builder.all(flat=True)) == {reloaded[1].pk, source.pk}

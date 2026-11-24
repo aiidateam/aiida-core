@@ -79,6 +79,25 @@ def test_querybuilder_data_subclass_excludes_containers(aiida_profile_clean):
     assert QueryBuilder().append(Dict).count() == 0
 
 
+def test_process_ports_accept_data_and_containers():
+    """Process ports declared with ``Data`` accept data and containers alike."""
+    from aiida.engine.processes.ports import InputPort
+
+    port = InputPort('port', valid_type=Data)
+    assert port.validate(Int(1)) is None
+    assert port.validate(DataList([Int(1)])) is None
+    assert port.validate(DataDict({'a': Int(1)})) is None
+
+
+def test_infer_data_node_types():
+    """Type inference preserves the declared data class."""
+    from aiida.engine.processes.ports import _infer_node_types
+
+    assert _infer_node_types(Data) == (Data,)
+    assert _infer_node_types(Int) == (Int,)
+    assert _infer_node_types(Container) == (Container,)
+
+
 def test_links_accept_containers():
     """Provenance link validation treats containers like data at the boundary."""
     from aiida.common.links import LinkType
@@ -88,3 +107,48 @@ def test_links_accept_containers():
     target = DataList([Int(1)])
     validate_link(source, target, LinkType.CREATE, 'result')
     validate_link(target, source, LinkType.INPUT_CALC, 'input')
+
+
+def test_calcfunction_container_output(aiida_profile_clean):
+    """A ``calcfunction`` can return a container and the launcher-equivalent filter finds it."""
+    from aiida.engine import calcfunction, run_get_node
+
+    @calcfunction
+    def make_list():
+        return DataList([Int(1), Int(2)])
+
+    results, node = run_get_node(make_list)
+    assert isinstance(results, DataList)
+    assert results.is_stored
+
+    # This mirrors ``ProcessLauncher`` for finished processes: outputs are collected as data nodes.
+    outputs = {entry.link_label: entry.node for entry in node.base.links.get_outgoing(node_class=Data)}
+    assert set(outputs) == {'result'}
+    assert isinstance(outputs['result'], DataList)
+    assert outputs['result'].uuid == results.uuid
+    # The stored container plus its two owned children are all data-node rows.
+    assert QueryBuilder().append(Data).count() == 3
+
+
+def test_calcfunction_owned_child_output(aiida_profile_clean):
+    """Returning an owned container child records a standalone copy; the caller handle stays usable."""
+    from aiida.engine import calcfunction, run_get_node
+    from aiida.orm.nodes.data.container import is_owned
+
+    @calcfunction
+    def take_first(container: DataList):
+        child = container[0]
+        assert is_owned(child)
+        return child
+
+    source = DataList([Int(1), Int(2)])
+    results, node = run_get_node(take_first, container=source)
+    recorded = node.base.links.get_outgoing().get_node_by_label('result')
+
+    assert recorded.is_stored
+    assert not is_owned(recorded)
+    assert not is_owned(results)
+    assert recorded.value == 1
+    # The recorded node is exactly what the process output link points to.
+    assert recorded.uuid == node.base.links.get_outgoing().get_node_by_label('result').uuid
+    assert results.uuid == recorded.uuid

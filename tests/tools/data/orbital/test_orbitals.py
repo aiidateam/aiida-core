@@ -173,3 +173,18 @@ class TestRealhydrogenOrbital:
 
         name = RealhydrogenOrbital.get_name_from_quantum_numbers(angular_momentum=2, magnetic_number=4)
         assert name == 'DXY'
+
+    def test_get_quantum_numbers_from_name(self):
+        """Test if the function ``get_quantum_numbers_from_name`` works as expected"""
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')
+
+        p_orbitals = RealhydrogenOrbital.get_quantum_numbers_from_name('P')
+        assert len(p_orbitals) == 3
+        assert all(data['angular_momentum'] == 1 for data in p_orbitals)
+
+        px_orbital = RealhydrogenOrbital.get_quantum_numbers_from_name('Px')
+        assert len(px_orbital) == 1
+        assert px_orbital[0] == {'angular_momentum': 1, 'magnetic_number': 1}
+
+        with pytest.raises(ValueError, match='Invalid choice of projection name'):
+            RealhydrogenOrbital.get_quantum_numbers_from_name('NonExistent')

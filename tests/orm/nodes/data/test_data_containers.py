@@ -386,6 +386,27 @@ def test_store_failure_leaves_no_partial_graph_and_retryable():
     assert list(container)[:2] == children
 
 
+def test_enclosing_transaction_rollback_recovers_and_retries():
+    """Rollback of an enclosing transaction after successful storage restores editable retained objects."""
+    container = DataDict({'a': Int(1), 'b': Int(2)})
+    backend = container.backend
+    with pytest.raises(RuntimeError, match='outer failure'):
+        with backend.transaction():
+            container.store()
+            assert container.is_stored
+            raise RuntimeError('outer failure')
+
+    assert not container.is_stored
+    assert not any(child.is_stored for child in container.values())
+    assert list(container.keys()) == ['a', 'b']
+    assert [child.value for child in container.values()] == [1, 2]
+
+    container['c'] = Int(3)
+    container.store()
+    assert container.is_stored
+    assert list(container.keys()) == ['a', 'b', 'c']
+
+
 def test_equality_and_hash_are_uuid_identity():
     """Independent copies are unequal even with matching content; hashing is UUID-based."""
     container = DataList([Int(1)])

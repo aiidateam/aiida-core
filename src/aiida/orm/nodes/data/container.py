@@ -543,6 +543,27 @@ class Container(Data):
             self._container_root()._verify_outer_persisted()
         return super().is_stored
 
+    def _register_rollback_recovery(self, subtree: list[Node], snapshot: dict[str, dict[str, t.Any]]) -> None:
+        """Register eager subtree recovery if the enclosing backend transaction rolls back.
+
+        Uses the general storage rollback hook (a plain callable carrying no ORM assumptions for
+        storage), so the same retained objects are restored to an unstored, editable, retryable state
+        at rollback time regardless of whether a retained leaf child or the ownership root is inspected
+        first afterwards. Backends without hook support keep the lazy verification fallback below.
+        """
+        add_hook = getattr(self.backend, 'add_rollback_callback', None)
+        if add_hook is None or not self.backend.in_transaction:
+            return
+
+        def _recover_on_rollback() -> None:
+            # Disarm before recovering: recovery mutates attributes, whose mutability checks consult
+            # `is_stored`, which would otherwise re-enter lazy verification and recurse on nested subtrees.
+            self._container_guard_armed = False
+            self._container_recovery_snapshot = None
+            self._recover_subtree(subtree, snapshot)
+
+        add_hook(_recover_on_rollback)
+
     def _verify_outer_persisted(self) -> None:
         """Disarm the enclosing-transaction guard, recovering the subtree if its rows are gone."""
         if not getattr(self, '_container_guard_armed', False):
@@ -831,9 +852,12 @@ class Container(Data):
         self.base.links.incoming_cache = []
         self.base.caching.rehash()
         if joined_outer:
-            # Retain the snapshot for lazy recovery if the enclosing transaction rolls back.
+            # The rows may still be rolled back with the enclosing transaction: recover eagerly through a
+            # rollback hook (child-first safe, no root check needed), keeping lazy verification (see
+            # `is_stored`) as a fallback for backends without hook support.
             self._container_guard_armed = True
             self._container_recovery_snapshot = snapshot
+            self._register_rollback_recovery(subtree, snapshot)
         else:
             self._container_guard_armed = False
             self._container_recovery_snapshot = None

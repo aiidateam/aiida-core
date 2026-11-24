@@ -295,26 +295,35 @@ class PsqlDosBackend(StorageBackend):
         """Open a transaction to be used as a context manager.
 
         If there is an exception within the context then the changes will be rolled back and the state will be as before
-        entering. Transactions can be nested.
+        entering. Transactions can be nested. Rollback callbacks registered via
+        :meth:`add_rollback_callback <aiida.orm.implementation.storage_backend.StorageBackend.add_rollback_callback>`
+        fire when their scope rolls back and are handed to the parent scope on a clean nested exit.
         """
         session = self.get_session()
-        if session.in_nested_transaction():
-            # Already inside an explicit transaction: join it through a savepoint and let the outermost transaction
-            # own the commit, so nested work rolls back together with the outer transaction on failure.
-            with session.begin_nested():
-                yield session
-        elif session.in_transaction():
-            # An autobegun transaction (for example from preceding reads) is active, but no explicit outer
-            # transaction owns the commit, so commit on successful exit as before.
-            with session.begin_nested() as savepoint:
-                yield session
-                savepoint.commit()
-            session.commit()
-        else:
-            with session.begin():
+        scope = self._push_rollback_scope()
+        try:
+            if session.in_nested_transaction():
+                # Already inside an explicit transaction: join it through a savepoint and let the outermost
+                # transaction own the commit, so nested work rolls back together with the outer transaction on failure.
+                with session.begin_nested():
+                    yield session
+            elif session.in_transaction():
+                # An autobegun transaction (for example from preceding reads) is active, but no explicit outer
+                # transaction owns the commit, so commit on successful exit as before.
                 with session.begin_nested() as savepoint:
                     yield session
                     savepoint.commit()
+                session.commit()
+            else:
+                with session.begin():
+                    with session.begin_nested() as savepoint:
+                        yield session
+                        savepoint.commit()
+        except BaseException:
+            self._fail_rollback_scope(scope)
+            raise
+        else:
+            self._merge_rollback_scope(scope)
 
     @property
     def in_transaction(self) -> bool:

@@ -259,6 +259,42 @@ class TestPreStorageMutation:
         assert _values(load_node(container.pk)) == [2, 3, 1]
 
 
+class TestFreezeRollbackRetained:
+    """Atomic freezing, rollback, and retained state."""
+
+    def test_draft_member_can_store_independently(self):
+        node = Int(1)
+        container = DataDict({'value': node})
+        node.store()
+        with pytest.raises(IntegrityError, match='insert an explicit clone'):
+            container.store()
+        assert node.is_stored
+        assert not container.is_stored
+
+    def test_atomic_freeze(self):
+        container = DataList([Int(1), Int(2)])
+        container.store()
+        assert container.is_stored
+        reloaded = load_node(container.pk)
+        assert reloaded.is_stored
+        assert _values(reloaded) == [1, 2]
+        with pytest.raises(ModificationNotAllowed):
+            reloaded.append(Int(3))
+
+    def test_enclosing_rollback_recovery_retryable(self, backend):
+        container = DataList([Int(1), Int(2)])
+        with pytest.raises(RuntimeError, match='force outer rollback'):
+            with backend.transaction():
+                container.store()
+                raise RuntimeError('force outer rollback')
+        # Retained objects recovered: unstored, editable, retryable (same objects).
+        assert not container.is_stored
+        assert _values(container) == [1, 2]
+        container.append(Int(3))
+        container.store()
+        assert _values(load_node(container.pk)) == [1, 2, 3]
+
+
 class TestLowLevelLinkRejectionStrict:
     """§14/§7: direct low-level provenance links to owned children are rejected."""
 

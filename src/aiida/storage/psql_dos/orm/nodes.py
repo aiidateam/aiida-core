@@ -18,6 +18,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm.implementation import BackendNode, BackendNodeCollection
+from aiida.orm.implementation.containers import BackendContainer
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 from aiida.storage.psql_dos.models import node as models
 from aiida.storage.psql_dos.orm import entities
@@ -34,6 +35,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     USER_CLASS = SqlaUser
     COMPUTER_CLASS = SqlaComputer
     LINK_CLASS = models.DbLink
+    MEMBERSHIP_CLASS = models.DbMembership
 
     def __init__(
         self,
@@ -181,7 +183,10 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     def add_incoming(self, source, link_type, link_label):
         session = self.backend.get_session()
 
-        type_check(source, self.__class__)
+        # Backend-node interface, not the concrete subclass: provenance links routinely connect
+        # different backend entities (e.g. a calculation ``SqlaNode`` CREATEs a ``SqlaContainer``),
+        # so restricting ``source`` to ``self.__class__`` wrongly rejects whole-container links.
+        type_check(source, SqlaNode)
 
         if not self.is_stored:
             raise exceptions.ModificationNotAllowed('node has to be stored when adding an incoming link')
@@ -199,7 +204,19 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     def _add_link(self, source, link_type, link_label):
         """Add a single link"""
+        from aiida.storage import ownership as ownership_contract
+
         session = self.backend.get_session()
+
+        # Membership rows are containment edges, not provenance: direct low-level provenance links to owned
+        # children are rejected at the backend contract level (automatic copying belongs at the deferred
+        # process-boundary integration).
+        ownership_contract.assert_no_provenance_link_to_owned(
+            session, self.MODEL_CLASS, endpoint_id=source.pk, role='source'
+        )
+        ownership_contract.assert_no_provenance_link_to_owned(
+            session, self.MODEL_CLASS, endpoint_id=self.pk, role='target'
+        )
 
         try:
             with session.begin_nested():
@@ -215,6 +232,13 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     def store(self, links=None, clean=True):
         session = self.backend.get_session()
+
+        if getattr(self.model, 'owner_id', None) is not None:
+            msg = (
+                'Cannot store an owned node independently: ownership references are created atomically '
+                'with membership rows via `create_container_membership`.'
+            )
+            raise exceptions.IntegrityError(msg)
 
         if clean:
             self.clean_values()
@@ -312,27 +336,132 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         yield from self.model.attributes.keys()
 
 
+class SqlaContainer(SqlaNode, BackendContainer):
+    """SQLA backend entity for an owned data container.
+
+    Shares the ``DbNode`` row (common node identity) but persists through
+    :meth:`store_container`, never :meth:`SqlaNode.store`. The generic
+    ``store`` raises so containers cannot silently take the data path.
+    """
+
+    def store(self, links=None, clean=True):  # type: ignore[override]
+        msg = (
+            'Cannot store a container with `BackendNode.store`: use `BackendContainer.store_container` '
+            '(via `backend.store_container_subtree`) so container persistence stays decoupled from data.'
+        )
+        raise exceptions.IntegrityError(msg)
+
+    def store_container(self, links=None, clean=True):
+        """Store this container node row without any membership edges.
+
+        Dedicated container persistence (no delegation to ``SqlaNode.store``):
+        writes the ``DbNode`` row plus optional incoming provenance links for
+        the ownership root. Membership rows and child owner references are
+        persisted separately via ``backend.create_container_membership``.
+        """
+        session = self.backend.get_session()
+
+        if getattr(self.model, 'owner_id', None) is not None:
+            msg = (
+                'Cannot store an owned container independently: ownership references are created '
+                'atomically with membership rows via `create_container_membership`.'
+            )
+            raise exceptions.IntegrityError(msg)
+
+        if clean:
+            self.clean_values()
+
+        session.add(self.model)
+
+        if links:
+            for link_triple in links:
+                self._add_link(*link_triple)
+
+        if not session.in_nested_transaction():
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+                raise
+        else:
+            session.flush()
+
+        return self
+
+
+def _is_container_node_type(node_type: str | None) -> bool:
+    """Return whether a backend ``node_type`` string identifies a container (no ORM import)."""
+    from aiida.storage import ownership as ownership_contract
+
+    # Closed container set: the shared storage identifier mapping is the single source of truth.
+    return ownership_contract.is_container_node_type(node_type)
+
+
 class SqlaNodeCollection(BackendNodeCollection):
     """The collection of Node entries."""
 
     ENTITY_CLASS: type[SqlaNode] = SqlaNode
+    CONTAINER_CLASS: type[SqlaContainer] = SqlaContainer
+
+    def create(self, **kwargs):
+        """Create an unstored backend node, branching to ``SqlaContainer`` for containers."""
+        entity_class = self.CONTAINER_CLASS if _is_container_node_type(kwargs.get('node_type')) else self.ENTITY_CLASS
+        return entity_class(backend=self._backend, **kwargs)
 
     def get(self, pk):
         session = self.backend.get_session()
 
         try:
-            return self.ENTITY_CLASS.from_dbmodel(
-                session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one(), self.backend
-            )
+            model = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
+            entity_class = self.CONTAINER_CLASS if _is_container_node_type(model.node_type) else self.ENTITY_CLASS
+            return entity_class.from_dbmodel(model, self.backend)
         except NoResultFound:
             msg = f"Node with pk '{pk}' not found"
             raise exceptions.NotExistent(msg) from NoResultFound
 
     def delete(self, pk):
+        from aiida.storage import ownership as ownership_contract
+
         session = self.backend.get_session()
+        get_models = getattr(self.backend, '_ownership_models', None)
 
         try:
             row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
+        except NoResultFound:
+            msg = f"Node with pk '{pk}' not found"
+            raise exceptions.NotExistent(msg) from NoResultFound
+        node_models = get_models() if get_models is not None else None
+        if node_models is None:
+            # Backends without the ownership schema cannot hold containers; keep historical behavior.
+            try:
+                session.delete(row)
+                session.commit()
+            except NoResultFound:
+                msg = f"Node with pk '{pk}' not found"
+                raise exceptions.NotExistent(msg) from NoResultFound
+            return
+        node_model, membership_model = node_models
+        owned_by = getattr(row, 'owner_id', None)
+        if owned_by is not None:
+            msg = (
+                f'Cannot delete node {pk} directly: it is an owned container child (owned by '
+                f'{owned_by}). Expand the request to the full ownership unit '
+                '(ownership root plus complete subtree) and delete it with explicit approval; '
+                'owned children cannot be deleted independently.'
+            )
+            raise exceptions.IntegrityError(msg)
+        members = session.query(membership_model).filter(membership_model.owner_id == pk).count()
+        if members:
+            msg = (
+                f'Cannot delete node {pk} directly: it owns a container subtree ({members} '
+                'membership row(s)). Expand the request to the full ownership unit (root plus '
+                'complete subtree) and delete it with explicit approval; database cascades alone '
+                'are not sufficient.'
+            )
+            raise exceptions.IntegrityError(msg)
+        # Re-validate closure at execution: the set must still be ownership-closed.
+        ownership_contract.validate_deletion_set(session, node_model, membership_model, [pk])
+        try:
             session.delete(row)
             session.commit()
         except NoResultFound:

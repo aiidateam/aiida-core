@@ -15,6 +15,7 @@
 from aiida.orm.implementation.authinfos import *
 from aiida.orm.implementation.comments import *
 from aiida.orm.implementation.computers import *
+from aiida.orm.implementation.containers import *
 from aiida.orm.implementation.entities import *
 from aiida.orm.implementation.groups import *
 from aiida.orm.implementation.logs import *
@@ -32,6 +33,7 @@ __all__ = (
     'BackendCommentCollection',
     'BackendComputer',
     'BackendComputerCollection',
+    'BackendContainer',
     'BackendEntity',
     'BackendEntityExtrasMixin',
     'BackendGroup',

@@ -123,6 +123,44 @@ class TestNode:
         assert Custom.entry_point is None
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_add_incoming_joins_ambient_transaction(backend):
+    """A backend link write must roll back with the enclosing transaction."""
+    source = Data().store()
+    target = WorkflowNode().store()
+
+    with pytest.raises(RuntimeError, match='boom'):
+        with backend.transaction():
+            target.backend_entity.add_incoming(source.backend_entity, LinkType.INPUT_WORK, 'input')
+            assert target.base.links.get_incoming().one().node.uuid == source.uuid
+            raise RuntimeError('boom')
+
+    assert target.base.links.get_incoming().all() == []
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_store_all_is_atomic(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A late failure rolls back new inputs but leaves previously stored inputs alone."""
+    stored = Data().store()
+    unstored = Data()
+    target = CalculationNode()
+    target.base.links.add_incoming(stored, LinkType.INPUT_CALC, 'existing')
+    target.base.links.add_incoming(unstored, LinkType.INPUT_CALC, 'new')
+
+    def fail_store() -> None:
+        assert unstored.is_stored
+        msg = 'target store fails'
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(target, 'store', fail_store)
+    with pytest.raises(RuntimeError, match='target store fails'):
+        target.store_all()
+
+    with pytest.raises(exceptions.NotExistent):
+        load_node(uuid=unstored.uuid)
+    assert load_node(uuid=stored.uuid).pk == stored.pk
+
+
 class TestNodeAttributesExtras:
     """Test for node attributes and extras."""
 

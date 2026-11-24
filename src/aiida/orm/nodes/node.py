@@ -818,9 +818,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return self.backend_entity.mtime
 
     def store_all(self) -> Self:
-        """Store the node, together with all input links.
+        """Store the node, together with all input links, atomically.
 
-        Unstored nodes from cached incoming linkswill also be stored.
+        Unstored nodes from cached incoming links will also be stored. The inputs and this node are stored inside a
+        single backend transaction, so a failure rolls everything back instead of leaving partially stored inputs
+        behind. Repository content written before the failure is not rolled back; it becomes unreferenced and is
+        cleaned up by the regular storage maintenance.
         """
         if self.is_stored:
             msg = f'Node<{self.pk}> is already stored'
@@ -830,11 +833,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         for link_triple in self.base.links.incoming_cache:
             link_triple.node._verify_are_parents_stored()
 
-        for link_triple in self.base.links.incoming_cache:
-            if not link_triple.node.is_stored:
-                link_triple.node.store()
+        with self.backend.transaction():
+            for link_triple in self.base.links.incoming_cache:
+                if not link_triple.node.is_stored:
+                    link_triple.node.store()
 
-        return self.store()
+            return self.store()
 
     def store(self) -> Self:
         """Store the node in the database while saving its attributes and repository directory.

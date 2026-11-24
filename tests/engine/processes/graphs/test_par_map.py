@@ -214,9 +214,13 @@ def test_map_nested_graph_provenance() -> None:
     original = DataList([Int(1), Int(2)])
     outputs, node = run_get_node(par_maps.map_nested, values=original)
     assert node.is_finished_ok
-    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
-    calc_calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()
-    assert set(calc_calls) == {'map_add_one_0__increment', 'map_add_one_1__increment', 'map_add_one_collect'}
+    items = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert set(items) == {'map_add_one_0', 'map_add_one_1'}
+    collector = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).get_node_by_label('map_add_one_collect')
+    for index, (name, item) in enumerate(sorted(items.items())):
+        assert name == f'map_add_one_{index}'
+        (increment,) = item.called
+        assert collector.inputs[f'item_{index}'].uuid == item.outputs.result.uuid == increment.outputs.result.uuid
     assert [member.value for member in outputs['result']] == [2, 3]
     assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
 

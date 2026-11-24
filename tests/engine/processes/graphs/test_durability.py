@@ -117,7 +117,11 @@ def test_checkpoint_only_provenance() -> None:
     outputs, node = run_get_node(report, seed=3.0)
     assert node.is_finished_ok
     assert outputs['score'].value == 0.6
-    producer, consumer = sorted(node.called, key=lambda child: child.process_label)
+    (prepare_scope,) = (child for child in node.called if isinstance(child, orm.GraphNode))
+    (producer,) = prepare_scope.called
+    (consumer,) = (child for child in node.called if isinstance(child, orm.TaskNode))
+    assert prepare_scope.is_finished_ok and prepare_scope.is_sealed
+    assert list(prepare_scope.outputs) == []
     assert producer.process_label == 'estimate'
     assert consumer.process_label == 'normalize'
     assert producer.inputs.seed.uuid == node.inputs.seed.uuid
@@ -192,7 +196,10 @@ def test_checkpoint_only_output_outlives_the_child(runner, restart: bool) -> Non
         persister.save_checkpoint(process)
         with process._process_scope():
             process._do_step()
-        (producer,) = process.node.called
+        (prepare_scope,) = process.node.called
+        assert isinstance(prepare_scope, orm.GraphNode) and not prepare_scope.is_terminated
+        (producer,) = prepare_scope.called
+        assert process._active_called_processes() == [producer]
         runner.loop.run_until_complete(runner._local_process_tasks[producer.pk])
         producer = orm.load_node(producer.pk)
         assert producer.is_finished_ok
@@ -203,6 +210,8 @@ def test_checkpoint_only_output_outlives_the_child(runner, restart: bool) -> Non
         if not restart:
             assert process.kill() is True
             assert process.node.is_killed
+            killed_scope = orm.load_node(prepare_scope.pk)
+            assert killed_scope.is_killed and killed_scope.is_sealed
             assert not list(process.node.backend.checkpoint_store.iter_files(node_uuid=process.node.uuid))
             return
 
@@ -211,7 +220,10 @@ def test_checkpoint_only_output_outlives_the_child(runner, restart: bool) -> Non
         restored.execute()
         assert restored.node.is_finished_ok
         assert restored.outputs['score'].value == 0.6
-        assert [child.uuid for child in restored.node.called if child.process_label == 'estimate'] == [producer.uuid]
+        (replayed_scope,) = (child for child in restored.node.called if isinstance(child, orm.GraphNode))
+        assert replayed_scope.uuid == prepare_scope.uuid
+        assert replayed_scope.is_finished_ok and replayed_scope.is_sealed
+        assert replayed_scope.called == [producer]
         assert not list(restored.node.backend.checkpoint_store.iter_files(node_uuid=restored.node.uuid))
     finally:
         if restored is not None:

@@ -111,14 +111,14 @@ def test_map_graph_never_creates_result_container() -> None:
     outputs, node = run_get_node(map_graphs.map_two_step, values=original)
     assert node.is_finished_ok
     assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
-    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
-    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()
-    assert set(calls) == {
-        'map_two_step_0__increment',
-        'map_two_step_0__double',
-        'map_two_step_1__increment',
-        'map_two_step_1__double',
-        'map_two_step_collect',
-    }
+    items = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert set(items) == {'map_two_step_0', 'map_two_step_1'}
+    for item in items.values():
+        assert item.is_finished_ok
+        assert set(item.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()) == {
+            'increment',
+            'double',
+        }
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels() == ['map_two_step_collect']
     collector = node.base.links.get_outgoing(link_label_filter='map_two_step_collect').one().node
     assert collector.outputs.result.uuid == outputs['result'].uuid

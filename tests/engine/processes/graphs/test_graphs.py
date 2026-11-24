@@ -769,24 +769,19 @@ def test_failed_loop_iteration_dispatches_no_next_iteration(monkeypatch: pytest.
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_nested_graph_runs_in_single_graph_process() -> None:
-    """A nested declaration executes as a scope of the root graph with hierarchical call labels."""
+    """A nested declaration records a graph node and links its own children."""
     outputs, node = run_get_node(call_programs.nested_multiply_add, x=2, y=3, z=4)
     assert node.is_finished_ok
     assert outputs['result'].value == 11
     assert isinstance(node, GraphNode)
-    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
-    graph_nodes = [child for child in node.called_descendants if isinstance(child, GraphNode)]
-    assert graph_nodes == []
-    assert set(node.called) == set(node.called_descendants)
-    by_label = {link.link_label: link.node for link in node.base.links.get_outgoing().all()}
-    assert {label for label, child in by_label.items() if isinstance(child, ProcessNode)} == {
-        'multiply_add__multiply',
-        'multiply_add__add',
-        'add',
-    }
-    assert all(child.is_finished_ok for child in node.called)
-    assert by_label['multiply_add__add'].outputs.result.value == 10
-    assert outputs['result'].uuid == by_label['add'].outputs.result.uuid
+    scope = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).get_node_by_label('multiply_add')
+    assert isinstance(scope, GraphNode) and scope.is_finished_ok
+    calls = scope.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    assert set(calls) == {'multiply', 'add'}
+    assert scope.outputs.result.uuid == calls['add'].outputs.result.uuid
+    add = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).get_node_by_label('add')
+    assert add.inputs.x.uuid == scope.outputs.result.uuid
+    assert outputs['result'].uuid == add.outputs.result.uuid
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

@@ -196,8 +196,8 @@ def test_graph_outputs_materialize_computed_scalars_and_reuse_existing_data() ->
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_computed_scalar_materializes_only_at_root_output() -> None:
-    """Nested passthrough and branch arms keep the primitive until the root publishes it."""
+def test_computed_scalar_materializes_at_graph_boundaries() -> None:
+    """An explicit graph records its computed input; branch arms remain internal."""
     from aiida.engine.processes.graphs.process import GraphProcess
     from aiida.orm import Node
 
@@ -232,8 +232,10 @@ def test_computed_scalar_materializes_only_at_root_output() -> None:
     outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(laundered, {'x': 2, 'y': 3}))
     assert node.is_finished_ok
     assert outputs['result'].value == 5
-    assert outputs['result'].creator.uuid == node.uuid
-    assert not node.called
+    (nested,) = node.called
+    assert outputs['result'].uuid == nested.inputs.value.uuid == nested.outputs.result.uuid
+    assert outputs['result'].creator is None
+    assert not nested.called
 
     taken_body = _graph(
         [],

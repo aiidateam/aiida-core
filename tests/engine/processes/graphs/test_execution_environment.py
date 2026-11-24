@@ -160,7 +160,13 @@ def test_nested_attempts(code, threshold, initial, ceiling, budget, requests, su
     children = {
         entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
     }
-    attempts = [children.pop(f'graph_attempt_{n}__stage__solver') for n in range(1, len(requests) + 1)]
+    stage = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).get_node_by_label('stage')
+    assert stage.is_finished_ok is success
+    assert stage.is_sealed
+    attempts = [
+        stage.base.links.get_outgoing(link_type=LinkType.CALL_CALC).get_node_by_label(f'graph_attempt_{n}__solver')
+        for n in range(1, len(requests) + 1)
+    ]
     assert set(children) == ({'preprocess', 'consume'} if success else {'preprocess'})
     assert [child.get_option('max_memory_kb') for child in attempts] == requests
     assert {child.inputs.x.uuid for child in attempts} == {children['preprocess'].outputs.result.uuid}

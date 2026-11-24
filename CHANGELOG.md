@@ -22,6 +22,14 @@ Graph bodies accept a general `partial(...)` input binding that needs no import:
 
 ### Breaking changes
 
+#### Nested graph invocations have provenance nodes
+
+Explicit nested graph calls and mapped graph items now each get a `GraphNode` with their own input, output, and call links, while still running inside the root `GraphProcess`.
+Previously, their tasks were called directly by the root under labels such as `prepare__expand`; now the root calls `prepare`, and that graph node calls `expand`.
+Use `called_descendants` instead of `called` to find tasks across graph boundaries.
+Durable inline values are materialized when they cross an explicit graph input or output boundary.
+Branch and loop regions still do not get their own nodes, and existing provenance links are unchanged.
+
 #### Function-backed tasks have a dedicated node type
 
 New function-backed `@task` runs, including `par_map` collectors, are recorded as `aiida.orm.TaskNode` instead of `aiida.orm.CalcFunctionNode`.
@@ -38,8 +46,8 @@ Annotate each parameter with its intended type.
 
 Function tasks receive stored data-node inputs by default and cannot change their scientific data.
 Use `Annotated[NodeType, PortField(mutable=True)]` on the task input and every graph input along its path to give the task an unstored private clone while linking the original.
-Graphs now publish inline values directly: the root adds both `CREATE` and `RETURN` for a newly materialized output and only `RETURN` for an existing node.
-Nested scopes do not publish outputs or create provenance nodes of their own.
+Graphs publish inline values directly: the invocation adds both `CREATE` and `RETURN` for a newly materialized output and only `RETURN` for an existing node.
+Internal branch and loop scopes do not publish outputs or create provenance nodes of their own.
 `verdi process show` and `verdi node show` list a graph output once.
 Archives preserve both links for graph-created outputs.
 Older versions that restrict `CREATE` to calculations cannot import these graph-created outputs.
@@ -131,7 +139,7 @@ Graph placements declared with `task(ProcessClass, errors=...)` now expose outpu
 
 #### Graphs run as a single process
 
-One `GraphProcess` now executes the whole graph: nested graphs, loop iterations, branch arms, and map elements run as checkpointable scopes of that process instead of child graph processes. Only task runs and map collectors remain child processes, dispatched with hierarchical call labels (for example `multiply_add__multiply` or `loop_1_iteration_0__decrement`). Provenance that previously contained intermediate `GraphNode` children now shows the task runs directly under the single graph node, and `GraphRun` checkpoints use a new `0.2` scope format; existing `0.1` checkpoints cannot be resumed after upgrading. The run state is checkpointed YAML-encoded (like the other process inputs), and nested scope inputs normalized from defaults are stored standalone so checkpoints can reference them; they carry no provenance links. Finish or terminate all active graph processes before upgrading.
+One `GraphProcess` now executes the whole graph: nested graphs, loop iterations, branch arms, and map elements run as checkpointable scopes of that process instead of child graph processes. Only task runs and map collectors are independently scheduled child processes. `GraphRun` checkpoints use a scope format; existing `0.1` checkpoints cannot be resumed after upgrading. Finish or terminate graph processes with those older checkpoints before upgrading.
 
 #### Conditional expressions in source graphs
 

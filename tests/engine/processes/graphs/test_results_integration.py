@@ -226,7 +226,9 @@ def test_bare_failure_preserves_exit_code_and_blocks_consumers():
     assert node.is_failed
     assert (node.exit_status, node.exit_message) == FlakyErrors.ODD.value[:2]
     assert not outputs
-    assert [called.process_label for called in node.called] == ['flaky_increment']
+    (scope,) = node.called
+    assert (scope.exit_status, scope.exit_message) == FlakyErrors.ODD.value[:2]
+    assert [called.process_label for called in scope.called] == ['flaky_increment']
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -257,7 +259,9 @@ def test_success_returns_from_both_arms(early, expected):
     assert node.is_finished_ok
     assert outputs['result'].pk == (first if early else second).pk
     assert outputs['result'].value == expected
-    assert not node.called
+    (scope,) = node.called
+    assert scope.is_finished_ok and scope.outputs.result.uuid == outputs['result'].uuid
+    assert not scope.called
 
 
 @graph
@@ -323,14 +327,19 @@ def test_loop_return_blocks_later_iteration_and_independent_continuation():
     outputs, node = run_get_node(propagate_loop_return, x=0)
     assert (node.exit_status, node.exit_message) == FlakyErrors.TOO_BIG.value[:2]
     assert not outputs
-    assert [child.process_label for child in node.called] == ['advance_early']
+    (scope,) = node.called
+    assert (scope.exit_status, scope.exit_message) == FlakyErrors.TOO_BIG.value[:2]
+    assert [child.process_label for child in scope.called] == ['advance_early']
 
 
 def test_capture_of_loop_return_exposes_only_error():
     outputs, node = run_get_node(capture_loop_return, x=0)
     assert node.is_finished_ok
     assert outputs['result'].value is True
-    assert {child.process_label for child in node.called} == {'advance_early', 'mark_absent'}
+    scope, guard = node.called
+    assert (scope.exit_status, scope.exit_message) == FlakyErrors.TOO_BIG.value[:2]
+    assert [child.process_label for child in scope.called] == ['advance_early']
+    assert guard.process_label == 'mark_absent'
 
 
 @pytest.mark.parametrize('reject', [False, True])

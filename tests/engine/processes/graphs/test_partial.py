@@ -94,9 +94,9 @@ def test_partial_graph_inlines() -> None:
     outputs, node = run_get_node(partials.partial_graph, x=2, factor=10)
     assert node.is_finished_ok
     assert outputs['result'].value == 14
-    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
-    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()
-    assert set(calls) == {'scaled__add', 'scaled__scaled_add'}
+    inner = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).get_node_by_label('scaled')
+    calls = inner.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()
+    assert set(calls) == {'add', 'scaled_add'}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -198,16 +198,15 @@ def test_partial_map_graph_executes(serialized: bool) -> None:
     outputs, node = _launch(partials.partial_map_graph, {'values': original, 'factor': 10}, serialized)
     assert node.is_finished_ok
     assert [member.value for member in outputs['result']] == [12, 14]
-    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
     assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
-    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()
-    assert set(calls) == {
-        'map_scaled_0__add',
-        'map_scaled_0__scaled_add',
-        'map_scaled_1__add',
-        'map_scaled_1__scaled_add',
-        'map_scaled_collect',
-    }
+    items = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert set(items) == {'map_scaled_0', 'map_scaled_1'}
+    for item in items.values():
+        assert item.is_finished_ok
+        assert set(item.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()) == {
+            'add',
+            'scaled_add',
+        }
     collector = node.base.links.get_outgoing(link_label_filter='map_scaled_collect').one().node
     assert collector.outputs.result.uuid == outputs['result'].uuid
 

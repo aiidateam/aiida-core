@@ -223,16 +223,33 @@ def test_conditional_permission_checked_before_dispatch(take_readonly: bool) -> 
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_nested_report_provenance() -> None:
-    """Only the child copies the input; only the root materializes the count."""
+def test_nested_report_provenance(monkeypatch) -> None:
+    """One executor records both graph invocations; only the task copies the input."""
+    from aiida.engine.processes.graphs.process import GraphProcess
+
+    init = GraphProcess.__init__
+    executors = []
+
+    def count_executor(self, *args, **kwargs):
+        executors.append(self)
+        init(self, *args, **kwargs)
+
+    monkeypatch.setattr(GraphProcess, '__init__', count_executor)
     assert report.build() is None
     original = orm.StructureData(cell=UNIT_CELL)
     outputs, node = run_get_node(report, structure=original)
     assert node.is_finished_ok
     assert node.inputs.structure.uuid == outputs['original'].uuid == original.uuid
-    (child_link,) = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
-    assert child_link.link_label == 'prepare__expand'
-    assert len(node.called) == 1
+    assert len(executors) == 1
+    (nested_link,) = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()
+    nested = nested_link.node
+    assert nested_link.link_label == 'prepare'
+    assert node.called == [nested]
+    assert isinstance(nested, orm.GraphNode) and nested.is_finished_ok and nested.is_sealed
+    assert nested.inputs.structure.uuid == original.uuid
+    assert nested.outputs.result.uuid == outputs['expanded'].uuid
+    (child_link,) = nested.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
+    assert child_link.link_label == 'expand'
     child = child_link.node
     assert child.inputs.structure.uuid == original.uuid
     assert outputs['expanded'].creator.uuid == child.uuid
@@ -278,14 +295,18 @@ def test_create_links_still_restricted() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_nested_inline_condition_is_not_stored() -> None:
-    """A value confined to inline control state never materializes."""
+def test_condition_value_materializes_only_at_subgraph_boundary() -> None:
+    """A returned inline value belongs to the subgraph; the comparison stays internal."""
     existing = orm.Int(5).store()
     outputs, node = run_get_node(condition_only, value=existing)
     assert node.is_finished_ok
     assert outputs['result'].uuid == existing.uuid
-    assert not node.called
-    assert orm.QueryBuilder().append(orm.Int).count() == 1
+    (inner,) = node.called
+    assert not inner.called
+    assert inner.outputs.result.value == 1
+    assert inner.outputs.result.creator.uuid == inner.uuid
+    assert orm.QueryBuilder().append(orm.Int).count() == 2
+    assert orm.QueryBuilder().append(orm.Bool).count() == 0
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

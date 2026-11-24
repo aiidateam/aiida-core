@@ -229,8 +229,8 @@ def test_aliased_graph_executes() -> None:
     outputs, node = run_get_node(aliases.aliased_nested, x=2, y=3)
     assert node.is_finished_ok
     assert outputs['result'].value == 5
-    labels = {link.link_label for link in node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()}
-    assert labels == {'scf__pw'}
+    scope = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).get_node_by_label('scf')
+    assert scope.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels() == ['pw']
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

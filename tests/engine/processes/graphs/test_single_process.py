@@ -8,11 +8,10 @@
 ###########################################################################
 """Single-`GraphProcess` invariants: nested scopes never submit child graphs.
 
-Every graph execution, including explicitly nested graphs and loop, branch,
-and map bodies, runs as scopes of one root process. Only task runs and map
-collectors become child processes, dispatched with hierarchical call labels.
-These tests pin the invariant, the label hierarchy, failure propagation, and
-checkpoint/restart behavior with pending and completed child work.
+Explicitly nested graphs have their own provenance nodes, but execute in
+the same root process. Branches and loops contribute only to call labels.
+These tests also cover failure propagation and checkpoint/restart behavior
+with pending and completed child work.
 """
 
 import pytest
@@ -28,7 +27,7 @@ from aiida.orm import DataList
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.process.process import ProcessNode
 from aiida.orm.nodes.process.workflow.graph import GraphNode
-from tests.engine.processes.graphs.programs import branches, calls, loops, map_graphs, par_maps
+from tests.engine.processes.graphs.programs import branches, calls, loops, par_maps
 from tests.engine.processes.graphs.programs import tasks as task_programs
 
 pytestmark = pytest.mark.presto
@@ -105,6 +104,18 @@ def outer_overrides_default() -> int:
     return inner_with_default(x=10)
 
 
+@graph
+def increment_inline(x: int) -> int:
+    """Return a value that the graph itself must materialize."""
+    return x + 1
+
+
+@graph
+def call_inline_increment(x: int) -> int:
+    """Publish the nested graph's materialized result unchanged."""
+    return increment_inline(x=x)
+
+
 def _local_runner():
     """Return a broker-free runner for checkpoint tests that must not require RabbitMQ."""
     from aiida.manage import get_manager
@@ -134,19 +145,16 @@ def _call_labels(node: ProcessNode) -> set[str]:
 @pytest.mark.parametrize(
     'declaration, inputs',
     [
-        pytest.param(calls.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, id='nested-graph'),
         pytest.param(loops.countdown, {'value': 3, 'condition': True}, id='loop'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': True}, id='branch-taken'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': False}, id='branch-otherwise'),
         pytest.param(par_maps.map_list, {'values': [1, 2]}, id='map-task'),
-        pytest.param(par_maps.map_nested, {'values': [1, 2]}, id='map-graph'),
-        pytest.param(map_graphs.map_two_step, {'values': [1, 2]}, id='map-multistep-graph'),
         pytest.param(loops.nested_loops, {'value': 2}, id='nested-loops'),
         pytest.param(branches.loop_in_branch, {'value': 2, 'flag': True}, id='loop-in-branch'),
     ],
 )
 def test_single_graph_node_invariant(declaration, inputs: dict) -> None:
-    """Nested graphs, loops, branches, and maps execute without child graph processes."""
+    """Anonymous regions and task maps do not get their own graph nodes."""
     if 'values' in inputs:
         inputs = {**inputs, 'values': DataList([Int(value) for value in inputs['values']])}
     _, node = run_get_node(declaration, **inputs)
@@ -178,8 +186,10 @@ def test_nested_failure_propagates_without_dispatching_downstream() -> None:
     assert not node.is_finished_ok
     assert node.exit_status == GraphProcess.exit_codes.ERROR_TASK_FAILED.status
     assert outputs == {}
-    assert _call_labels(node) == {'inner_failing__fail_always'}
-    assert _graph_nodes(node) == [node]
+    (inner,) = node.called
+    assert isinstance(inner, GraphNode) and inner.is_failed and inner.is_sealed
+    assert _call_labels(node) == {'inner_failing'}
+    assert _call_labels(inner) == {'fail_always'}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -209,6 +219,33 @@ def test_nested_checkpoint_restores_scopes_and_rearms_callbacks(runner, monkeypa
         process.close()
         if restores is not None:
             restores.close()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_replay_reuses_nested_graph_and_its_inline_output() -> None:
+    """A checkpoint predating a completed scope reuses its node and materialized output."""
+    from aiida.engine.processes.persistence import CheckpointPayload
+
+    with _local_runner() as runner:
+        process = GraphProcess(inputs=call_inline_increment.get_launch_inputs(x=2), runner=runner)
+        try:
+            initial = CheckpointPayload.from_object(process)
+            assert process._do_step() is None
+            (scope,) = process.node.called
+            assert scope.is_finished_ok
+            result = scope.outputs.result
+            assert result.creator.uuid == scope.uuid
+        finally:
+            process.close()
+
+        replay = _decode_process(initial, runner)
+        try:
+            replay.execute()
+            assert replay.node.is_finished_ok
+            assert replay.node.called == [scope]
+            assert replay.node.outputs.result.uuid == result.uuid
+        finally:
+            replay.close()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -276,7 +313,8 @@ def test_nested_graph_map_collects_synchronously() -> None:
     outputs, node = run_get_node(map_passthrough_graph, values=values)
     assert node.is_finished_ok
     assert [member.value for member in outputs['result']] == [1, 2]
-    assert _graph_nodes(node) == [node]
+    items = _graph_nodes(node)[1:]
+    assert len(items) == 2 and all(item.is_finished_ok and not item.called for item in items)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -325,7 +363,9 @@ def test_nested_graph_default_end_to_end() -> None:
     overridden, overridden_node = run_get_node(outer_overrides_default)
     assert overridden_node.is_finished_ok
     assert overridden['result'].value == 11
-    assert _graph_nodes(filled_node) == [filled_node]
+    (inner,) = filled_node.called
+    assert isinstance(inner, GraphNode) and inner.inputs.x.value == 5
+    assert inner.outputs.result.uuid == filled['result'].uuid
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

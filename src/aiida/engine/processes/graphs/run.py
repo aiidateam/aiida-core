@@ -10,16 +10,14 @@
 
 One :class:`GraphProcess` executes the whole graph: nested graphs, branches,
 loops, and maps are checkpointable logical scopes inside a single
-:class:`GraphRun`, never submitted processes. Only task runs (calcfunctions,
-`CalcJob` and `WorkChain` children) and map collectors become child processes,
-dispatched directly by the root with hierarchical call labels that preserve
-scope and iteration identity.
+:class:`GraphRun`, never submitted processes. Explicit graph invocations have
+provenance nodes, while branches and loops only contribute to call labels.
 """
 
 from __future__ import annotations
 
 import typing as t
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from functools import cached_property
 
@@ -73,14 +71,8 @@ _ROOT_SCOPE: t.Final = 'root'
 def _prepared_scope_given(body: GraphIR, raw: dict[str, t.Any]) -> dict[str, t.Any]:
     """Fill a child scope's inputs with defaults and validate them like a nested launch.
 
-    Nested graphs previously launched as child `GraphProcess` nodes, so every boundary ran
-    `_prepare_graph_inputs` plus input-namespace and per-consumer validation. Scopes keep the
-    same contract: defaults fill here and unknown or mistyped inputs fail loudly on entry.
-    Wired values keep their runtime identity, so inline values only materialize if
-    a task consumes them or the root publishes them. Filled defaults serialize for checkpoints, like
-    root inputs serialize for their own `INPUT_WORK` links; existing `Node` inputs keep
-    their identity. Real tasks convert their inputs through the process machinery at
-    dispatch time.
+    Defaults fill here and unknown or mistyped inputs fail on entry. The scheduler retains
+    wired values until the executor records the invocation's durable input links.
     """
     namespace = body.build_input_namespace()
     prepared = _prepare_graph_inputs(namespace, raw, body.identifier)
@@ -108,9 +100,7 @@ def _prepared_scope_given(body: GraphIR, raw: dict[str, t.Any]) -> dict[str, t.A
         msg = 'graph inputs serialized to `None`; expected a mapping.'
         raise GraphValidationError(msg)
     assert isinstance(serialized, dict)
-    # Filled defaults were absent from the wired inputs: checkpoint them as nodes, mirroring
-    # what a nested child launch used to store as its own inputs. Anything the caller wired
-    # keeps its identity, so computed primitives survive every boundary as primitives.
+    # Normalize the default values for checkpointing without changing wired values in scheduling-only runs.
     given = dict(prepared)
     for name in prepared:
         if name not in raw and name in serialized:
@@ -253,6 +243,7 @@ class _Start:
     """A task run to dispatch under an explicit provenance call-link name."""
 
     instance: str
+    scope: str
     task: GraphTask
     inputs: dict[str, t.Any]
     config_path: tuple[str, ...] = ()
@@ -271,10 +262,10 @@ class _Step:
     starts: list[_Start] = field(default_factory=list)
 
     def begin(
-        self, instance: str, task: GraphTask, inputs: dict[str, t.Any], config_path: tuple[str, ...] = ()
+        self, scope: str, instance: str, task: GraphTask, inputs: dict[str, t.Any], config_path: tuple[str, ...] = ()
     ) -> None:
-        """Record the dispatch and its static configuration address."""
-        self.starts.append(_Start(instance=instance, task=task, inputs=inputs, config_path=config_path))
+        """Record the dispatch and its scope and static configuration address."""
+        self.starts.append(_Start(instance=instance, scope=scope, task=task, inputs=inputs, config_path=config_path))
 
 
 @dataclass(frozen=True)
@@ -354,6 +345,7 @@ class GraphRun:
     _ok: dict[int, bool] = field(default_factory=dict, repr=False, compare=False)
     _nodes: dict[int, Node] = field(default_factory=dict, repr=False, compare=False)
     _templates: dict[str, GraphIR] = field(default_factory=dict, repr=False, compare=False)
+    recorded_outputs: dict[str, dict[str, t.Any]] = field(default_factory=dict, repr=False, compare=False)
     _memo_outputs: dict[str, dict[str, t.Any]] = field(default_factory=dict, repr=False, compare=False)
     _memo_placements: dict[tuple[str, str], t.Any] = field(default_factory=dict, repr=False, compare=False)
     _memo_problems: dict[str, tuple[list[str], list[str]]] = field(default_factory=dict, repr=False, compare=False)
@@ -391,7 +383,11 @@ class GraphRun:
     @property
     def propagated_exit_code(self) -> ExitCode | None:
         """Return the original exit code if a declared failure reached the root."""
-        if (label := self.scopes[_ROOT_SCOPE].get('failure')) is None:
+        return self.scope_exit_code(_ROOT_SCOPE)
+
+    def scope_exit_code(self, key: str) -> ExitCode | None:
+        """Return the declared failure that reached this scope, if any."""
+        if (label := self.scopes[key].get('failure')) is None:
             return None
         if isinstance(label, tuple):
             return self._returned_member(label).value
@@ -512,6 +508,8 @@ class GraphRun:
         """Return every task label claimed so far, across all scopes."""
         used = set(self.dispatched) | set(self.done)
         for scope in self.scopes.values():
+            if scope['kind'] in ('subgraph', 'map'):
+                used.add(scope['prefix'].removesuffix('__'))
             for labels in scope.get('instances', {}).values():
                 used.update(labels)
         return used
@@ -603,6 +601,8 @@ class GraphRun:
             if sibling == 0 and kind in ('subgraph', 'branch')
             else f'{parent}/{placement}#{sibling}'
         )
+        if kind in ('subgraph', 'map'):
+            prefix = self._claim(prefix.removesuffix('__')) + '__'
         self.scopes[key] = _new_scope_state(
             parent=parent, placement=placement, kind=kind, selector=selector, prefix=prefix, given=given
         )
@@ -921,6 +921,8 @@ class GraphRun:
 
     def _scope_outputs(self, key: str) -> dict[str, t.Any]:
         """Collect one scope's outputs from passthrough inputs and placement results."""
+        if key in self.recorded_outputs:
+            return self.recorded_outputs[key]
         if key not in self._memo_outputs:
             self._memo_outputs[key] = self._resolve_scope_outputs(key)
         return self._memo_outputs[key]
@@ -1012,8 +1014,11 @@ class GraphRun:
             sum('failure' in scope or 'return_origin' in scope for scope in scopes),
         )
 
-    def step(self) -> _Step:
-        """Advance scheduling until synchronous control flow settles, then return dispatches."""
+    def step(self, *, sync_scopes: Callable[[], None] | None = None) -> _Step:
+        """Advance scheduling until synchronous control flow settles, then return dispatches.
+
+        The executor can synchronize scope nodes before collectors or ready tasks read outputs.
+        """
         result = _Step()
         # Dispatches never change within a step, so outputs and declared-output
         # problems memoize for the call; scope progress invalidates them each round.
@@ -1022,6 +1027,8 @@ class GraphRun:
             while True:
                 self._invalidate()
                 before = self._progress(len(result.starts))
+                if sync_scopes is not None:
+                    sync_scopes()
                 for key in list(self.scopes):
                     if self._scope_stopped(key):
                         continue
@@ -1035,6 +1042,8 @@ class GraphRun:
                         ):
                             self._continue_map(key, task, result)
                 self._invalidate()
+                if sync_scopes is not None:
+                    sync_scopes()
                 for key in list(self.scopes):
                     if not self._scope_stopped(key):
                         self._settle_return(key, self._template_of(key))
@@ -1199,7 +1208,7 @@ class GraphRun:
             scope.setdefault('instances', {}).setdefault(name, []).append(label)
             if isinstance(task, ProcessTask) and task.spec.result_errors and not task.capture_error:
                 self._propagating_instances[label] = (scope_key, task.spec)
-            step.begin(label, task, inputs, (*self._config_prefix(scope_key), task.name))
+            step.begin(scope_key, label, task, inputs, (*self._config_prefix(scope_key), task.name))
         self._invalidate()
 
     def _config_prefix(self, scope_key: str) -> tuple[str, ...]:
@@ -1392,6 +1401,7 @@ class GraphRun:
                 label = self._claim(scope['prefix'] + base)
                 scope.setdefault('instances', {}).setdefault(task.name, []).append(label)
                 step.begin(
+                    scope_key,
                     label,
                     ProcessTask(name=task.name, inputs={}, spec=task.spec),
                     item_inputs,
@@ -1440,7 +1450,7 @@ class GraphRun:
             collected['keys'] = keys
         collect = self._collect_label(scope_key, task.name)
         scope.setdefault('instances', {}).setdefault(task.name, []).append(collect)
-        step.begin(collect, task, collected)
+        step.begin(scope_key, collect, task, collected)
         self._invalidate()
 
     def _continue_map(self, scope_key: str, task: MapControl, step: _Step) -> None:

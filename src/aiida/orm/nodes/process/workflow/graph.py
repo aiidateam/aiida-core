@@ -45,6 +45,7 @@ class GraphNode(WorkflowNode):
     _CLS_NODE_LINKS = GraphNodeLinks
 
     GRAPH_DEFINITION_KEY = 'graph_definition'
+    EXECUTOR_UUID_KEY = 'graph_executor_uuid'
     RUNTIME_CONFIG_KEY = 'graph_runtime_config_v1'
     EXECUTION_POLICY_KEY = 'graph_execution_policy_v1'
     PROTOCOL_KEY = 'graph_protocol_v1'

@@ -289,9 +289,9 @@ def test_nested_scoped_config(executable, aiida_code_installed):
     assert node.is_finished_ok
     assert outputs['result'].value == 7
     calls = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()
-    assert {call.link_label: call.node.inputs.executable.uuid for call in calls} == {
-        'first__configured_chain': executable.uuid,
-        'second__configured_chain': other.uuid,
+    assert {call.link_label: call.node.called[0].inputs.executable.uuid for call in calls} == {
+        'first': executable.uuid,
+        'second': other.uuid,
     }
 
 
@@ -325,7 +325,7 @@ def test_map_config(executable, values):
     )
     assert node.is_finished_ok
     assert [value.value for value in outputs['result']] == values
-    children = [child for child in node.called if child.process_class is ConfiguredChain]
+    children = [child for child in node.called_descendants if child.process_class is ConfiguredChain]
     assert len(children) == len(values)
     assert all(child.inputs.executable.uuid == executable.uuid for child in children)
 
@@ -350,7 +350,7 @@ def test_checkpoint_config(executable):
         assert restored.node.is_finished_ok
         assert restored.outputs['result'].value == 7
         assert len(restored.node.called) == 2
-        assert all(child.inputs.executable.uuid == executable.uuid for child in restored.node.called)
+        assert all(child.called[0].inputs.executable.uuid == executable.uuid for child in restored.node.called)
     finally:
         if restored is not None:
             restored.close()

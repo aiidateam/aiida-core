@@ -45,7 +45,9 @@ The full rule list lives under :ref:`topics:workflows:graphs:language`.
 Each call to a task or graph in a body is a placement.
 Calling the same task twice creates two placements, each running as its own child process with its own inputs, outputs, and provenance links; name repeated placements with distinct ``.alias('name')`` calls, as a bare second call fails when the graph is built.
 A named value passed between placements is a wire.
-Nested graphs, branch arms, loop iterations, and map items run as scopes of the same graph process: no intermediate process nodes, with hierarchical call labels preserving the scope identity.
+Nested graphs, branch arms, loop iterations, and map items run as scopes of the same graph process.
+Each explicit graph invocation, including each invocation of a mapped graph, gets its own provenance node with input, output, and call links.
+Branches and loops do not get separate nodes; their scope and iteration appear in hierarchical call labels.
 
 .. _topics:workflows:graphs:recipe:
 
@@ -314,9 +316,10 @@ Only finite numbers, strings, booleans, and ``None`` bind; anything else (format
 Inline results are ephemeral orchestration state, not scientific data:
 
 * **No intermediate provenance:** evaluating an inline value does not store or link a data node.
-* **Checkpointed, not stored:** the scheduler keeps inline values in its scope state, so restarts resume counters and conditions, but the provenance graph shows only the tasks that ran.
-* **Output materialization:** returning ``n`` from the root stores it as a new data node with both ``CREATE`` and ``RETURN`` links from the graph. Nested scopes forward inline values without storing them.
-* **Nested helpers may return control state:** a subgraph can return an inline value for its caller to consume as orchestration state, since the caller scope, not the provenance, receives it.
+* **Checkpointed, not stored:** the scheduler keeps inline control values in its scope state so restarts can resume counters and conditions.
+* **Output materialization:** returning a new inline value from an explicit graph invocation stores it as a data node with both ``CREATE`` and ``RETURN`` links from that graph's node.
+  Returning an existing node adds just a ``RETURN`` link.
+  Branches and loops forward inline values without storing them.
 * **Explicit tasks are never inlined:** a ``@task`` function always runs as its own child process, even when its body is a single expression. Inlining never invents a calculation absent from the source.
 * **Cheap by construction:** inline expressions run inside the graph process, so keep them to the supported operators. Anything else (formatting, method calls, nested task calls, slices, set and generator comprehensions, private attribute reads) belongs in a task and still raises ``GraphLanguageError``. Division by zero and non-finite results fail the run.
 
@@ -355,7 +358,7 @@ Comprehensions over owned members keep the owned contract when they forward the 
 Inline indexing and comprehensions require Python container hints such as ``list[orm.Int]``. Pass ``orm.DataList`` and ``orm.DataList[T]`` wires whole instead.
 Task or method calls inside an expression, slices, set or generator comprehensions, private attribute reads, and nested boolean combinations or conditional expressions inside a comprehension all stay task concerns and fail the build.
 Like scalar inline operations, these expressions evaluate inside the graph process and checkpoint with the scope without creating child processes or intermediate data nodes.
-The root materializes a returned collection only when it publishes its outputs.
+An explicit graph invocation materializes a returned collection when it publishes its outputs.
 Returning an existing owned member itself stays under the unchanged owned-container contract and fails at launch, so consume it in a task first.
 
 .. _topics:workflows:graphs:control_flow:
@@ -511,7 +514,7 @@ Graphs can be launched like any other process, with a loaded AiiDA profile:
 * Graph inputs are the function parameters; an input omitted at launch takes its literal default.
 * Graphs and tasks take no ``*args`` or ``**kwargs``, because every input needs its own declared port.
 * Graph outputs can reference task outputs, graph inputs, or new inline values; a graph with no outputs ends with an explicit ``return {}``.
-* Only the root materializes inline return values; a nested graph may return inline control state for its caller without storing a node (see :ref:`topics:workflows:graphs:inline`).
+* Returning a durable inline value from an explicit graph invocation materializes it on that invocation's provenance node (see :ref:`topics:workflows:graphs:inline`).
 
 Tasks can be run independently: ``run_get_node(add, x=1, y=2)`` launches a single task.
 Function-based tasks require a type annotation for every parameter, including those with defaults, and for the return value.
@@ -1301,7 +1304,7 @@ The mapped callable can also be a multi-step graph:
     def apply_graph(values: orm.DataList) -> orm.DataList:
         return par_map(increment_twice, values)
 
-Each list element then runs as its own scope of the same graph process, including all of that graph's tasks dispatched with hierarchical call labels.
+Each list element then runs as its own scope of the same graph process, with a ``GraphNode`` that records its inputs, outputs, and called tasks.
 Graphs containing ``par_map`` can themselves be mapped over lists of lists.
 ``par_map`` also works inside ``if`` branches and ``while`` bodies.
 
@@ -1324,7 +1327,7 @@ AiiDA records the graph run, the task runs, and their data:
 
 * The graph run is a single process node: nested graphs, loop iterations, branch arms, and map elements never create intermediate process nodes.
 * Each task run is a child process node, with a call link named after its placement in the graph.
-  Tasks inside nested scopes carry hierarchical labels, such as ``multiply_add__multiply`` or ``loop_1_iteration_0__subtract``, that preserve their scope and iteration identity.
+  Tasks are linked to their nearest graph invocation's node, with labels such as ``multiply`` or ``loop_1_iteration_0__subtract`` that preserve any intervening control-flow scope and iteration.
 * Each annotated task input and output is a data node linked to the task node.
 
 AiiDA stores plain Python inputs and outputs as nodes automatically; passing an existing node reuses it.
@@ -1444,7 +1447,8 @@ Nest graphs as subgraphs
         inner = multiply_add(x=x, y=y, z=z)
         return add(x=inner, y=x)
 
-The nested graph runs as a scope of the same graph process, not as a child workflow. See :ref:`topics:workflows:graphs:control_flow`.
+The nested graph runs as a scope of the same graph process and is recorded as a child ``GraphNode``, not a separately scheduled process.
+See :ref:`topics:workflows:graphs:control_flow`.
 
 Handle a declared error without retrying
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -17,7 +17,7 @@ from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import BranchControl, InlineOperation, LoopControl, ProcessTask
 from aiida.engine.processes.graphs.lowering import compile_graph
 from aiida.engine.processes.graphs.results import RestartErrors
-from aiida.orm import StructureData
+from aiida.orm import GraphNode, StructureData
 from tests.engine.processes.graphs.programs import restart
 from tests.engine.processes.graphs.programs.restart import CalculationFailure, StepErrors
 
@@ -176,6 +176,9 @@ def test_chain_recovers_in_order() -> None:
     outputs, node = run_get_node(restart.chained_retry, parameters={}, max_attempts=5)
     assert node.is_finished_ok
     assert outputs['result'].value == 1.0
-    # Three step runs, each followed by both handlers, plus the guard.
-    assert len(node.called) == 10
+    # Three step runs, each followed by a graph that runs both handlers, plus the guard.
+    assert len(node.called) == 7
+    handlers = [child for child in node.called if isinstance(child, GraphNode)]
+    assert len(handlers) == 3 and all(len(handler.called) == 2 for handler in handlers)
+    assert sum(not isinstance(child, GraphNode) for child in node.called_descendants) == 10
     assert len(_leaf_labels(node, 'mock_step')) == 3

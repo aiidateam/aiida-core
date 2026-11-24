@@ -13,7 +13,7 @@ import typing as t
 from aiida.common.exceptions import GraphRuntimeError
 from aiida.engine._checkpoint_pickle import dumps, loads_unsafe
 from aiida.engine.processes.persistence import CheckpointPayload
-from aiida.orm import GraphNode, ProcessNode, TaskNode
+from aiida.orm import GraphNode, ProcessNode, TaskNode, load_node
 from aiida.orm.implementation.checkpoint_store import CheckpointBytes
 
 _OUTPUT_DIGEST = TaskNode.CHECKPOINT_OUTPUT_DIGEST
@@ -23,9 +23,18 @@ def _is_active(owner: GraphNode) -> bool:
     return not owner.is_terminated
 
 
+def _owner(node: ProcessNode) -> ProcessNode | None:
+    caller = node.caller
+    if isinstance(caller, GraphNode) and (uuid := caller.base.attributes.get(GraphNode.EXECUTOR_UUID_KEY, None)):
+        owner = load_node(uuid=uuid)
+        assert isinstance(owner, GraphNode)
+        return owner
+    return caller
+
+
 def publish_outputs(node: ProcessNode, outputs: dict[str, t.Any]) -> None:
     """Save the result before the child announces completion."""
-    owner = node.caller
+    owner = _owner(node)
     if not isinstance(owner, GraphNode) or not _is_active(owner):
         msg = 'cannot publish checkpoint-only results without an active calling graph'
         raise GraphRuntimeError(msg)
@@ -45,7 +54,7 @@ def publish_outputs(node: ProcessNode, outputs: dict[str, t.Any]) -> None:
 def read_outputs(node: ProcessNode) -> dict[str, t.Any]:
     """Restore a finished child's result without opening its process checkpoint."""
     digest = node.base.attributes.get(_OUTPUT_DIGEST, None)
-    owner = node.caller
+    owner = _owner(node)
     if digest is None or not isinstance(owner, GraphNode):
         msg = f'checkpoint-only results for task {node.pk} were not published'
         raise GraphRuntimeError(msg)

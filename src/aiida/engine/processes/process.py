@@ -19,6 +19,8 @@ import logging
 import traceback
 import typing as t
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from types import TracebackType
 from uuid import UUID
 
@@ -54,6 +56,8 @@ if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
 
 __all__ = ('Process', 'ProcessState')
+
+_CALL_PARENT: ContextVar[tuple[Process, int] | None] = ContextVar('_CALL_PARENT', default=None)
 
 
 def _with_runtime_values(port: InputPort | PortNamespace | None, original: t.Any, runtime: t.Any) -> t.Any:
@@ -419,7 +423,7 @@ class Process(ProcessBase):
 
         # A synchronous kill has already changed our state. This does not mean
         # the children were killed, so check them even when the parent is terminal.
-        children = [child for child in self.node.called if not child.is_terminated]
+        children = self._active_called_processes()
         if not children:
             return result
 
@@ -447,6 +451,10 @@ class Process(ProcessBase):
             return all(await asyncio.gather(*killing))
 
         return self.loop.create_task(wait_for_kills())
+
+    def _active_called_processes(self) -> list[orm.ProcessNode]:
+        """Return called processes with independent executions that can be cancelled."""
+        return [child for child in self.node.called if not child.is_terminated]
 
     async def _launch_task(self, coro, *args, **kwargs):
         """Launch a coroutine as a task, making sure to make it interruptable."""
@@ -527,7 +535,10 @@ class Process(ProcessBase):
         if self._parent_pid is None and Process.current():
             current = Process.current()
             if isinstance(current, Process):
-                self._parent_pid = current.pid  # type: ignore[assignment]
+                caller = _CALL_PARENT.get()
+                self._parent_pid = (
+                    caller[1] if caller is not None and caller[0] is current else t.cast(int, current.pid)
+                )
         self._pid = self._create_and_setup_db_record()
 
     @override
@@ -664,6 +675,15 @@ class Process(ProcessBase):
         :return: The process node.
         """
         return self.runner.submit(process, inputs, **kwargs)
+
+    @contextmanager
+    def _call_as(self, caller_pk: int) -> Iterator[None]:
+        """Attribute a child submission to a provenance scope of this process."""
+        token = _CALL_PARENT.set((self, caller_pk))
+        try:
+            yield
+        finally:
+            _CALL_PARENT.reset(token)
 
     @property
     def runner(self) -> Runner:

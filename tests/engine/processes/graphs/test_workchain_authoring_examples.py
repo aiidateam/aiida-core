@@ -21,6 +21,7 @@ from aiida.common.links import LinkType
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import BranchControl, InlineOperation, LoopControl, ProcessTask, SubgraphTask
 from aiida.engine.processes.graphs.lowering import compile_graph
+from aiida.orm import GraphNode
 from tests.engine.processes.graphs.programs import workchains
 from tests.engine.processes.graphs.programs.workchains import ChainErrors
 
@@ -85,14 +86,13 @@ def test_retry_recovers() -> None:
     assert outputs['result'].value == 1.0
     # Two chain runs plus the validation guard, and no control-state tasks: the
     # first chain keeps its declared failure while the retry and guard finish cleanly.
-    assert len(node.called) == 3
-    assert sorted(child.exit_status for child in node.called) == [0, 0, ChainErrors.UNSTABLE.status]
+    children = [child for child in node.called if not isinstance(child, GraphNode)]
+    assert len(children) == 3
+    assert sorted(child.exit_status for child in children) == [0, 0, ChainErrors.UNSTABLE.status]
     assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
     # The returned node is the successful chain's own output, not a guard copy.
     owners = [
-        child
-        for child in node.called
-        if 'result' in child.outputs and child.outputs.result.uuid == outputs['result'].uuid
+        child for child in children if 'result' in child.outputs and child.outputs.result.uuid == outputs['result'].uuid
     ]
     assert len(owners) == 1
     assert owners[0].process_label == 'FlakyChain'

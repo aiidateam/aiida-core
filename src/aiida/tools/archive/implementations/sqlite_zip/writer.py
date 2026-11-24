@@ -131,6 +131,11 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
             return
         self._assert_in_context()
         assert self._conn is not None
+        if entity_type is EntityTypes.LINK:
+            from aiida.storage.ownership import validate_provenance_link_type
+
+            for row in rows:
+                validate_provenance_link_type(row.get('type'))
         model, col_keys = models.get_model_from_entity(entity_type)
         if allow_defaults:
             for row in rows:

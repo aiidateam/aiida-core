@@ -950,9 +950,10 @@ def _import_links(
         LinkType.RETURN: ('in_id_label',),
     }
 
-    # Batch by type, to reduce memory load
-    # to-do check no extra types in archive?
+    # Batch by provenance type to reduce memory load. Ownership is imported separately.
     for link_type in LinkType:
+        if link_type is LinkType.CONTAINS:
+            continue
         # get validation parameters
         allowed_in_type, allowed_out_type = allowed_link_nodes[link_type]
         link_uniqueness = link_type_uniqueness[link_type]

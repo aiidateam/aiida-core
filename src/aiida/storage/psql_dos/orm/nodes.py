@@ -206,6 +206,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         """Add a single link"""
         from aiida.storage import ownership as ownership_contract
 
+        ownership_contract.validate_provenance_link_type(link_type)
         session = self.backend.get_session()
 
         # Membership rows are containment edges, not provenance: direct low-level provenance links to owned

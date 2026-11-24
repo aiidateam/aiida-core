@@ -74,6 +74,7 @@ from sqlalchemy.orm import Session
 
 from aiida.common import timezone
 from aiida.common.exceptions import IntegrityError
+from aiida.common.links import LinkType
 from aiida.orm.implementation.storage_backend import MembershipDeletion
 from aiida.storage.utils import _create_smarter_in_clause
 
@@ -105,6 +106,7 @@ __all__ = (
     'validate_link_rows',
     'validate_membership_spec',
     'validate_ownership_graph',
+    'validate_provenance_link_type',
 )
 
 #: Exact ``node_type`` identifiers eligible to own nodes. This is the single source of truth for the
@@ -601,16 +603,30 @@ def validate_bulk_node_update(rows: list[dict]) -> None:
             raise IntegrityError(msg)
 
 
+def validate_provenance_link_type(value: object) -> None:
+    """Reject ``CONTAINS`` when writing to the provenance link table.
+
+    :param value: the link type enum or its stored value.
+    :raises IntegrityError: if the type is ``CONTAINS``.
+    """
+    if value in (LinkType.CONTAINS, LinkType.CONTAINS.value):
+        msg = 'Rejected non-provenance CONTAINS link: use membership storage instead.'
+        raise IntegrityError(msg)
+
+
 def validate_link_rows(session, node_model, rows: list[dict]) -> None:
-    """Reject low-level provenance link rows touching owned nodes.
+    """Reject low-level provenance link rows touching owned nodes or carrying non-provenance types.
 
     Direct provenance links to owned children are rejected; automatic copying belongs at the process
-    input/calculation-output boundary (deferred integration).
+    input/calculation-output boundary (deferred integration). Non-provenance (containment) link types
+    such as ``contains`` must never be inserted in ``db_dblink``; containment edges live in the
+    dedicated membership table.
 
     :raises IntegrityError: on any violation.
     """
     endpoints: set[int] = set()
     for row in rows:
+        validate_provenance_link_type(row.get('type'))
         endpoints.add(row['input_id'])
         endpoints.add(row['output_id'])
     for endpoint_id in endpoints:

@@ -10,7 +10,7 @@
 
 import pytest
 
-from aiida.common.links import validate_link_label
+from aiida.common.links import LinkType, validate_link_label
 
 
 def test_validate_link_label():
@@ -28,3 +28,25 @@ def test_validate_link_label():
     for link_label in illegal_link_labels:
         with pytest.raises(ValueError):
             validate_link_label(link_label)
+
+
+def test_backend_bulk_insert_rejects_contains(backend):
+    """Low-level `bulk_insert` of a `contains` link must never reach `db_dblink`."""
+    from aiida import orm
+    from aiida.common.exceptions import IntegrityError
+    from aiida.orm.entities import EntityTypes
+
+    source = orm.Data().store()
+    target = orm.Data().store()
+    with pytest.raises(IntegrityError, match='non-provenance'):
+        backend.bulk_insert(
+            EntityTypes.LINK,
+            [
+                {
+                    'input_id': source.pk,
+                    'output_id': target.pk,
+                    'type': LinkType.CONTAINS.value,
+                    'label': 'child',
+                }
+            ],
+        )

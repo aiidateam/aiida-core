@@ -234,6 +234,19 @@ class TestVisGraph:
             (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
         }
 
+    def test_graph_contains_labels(self):
+        """Ownership is opt-in and renders literal dict keys and list indices."""
+        mapping = orm.DataDict({'<b>energy</b>': orm.DataList([orm.Int(1)])}).store()
+        graph = graph_mod.Graph()
+        graph.recurse_descendants(mapping)
+        assert graph.edges == set()
+
+        graph.recurse_descendants(mapping, link_types=[LinkType.CONTAINS], annotate_links='both')
+        source = graph.graphviz.source
+        assert 'label="CONTAINS\n<b>energy</b>"' in source
+        assert 'label="CONTAINS\n0"' in source
+        assert 'style=dashed' in source
+
     def test_graph_graphviz_source(self):
         """Test the output of graphviz source"""
         nodes = self.create_provenance()

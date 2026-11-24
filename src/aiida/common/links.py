@@ -25,6 +25,7 @@ class LinkType(Enum):
     INPUT_WORK = 'input_work'
     CALL_CALC = 'call_calc'
     CALL_WORK = 'call_work'
+    CONTAINS = 'contains'  # Stored as a membership edge, not in db_dblink.
 
 
 GraphTraversalRule = namedtuple('GraphTraversalRule', ['link_type', 'direction', 'toggleable', 'default'])
@@ -76,6 +77,8 @@ class GraphTraversalRules(Enum):
     }
 
     EXPORT = {
+        'contains_forward': GraphTraversalRule(LinkType.CONTAINS, 'forward', True, False),
+        'contains_backward': GraphTraversalRule(LinkType.CONTAINS, 'backward', False, True),
         'input_calc_forward': GraphTraversalRule(LinkType.INPUT_CALC, 'forward', True, False),
         'input_calc_backward': GraphTraversalRule(LinkType.INPUT_CALC, 'backward', False, True),
         'create_forward': GraphTraversalRule(LinkType.CREATE, 'forward', False, True),

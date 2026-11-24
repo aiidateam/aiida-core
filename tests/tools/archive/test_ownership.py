@@ -89,7 +89,7 @@ def test_ownership_round_trip(tmp_path, aiida_profile_clean, selection):
 
 @pytest.mark.parametrize('selection', ['leaf', 'group', 'nested', 'root-and-leaf', 'root-and-group', 'nested-and-leaf'])
 def test_export_projects_ownership(tmp_path, aiida_profile_clean, selection):
-    """An unselected owner is omitted without copying or dropping the selected member."""
+    """Export follows membership to ancestors but does not pull in unselected descendants."""
     root = orm.DataList([orm.DataList([orm.Int(1)]), orm.Int(2)]).store()
     nested = root[0]
     leaf = nested[0]
@@ -108,19 +108,32 @@ def test_export_projects_ownership(tmp_path, aiida_profile_clean, selection):
     expected = {node.uuid for node in starting[selection] if isinstance(node, orm.Node)}
     if group in starting[selection]:
         expected.add(leaf_uuid)
+    if leaf_uuid in expected:
+        expected.add(nested_uuid)
+    if nested_uuid in expected:
+        expected.add(root_uuid)
     assert orm.load_node(root_uuid)[0][0].uuid == leaf_uuid
 
     aiida_profile_clean.reset_storage()
     import_archive(path, create_group=False)
     assert set(orm.QueryBuilder().append(orm.Node, project='uuid').all(flat=True)) == expected
-    if selection == 'nested-and-leaf':
-        assert orm.load_node(nested_uuid)[0].uuid == leaf_uuid
-    elif selection == 'nested':
-        assert list(orm.load_node(nested_uuid)) == []
-    elif selection.startswith('root-'):
-        assert list(orm.load_node(root_uuid)) == []
+    assert [member.uuid for member in orm.load_node(root_uuid)] == [nested_uuid]
+    assert [member.uuid for member in orm.load_node(nested_uuid)] == ([leaf_uuid] if leaf_uuid in expected else [])
     if selection in ('group', 'root-and-group'):
         assert {node.uuid for node in orm.load_group(label='only-leaf').nodes} == {leaf_uuid}
+
+
+def test_export_contains_forward(tmp_path, aiida_profile_clean, run_cli_command):
+    """The archive CLI can opt into recursive export of owned members and references."""
+    from aiida.cmdline.commands.cmd_archive import create
+
+    reference = orm.Int(2).store()
+    root = orm.DataList([orm.DataList([orm.Int(1)]), reference]).store()
+    expected = {root.uuid, root[0].uuid, root[0][0].uuid, reference.uuid}
+    path = tmp_path / 'descendants.aiida'
+    run_cli_command(create, [str(path), '--nodes', str(root.pk), '--contains-forward'])
+    with ArchiveFormatSqlZip().open(path, 'r') as reader:
+        assert set(reader.querybuilder().append(orm.Node, project='uuid').all(flat=True)) == expected
 
 
 @pytest.mark.parametrize('projection', ['member', 'container', 'partial-tree'])

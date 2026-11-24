@@ -154,6 +154,7 @@ def create(
     nodes,
     force,
     input_calc_forward,
+    contains_forward,
     input_work_forward,
     create_backward,
     return_backward,
@@ -205,6 +206,7 @@ def create(
 
     kwargs = {
         'input_calc_forward': input_calc_forward,
+        'contains_forward': contains_forward,
         'input_work_forward': input_work_forward,
         'create_backward': create_backward,
         'return_backward': return_backward,

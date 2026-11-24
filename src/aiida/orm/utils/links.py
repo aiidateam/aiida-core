@@ -144,6 +144,10 @@ def validate_link(
     type_check(source, Node, f'source should be a `Node` but got: {type(source)}')
     type_check(target, Node, f'target should be a `Node` but got: {type(target)}')
 
+    if link_type is LinkType.CONTAINS:
+        msg = f'cannot add a {link_type} link: non-provenance links must not be stored as provenance links'
+        raise ValueError(msg)
+
     if source.backend != target.backend:
         msg = (
             f'source and target nodes must be stored in the same backend, but got {source.backend} and {target.backend}'

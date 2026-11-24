@@ -521,6 +521,11 @@ class PsqlDosBackend(StorageBackend):
             from aiida.storage import ownership as ownership_contract
 
             ownership_contract.validate_bulk_node_update(rows)
+        if entity_type is EntityTypes.LINK:
+            from aiida.storage.ownership import validate_provenance_link_type
+
+            for row in rows:
+                validate_provenance_link_type(row.get('type'))
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)

@@ -151,6 +151,7 @@ TRAVERSAL_RULE_HELP_STRING = {
     'input_work_forward': 'INPUT links to workflows forwards',
     'return_backward': 'RETURN links backwards',
     'return_forward': 'RETURN links forwards',
+    'contains_forward': 'CONTAINS edges forwards (from containers to members)',
     'create_backward': 'CREATE links backwards',
     'create_forward': 'CREATE links forwards',
 }

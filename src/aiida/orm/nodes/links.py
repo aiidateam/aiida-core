@@ -122,7 +122,7 @@ class NodeLinks:
         Note this will only return link triples that are stored in the database. Anything in the cache is ignored.
 
         :param node_class: If specified, should be a class, and it filters only elements of that (subclass of) type
-        :param link_type: Only get inputs of this link type, if empty tuple then returns all inputs of all link types.
+        :param link_type: Filter by link type. Only provenance links are returned, never container membership.
         :param link_label_filter: filters the incoming nodes by its link label. This should be a regex statement as
             one would pass directly to a QueryBuilder filter statement with the 'like' operation.
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
@@ -139,10 +139,9 @@ class NodeLinks:
 
         node_class = node_class or Node
         node_filters: dict[str, t.Any] = {'id': {'==': self._node.pk}}
-        edge_filters: dict[str, t.Any] = {}
-
-        if link_type:
-            edge_filters['type'] = {'in': [t.value for t in link_type]}
+        edge_filters: dict[str, t.Any] = {
+            'type': {'in': [kind.value for kind in (link_type or LinkType) if kind is not LinkType.CONTAINS]}
+        }
 
         if link_label_filter:
             edge_filters['label'] = {'like': link_label_filter}

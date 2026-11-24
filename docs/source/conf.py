@@ -29,6 +29,14 @@ from aiida import (  # noqa: F401
     transports,
 )
 from aiida.cmdline.params import arguments, options  # noqa: F401
+from aiida.storage.sqlite_temp import SqliteTempBackend
+
+# Process directives run in Sphinx, not in the notebook kernel that creates the archive.
+# Create the config first so its default never points at the unregistered temporary profile.
+manage.configuration.get_config(create=True)
+manage.get_manager().load_profile(
+    SqliteTempBackend.create_profile('sphinx-docs', options={'warnings.development_version': False}), allow_switch=True
+)
 
 # -- General configuration -----------------------------------------------------
 

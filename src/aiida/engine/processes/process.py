@@ -51,7 +51,6 @@ from aiida.engine.processes.utils import prune_mapping
 from aiida.engine.utils import InterruptableFuture
 from aiida.orm.implementation.utils import clean_value
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
-from aiida.orm.utils import serialize
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
@@ -70,6 +69,13 @@ def _with_runtime_values(port: InputPort | PortNamespace | None, original: t.Any
             {key: _with_runtime_values(port.get(key), original[key], runtime[key]) for key in original}
         )
     return runtime
+
+
+def _copy_input_containers(value: t.Any) -> t.Any:
+    """Recursively copy nested mappings without cloning the values they hold."""
+    if isinstance(value, Mapping):
+        return {key: _copy_input_containers(subvalue) for key, subvalue in value.items()}
+    return value
 
 
 @process_persistence.auto_persist('_parent_pid', '_enable_persistence')
@@ -317,7 +323,7 @@ class Process(ProcessBase):
             assert self.node.is_stored
 
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
-        out_state['provenance_inputs'] = serialize.serialize(self._flat_inputs())
+        out_state['provenance_inputs'] = self._flat_inputs()
 
     def get_provenance_inputs_iterator(self) -> Iterator[tuple[str, InputPort | PortNamespace]]:
         """Get provenance input iterator.
@@ -351,7 +357,7 @@ class Process(ProcessBase):
         assert isinstance(runtime, AttributesFrozendict)
         self._parsed_inputs = runtime
         if 'provenance_inputs' in saved_state:
-            self._provenance_inputs = serialize.deserialize_unsafe(saved_state['provenance_inputs'])
+            self._provenance_inputs = dict(saved_state['provenance_inputs'])
         else:
             # Checkpoints predating provenance inputs carry only converted values: keep the
             # original nodes from the raw inputs so provenance links still point at them.
@@ -799,22 +805,28 @@ class Process(ProcessBase):
         return UUID(self.node.uuid)
 
     @override
-    def _encode_input_args(self, inputs: dict[str, t.Any]) -> str:
-        """Encode input arguments such that they may be saved in a CheckpointPayload
+    def _encode_input_args(self, inputs: t.Any) -> t.Any:
+        """Return a copy of the nested input containers.
+
+        The checkpoint pickler stores nodes by reference, so copying the containers keeps the payload
+        independent of the live process without cloning the stored nodes.
 
         :param inputs: A mapping of the inputs as passed to the process
-        :return: The encoded (serialized) inputs
+        :return: A copy of the nested containers
         """
-        return serialize.serialize(inputs)
+        return _copy_input_containers(inputs)
 
     @override
-    def _decode_input_args(self, encoded: str) -> dict[str, t.Any]:
-        """Decode saved input arguments as they came from the saved instance state CheckpointPayload
+    def _decode_input_args(self, encoded: t.Any) -> t.Any:
+        """Return a copy of the nested restored containers.
 
-        :param encoded: encoded (serialized) inputs
-        :return: The decoded input args
+        The decoded process must not alias the retained payload, so emitting an output after one decode
+        does not leak into a later decode of the same payload.
+
+        :param encoded: The inputs from the checkpoint payload
+        :return: A copy of the nested containers
         """
-        return serialize.deserialize_unsafe(encoded)
+        return _copy_input_containers(encoded)
 
     def update_outputs(self) -> None:
         """Attach new outputs to the node since the last call.

@@ -444,6 +444,57 @@ def test_checkpoint_restores_python_objects_and_shared_references(
         restored.close()
 
 
+def test_checkpoint_keeps_inputs_as_node_references(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """Raw and provenance inputs reach the pickle as objects, so one stored node restores as one object."""
+    from aiida.engine.processes.generic.process import CheckpointPayloadKeys
+
+    live = make_process()
+    persister.save_checkpoint(live)
+    loaded = persister.load_checkpoint(live.pid)
+
+    raw = loaded[CheckpointPayloadKeys.INPUTS_RAW]['x']
+    provenance = loaded['provenance_inputs']['x']
+    assert raw.uuid == live.inputs.x.uuid
+    assert raw is provenance
+
+
+def test_encode_decode_input_args_snapshot_containers():
+    """Encoded and decoded inputs are new containers, so a decoded process never aliases the payload."""
+    from aiida.engine import Process
+
+    process = Process.__new__(Process)
+    source: dict[str, int] = {'x': 1}
+    encoded = process._encode_input_args(source)
+    assert encoded == source and encoded is not source
+    decoded = process._decode_input_args(encoded)
+    assert decoded == encoded and decoded is not encoded
+    decoded['y'] = 2
+    assert 'y' not in encoded and 'y' not in source
+
+
+def test_encode_decode_input_args_copy_nested_containers():
+    """Nested containers are copied, so mutating one decode leaves later decodes untouched."""
+    from aiida.engine import Process
+
+    process = Process.__new__(Process)
+    leaf = orm.Int(1)
+    source: dict[str, t.Any] = {'nested': {'second': leaf}}
+    encoded = process._encode_input_args(source)
+    assert encoded == source and encoded is not source
+    assert encoded['nested'] is not source['nested']
+    assert encoded['nested']['second'] is leaf
+
+    first = process._decode_input_args(encoded)
+    assert first['nested'] is not encoded['nested']
+    assert first['nested']['second'] is leaf
+    first['nested']['second'] = orm.Int(2)
+
+    second = process._decode_input_args(encoded)
+    assert second['nested']['second'] is leaf
+
+
 def test_checkpoint_restores_group_and_computer_references(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process], aiida_localhost: orm.Computer
 ):

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import typing as t
 from collections.abc import Iterator, KeysView, Mapping
+from types import MemberDescriptorType
 
 from typing_extensions import Self
 
@@ -132,6 +133,28 @@ class Frozendict(Mapping[str, t.Any]):
         if self._hash is None:
             self._hash = hash(frozenset(self._dict.items()))
         return self._hash
+
+    def __getstate__(self) -> dict[str, object]:
+        """Return instance state, including subclass slots, without the hash cache."""
+        state: dict[str, object] = {key: value for key, value in self.__dict__.items() if key != '_hash'}
+        for cls in type(self).__mro__:
+            for slot, descriptor in cls.__dict__.items():
+                if not isinstance(descriptor, MemberDescriptorType) or slot == '_hash' or slot in state:
+                    continue
+                try:
+                    state[slot] = descriptor.__get__(self)
+                except AttributeError:
+                    continue
+        return state
+
+    def __setstate__(self, state: dict[str, object]) -> None:
+        """Restore instance state and invalidate the interpreter-local hash cache.
+
+        :param state: Serialized instance attributes.
+        """
+        for key, value in state.items():
+            setattr(self, key, value)
+        self._hash = None
 
 
 class AttributesFrozendict(Frozendict):

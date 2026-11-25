@@ -9,6 +9,7 @@
 """Tests for nodes, attributes and links."""
 
 import pytest
+from sqlalchemy import inspect
 
 from aiida import orm
 from aiida.orm import Data, load_node
@@ -113,6 +114,17 @@ class TestNodeBasicSQLA:
         # Check again that the node is in the db
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
         assert len(res) == 1, f'There should be a node in the session/DB with the UUID {node_uuid}'
+
+
+def test_bulk_delete_synchronizes_session(backend):
+    """A bulk delete marks already-loaded objects as deleted for either SQL backend."""
+    node = Data().store()
+    pk = node.pk
+    model = node.backend_entity.bare_model
+
+    with backend.transaction():
+        backend.delete_nodes_and_connections([pk])
+        assert inspect(model).deleted
 
 
 @pytest.mark.requires_psql

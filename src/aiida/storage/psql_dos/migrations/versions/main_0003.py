@@ -25,9 +25,9 @@ The legacy paramiko-based ``core.ssh`` transport plugin was removed in v3.0, and
   they are written out as an OpenSSH client configuration entry and replaced by the alias of that
   entry. See :mod:`~aiida.storage.migrations.legacy_ssh`.
 
-Note that neither step has an inverse: once both kinds of computers share the ``core.ssh`` transport
-type they can no longer be told apart, and the parameters that were converted are gone from the
-database. The downgrade therefore only restores the schema revision.
+The data migrations have no inverse. In particular, once both kinds of computers share the ``core.ssh`` transport
+type they can no longer be told apart, and the converted parameters are gone from the database. Downgrades are
+therefore not supported.
 
 Revision ID: main_0003
 Revises: main_0002
@@ -134,5 +134,7 @@ def upgrade():
     _migrate_code_hidden_extra(conn)
 
 
-def downgrade():
-    """Migrations for the downgrade."""
+def downgrade() -> None:
+    """Reject downgrading because the data migrations cannot be reversed."""
+    msg = 'Downgrading from main_0003 is not supported.'
+    raise NotImplementedError(msg)

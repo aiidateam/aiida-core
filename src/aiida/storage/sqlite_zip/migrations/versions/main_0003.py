@@ -21,8 +21,7 @@ the legacy ``core.ssh`` conversion. See ``aiida.storage.psql_dos.migrations.vers
 for the rationale.
 
 The rename has no inverse: once both kinds of computers share the ``core.ssh`` transport type, they
-can no longer be told apart. The downgrade therefore only restores the schema revision and leaves
-the transport types as they are.
+can no longer be told apart. Archive downgrades are not supported.
 
 Without the code migration, an archive containing nodes with the ``data.core.code.Code.`` node type
 would import them as plain ``Data``, since the entry point no longer exists. See
@@ -60,5 +59,6 @@ def upgrade():
 
 
 def downgrade():
-    """Migrations for the downgrade."""
-    pass
+    """Reject downgrading an archive."""
+    msg = 'Archive downgrades are not supported.'
+    raise NotImplementedError(msg)

@@ -8,8 +8,22 @@
 ###########################################################################
 """Tests shared by profile storage backends for ``main_0003``."""
 
+import pytest
+
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
+
+
+@pytest.mark.parametrize('revision', ('main_0002', 'main_0003'))
+def test_downgrade_rejected(migration_profile, revision):
+    """Reject profile downgrades without changing the schema revision."""
+    with migration_profile.storage_cls.migrator(migration_profile) as migrator:
+        migrator.migrate_up(f'main@{revision}')
+
+        with pytest.raises(NotImplementedError, match='Profile storage downgrades are not supported'):
+            migrator.migrate_down('main@main_0001')
+
+        assert migrator.get_schema_version_profile() == revision
 
 
 def test_migrate_legacy_code(migration_profile):
@@ -121,9 +135,3 @@ def test_migrate_legacy_code(migration_profile):
             assert installed.attributes == {'filepath_executable': '/usr/bin/bash'}
             assert installed.extras == {'_aiida_hash': 'hash', 'is_hidden': False}
             assert installed.extras['is_hidden'] is False
-
-        # Downgrade only restores the schema revision; it cannot reconstruct the original legacy codes.
-        migrator.migrate_down('main@main_0002')
-        with migrator.session() as session:
-            remote = session.query(node_model).filter(node_model.id == remote_id).one()
-            assert remote.node_type == 'data.core.code.installed.InstalledCode.'

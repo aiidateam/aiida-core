@@ -316,15 +316,3 @@ def test_with_db_setting(uninitialised_profile):
         migrator.connection.commit()
         migrator.migrate_up('main@main_0003')
         assert inspect(migrator.connection).has_table('db_dbsetting')
-
-
-def test_downgrade(uninitialised_profile):
-    """Test downgrading from ``main_0003`` to ``main_0002``."""
-    with SqliteDosMigrator(uninitialised_profile) as migrator:
-        migrator.migrate_up('main@main_0003')
-        migrator.migrate_down('main_0002')
-        migrator.connection.commit()
-
-    with SqliteDosMigrator(uninitialised_profile) as migrator:
-        assert migrator.get_schema_version_profile() == 'main_0002'
-        assert inspect(migrator.connection).has_table('db_dbsetting')

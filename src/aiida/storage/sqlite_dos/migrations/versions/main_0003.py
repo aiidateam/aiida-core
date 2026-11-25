@@ -16,7 +16,7 @@ Migration steps:
 4. Rename the visibility extra on built-in Code nodes.
 
 See the ``main_0003`` revision of the ``psql_dos`` backend for the rationale of the transport
-rename, which likewise has no inverse: the downgrade only restores the schema revision.
+rename, which likewise has no inverse. Downgrades are therefore not supported.
 
 Revision ID: main_0003
 Revises: main_0002
@@ -106,6 +106,7 @@ def upgrade():
     conn.execute(text(SQLITE_HIDDEN_UPGRADE_STATEMENT))
 
 
-def downgrade():
-    """Migrations for the downgrade."""
-    pass
+def downgrade() -> None:
+    """Reject downgrading because the data migrations cannot be reversed."""
+    msg = 'Downgrading from main_0003 is not supported.'
+    raise NotImplementedError(msg)

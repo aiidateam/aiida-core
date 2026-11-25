@@ -175,7 +175,8 @@ Container caching
 Container hashes include the storage layout and each child's content hash recursively, with list order significant and dict order ignored.
 A cleared container hashes like a newly constructed empty container with the same metadata.
 Owner IDs and child UUIDs are excluded, so equivalent independent copies hash equally.
-Cache reuse is explicitly disabled (``_cachable = False``) — restoring a cached run would have to materialise an independent ownership subtree, which the generic ``_store_from_cache`` root-only clone cannot provide — while hashing itself works.
+A process with container inputs bypasses cache lookup, and a process with container inputs or outputs cannot serve as a cache source.
+Deletion and archive merges can change membership after a process has run, and order-sensitive calculations can distinguish dictionaries with the same content hash.
 
 
 .. _internal_architecture:storage:containers:limitations:
@@ -185,6 +186,6 @@ Known limitations
 
 - QueryBuilder has no recursive membership traversal or container-specific aggregation.
   ``Data`` queries match containers and other data nodes, and ``Container`` queries match only ``DataList`` and ``DataDict``.
-- Container cache reuse is disabled (``_cachable = False``).
+- Process cache reuse is disabled for runs with container inputs or outputs.
 - Slicing a ``DataList`` raises ``TypeError``; there is no view or copy semantics for slices.
 - Port validation for containers is class-only (``valid_type`` accepts ``Data``); element types are not checked by the port.

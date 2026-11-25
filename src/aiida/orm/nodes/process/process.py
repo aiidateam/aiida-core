@@ -48,7 +48,14 @@ class ProcessNodeCaching(NodeCaching):
         if disable_cache:
             return False
 
-        return super().should_use_cache()
+        return super().should_use_cache() and not self._has_container_inputs()
+
+    def _has_container_inputs(self) -> bool:
+        """Return whether the process has a container among its stored or pending inputs."""
+        from aiida.orm.nodes.data.container import Container
+
+        inputs = self._node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+        return any(isinstance(entry.node, Container) for entry in inputs)
 
     @property
     def is_valid_cache(self) -> bool:
@@ -56,7 +63,16 @@ class ProcessNodeCaching(NodeCaching):
 
         :returns: True if this process node is valid to be used for caching, False otherwise
         """
+        from aiida.orm.nodes.data.container import Container
+
         if not (super().is_valid_cache and self._node.is_finished and self._node.is_sealed):
+            return False
+
+        # Membership may change after the run (e.g. deleting a member), so the recorded
+        # inputs and outputs may no longer describe what the original run consumed or produced.
+        if self._has_container_inputs() or self._node.base.links.get_outgoing(
+            node_class=Container, link_type=(LinkType.CREATE, LinkType.RETURN), only_uuid=True
+        ):
             return False
 
         try:

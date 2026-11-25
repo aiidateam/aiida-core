@@ -30,6 +30,7 @@ import time
 import pytest
 
 from aiida.common.exceptions import IntegrityError, ModificationNotAllowed
+from aiida.engine import calcfunction
 from aiida.orm import DataDict, DataList, Dict, Int, List, Str, load_node
 
 pytestmark = pytest.mark.usefixtures('aiida_profile_clean')
@@ -673,6 +674,16 @@ class TestMembershipQueriesStrict:
         assert listed.pk not in dicts
 
 
+@calcfunction
+def _create_list_for_cache_test() -> DataList:
+    return DataList([Int(1), Int(2)])
+
+
+@calcfunction
+def _first_dict_value_for_cache_test(container: DataDict) -> Int:
+    return Int(next(iter(container.values())).value)
+
+
 class TestContentHashingCacheReuse:
     """§14/§10: content hashing (implemented) + cache-reuse rejection (explicit)."""
 
@@ -717,6 +728,31 @@ class TestContentHashingCacheReuse:
         """F4 resolved as explicit safe rejection: containers never serve/store cache."""
         assert DataList._cachable is False
         assert DataDict._cachable is False
+
+    def test_process_cache_does_not_reuse_edited_container_output(self):
+        """Deleting a member must not change the result of a future calculation."""
+        from aiida.manage.caching import enable_caching
+        from aiida.tools import delete_nodes
+
+        with enable_caching():
+            original = _create_list_for_cache_test()
+            delete_nodes([original[0].pk], dry_run=False)
+            assert [child.value for child in original] == [2]
+            result, calc = _create_list_for_cache_test.run_get_node()
+
+        assert calc.base.caching.get_cache_source() is None
+        assert [child.value for child in result] == [1, 2]
+
+    def test_process_cache_does_not_equate_dict_input_orders(self):
+        """Calculations can observe dict insertion order even though the container hash ignores it."""
+        from aiida.manage.caching import enable_caching
+
+        with enable_caching():
+            assert _first_dict_value_for_cache_test(DataDict({'a': Int(1), 'b': Int(2)})).value == 1
+            result, calc = _first_dict_value_for_cache_test.run_get_node(DataDict({'b': Int(2), 'a': Int(1)}))
+
+        assert calc.base.caching.get_cache_source() is None
+        assert result.value == 2
 
 
 class TestIntegrationSmokeStrict:

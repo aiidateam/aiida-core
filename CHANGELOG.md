@@ -10,6 +10,7 @@ Load the built-in types with `aiida.plugins.ContainerFactory('core.data_list')` 
 
 Graph walks can opt in to container membership with `LinkType.CONTAINS`. Traversal returns membership edges separately from provenance links.
 Use `verdi node delete --no-contains-forward` to delete a container while retaining its surviving owned members as standalone nodes.
+Processes with container inputs bypass cache lookup, and processes with container inputs or outputs cannot be cache sources.
 
 ### Breaking changes
 

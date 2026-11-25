@@ -200,13 +200,9 @@ class ContainerCaching(NodeCaching):
       order ignored; ``make_hash`` sorts mappings by hashed key).
 
     Child hashes are content hashes (class, attributes, repository content,
-    computer) that never embed UUIDs or owner references. Cache *reuse*
-    remains disabled (``_cachable = False``): reusing a cached container
-    would have to materialize an independent ownership subtree, which the
-    generic ``_store_from_cache`` root-only clone cannot provide without
-    introducing shared ownership. Disabling reuse is explicit safe rejection
-    under the staging guard, not silent bypass: no container is ever served
-    from, or stored into, the process cache.
+    computer) that never embed UUIDs or owner references. These hashes are not
+    safe for process cache reuse: membership can change after a run, and a
+    process can observe dictionary order even though the hash ignores it.
     """
 
     @override
@@ -255,8 +251,7 @@ class Container(Data):
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
-    _cachable = False  # cache reuse explicitly disabled: generic `_store_from_cache` cannot provide
-    # independent ownership subtrees (see `ContainerCaching`); content hashing itself is implemented.
+    _cachable = False
     _CLS_NODE_CACHING = ContainerCaching
 
     def initialize(self) -> None:

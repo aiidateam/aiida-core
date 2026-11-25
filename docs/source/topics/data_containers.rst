@@ -247,8 +247,8 @@ A later import can supply missing edges if they do not conflict with stored owne
 Limitations
 ===========
 
-- Container cache reuse is disabled.
+- Processes with container inputs skip cache lookup, and processes with container inputs or outputs are not cache sources.
+  Containers still have content hashes: list order affects the hash; dict insertion order does not.
 - The container set is closed: ``DataList`` and ``DataDict`` cannot be subclassed and no custom container types are supported.
-  List order affects the hash; dict insertion order does not.
 - Slicing a ``DataList`` raises ``TypeError``.
 - Querying is limited to immediate membership joins as described above; there is no recursive traversal and no container-specific aggregation.

@@ -242,6 +242,7 @@ def validate_ownership_graph(
     owner_node_type: str | None,
     members: list[dict],
     kind: ContainerKind | None = None,
+    allow_existing_members: bool = False,
 ) -> None:
     """Validate a complete ownership insertion for one container.
 
@@ -382,8 +383,8 @@ def validate_ownership_graph(
             )
             raise IntegrityError(msg)
 
-    # Stored membership is immutable: reject overlap with existing rows.
-    if members:
+    # Only archive merging can extend a stored container, after checking for conflicts.
+    if members and not allow_existing_members:
         clashes = session.query(membership_model).filter(membership_model.owner_id == owner_id).all()
         if clashes:
             msg = (
@@ -412,7 +413,6 @@ def validate_ownership_graph(
         if parent in child_ids:
             msg = f'Ownership cycle: child {parent} is an ancestor of owner {owner_id}.'
             raise IntegrityError(msg)
-        rows[parent] = rows.get(parent) or cursor_row
         cursor = parent
 
 
@@ -623,6 +623,7 @@ def attach_membership(
     members: list[dict],
     *,
     kind: ContainerKind | None = None,
+    merge_with_link_model: t.Any = None,
 ) -> None:
     """Atomically persist ownership edges for one container on any SQL backend.
 
@@ -642,6 +643,7 @@ def attach_membership(
     :param members: list of ``{'child_id': int, 'child_node_type': str, 'position': int,
         'key': str | None}`` (``key`` NULL for lists, NOT NULL string for dicts).
     :param kind: ``'list'``/``'dict'``; inferred from the owner's ``node_type`` when omitted.
+    :param merge_with_link_model: Enable an additive archive merge and check the given provenance link table.
     :raises IntegrityError: on any ownership-invariant violation.
     """
     from contextlib import nullcontext
@@ -664,6 +666,10 @@ def attach_membership(
                 msg = f'Unknown container kind for owner {owner_id} (node_type={owner.node_type!r}).'
                 raise IntegrityError(msg)
             resolved_kind = inferred
+        if merge_with_link_model is not None:
+            members = _members_to_merge(session, node_model, membership_model, merge_with_link_model, owner_id, members)
+            if not members:
+                return
         validate_ownership_graph(
             session,
             node_model,
@@ -672,6 +678,7 @@ def attach_membership(
             owner_node_type=owner.node_type,
             members=members,
             kind=resolved_kind,
+            allow_existing_members=merge_with_link_model is not None,
         )
         sqlite = session.get_bind().dialect.name == 'sqlite'
         for spec in members:
@@ -695,7 +702,61 @@ def attach_membership(
                     key=key,
                 )
             )
+        if merge_with_link_model is not None:
+            invalidate_container_hashes(session, node_model, [owner_id])
         session.flush()
+
+
+def _members_to_merge(
+    session, node_model, membership_model, link_model, owner_id: int, members: list[dict]
+) -> list[dict]:
+    """Reuse matching edges and reject changes to existing membership or adoption of linked nodes."""
+    from sqlalchemy import or_
+
+    rows = (
+        session.query(membership_model, node_model.owner_id, node_model.node_type)
+        .join(node_model, node_model.id == membership_model.child_id)
+        .filter(membership_model.owner_id == owner_id)
+    )
+    by_child = {edge.child_id: (edge, parent, node_type) for edge, parent, node_type in rows}
+    occupied_positions = {edge.position for edge, _, _ in by_child.values()}
+    occupied_keys = {edge.key for edge, _, _ in by_child.values() if edge.key is not None}
+    pending = []
+    for spec in members:
+        child_id = spec['child_id']
+        if child_id in by_child:
+            edge, parent, node_type = by_child[child_id]
+            expected_parent = None if spec.get('reference', False) else owner_id
+            if (edge.position, edge.key, parent, node_type) != (
+                spec['position'],
+                spec['key'],
+                expected_parent,
+                spec['child_node_type'],
+            ):
+                msg = f'Container {owner_id} already has a different membership edge for node {child_id}.'
+                raise IntegrityError(msg)
+            continue
+        if spec['position'] in occupied_positions or spec['key'] in occupied_keys:
+            msg = f'Container {owner_id} already has a member at position {spec["position"]} or key {spec["key"]!r}.'
+            raise IntegrityError(msg)
+        pending.append(spec)
+
+    owned = [spec['child_id'] for spec in pending if not spec.get('reference', False)]
+    if (
+        owned
+        and session.query(link_model.id)
+        .filter(
+            or_(
+                _create_smarter_in_clause(session, link_model.input_id, owned),
+                _create_smarter_in_clause(session, link_model.output_id, owned),
+            )
+        )
+        .first()
+        is not None
+    ):
+        msg = 'Cannot adopt a node with existing provenance links as a container member.'
+        raise IntegrityError(msg)
+    return pending
 
 
 def attach_list_membership(backend, owner_id: int, members: list[dict]) -> None:

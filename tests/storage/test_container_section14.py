@@ -13,7 +13,7 @@ Backend-contract tests through ``aiida.storage.ownership`` and the
 database backend via the ``backend`` fixture (SQLite and PostgreSQL). Covers
 the §14 storage-invariant bullets: low-level agreement paths, concurrent
 violations, bulk guards, provenance-link rejection, deletion closure +
-revalidation, archive export rejection, migration columns, plus perf
+revalidation, migration columns, plus perf
 measurements (attach/traversal/deletion/export timing with per-child query
 hotspot notes). TEST code only; no feature source is changed here.
 """
@@ -188,30 +188,6 @@ class TestDeletionClosureRevalidation:
         _attach(backend, owner.pk, [_spec(child.pk, FLOAT_TYPE, 0)])
         expanded = ownership.expand_ownership_closure(backend.get_session(), *backend._ownership_models(), [child.pk])
         assert expanded == {owner.pk, child.pk}
-
-
-class TestArchiveExportRejection:
-    """§14/§11: ownership-unit export safe-rejection (accepted per F5)."""
-
-    def test_plain_export_unaffected(self, backend, tmp_path):
-        from aiida.orm import Data
-        from aiida.tools.archive import create_archive
-
-        node = Data().store()
-        path = str(tmp_path / 'plain.aiida')
-        create_archive([node], filename=path)
-        assert True
-
-    def test_ownership_export_rejected(self, backend, tmp_path):
-        from aiida.tools.archive import create_archive
-
-        owner, child = _stored_nodes(backend, STORAGE_LIST_TYPE, FLOAT_TYPE)[0:2]
-        _attach(backend, owner.pk, [_spec(child.pk, FLOAT_TYPE, 0)])
-        from aiida.orm import load_node
-
-        path = str(tmp_path / 'owned.aiida')
-        with pytest.raises(Exception, match=r'[Oo]wned|[Cc]ontainer|[Oo]wnership'):
-            create_archive([load_node(owner.pk)], filename=path)
 
 
 class TestMigrationColumns:

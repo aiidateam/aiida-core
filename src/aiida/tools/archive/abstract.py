@@ -15,9 +15,12 @@ from pathlib import Path
 from typing_extensions import Self
 
 if t.TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from aiida.orm import QueryBuilder
     from aiida.orm.entities import Entity, EntityTypes
     from aiida.orm.implementation import StorageBackend
+    from aiida.tools.archive._ownership import ContainerState
     from aiida.tools.visualization.graph import Graph
 
 EntityType = t.TypeVar('EntityType', bound='Entity')
@@ -96,6 +99,17 @@ class ArchiveWriterAbstract(ABC):
 
         :raises: ``IntegrityError`` if the keys in a row are not a subset of the columns in the table
         """
+
+    def write_ownership(self, containers: 'Mapping[int, ContainerState]') -> None:
+        """Write the ownership records for container nodes already added to the archive.
+
+        :param containers: Container states keyed by archive node ID.
+        :raises ExportValidationError: if the archive format does not support ownership.
+        """
+        from aiida.tools.archive.exceptions import ExportValidationError
+
+        msg = 'This archive format does not support owned containers.'
+        raise ExportValidationError(msg)
 
     @abstractmethod
     def put_object(self, stream: t.BinaryIO, *, buffer_size: int | None = None, key: str | None = None) -> str:

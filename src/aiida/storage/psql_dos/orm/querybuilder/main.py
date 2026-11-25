@@ -1041,12 +1041,19 @@ def generate_joins(
         expand_path = (data['filters'][edge_tag].get('path', None) is not None) or any(
             'path' in d.keys() for d in data['project'][edge_tag]
         )
+        # A predicate on a provenance edge must not match a membership neighbour.
+        join_options = (
+            {'provenance_only': bool(data['filters'][edge_tag])}
+            if joining_keyword in ('with_incoming', 'with_outgoing')
+            else {}
+        )
         join = join_func(
             join_tag,
             join_to,
             isouterjoin=verticespec.get('outerjoin'),  # type: ignore[call-arg]
             filter_dict=filter_dict,
             expand_path=expand_path,
+            **join_options,
         )
         join.edge_tag = edge_tag
         joins.append(join)

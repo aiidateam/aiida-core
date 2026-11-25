@@ -302,6 +302,12 @@ class SqliteZipBackend(StorageBackend):
     def query(self) -> orm.SqliteQueryBuilder:
         return orm.SqliteQueryBuilder(self)
 
+    def _ownership_models(self):
+        """Return the archive node and membership models."""
+        from aiida.storage.sqlite_zip.models import DbMembership, DbNode
+
+        return DbNode, DbMembership
+
     def get_backend_entity(self, model):
         """Return the backend entity that corresponds to the given Model instance."""
         return orm.get_backend_entity(model, self)

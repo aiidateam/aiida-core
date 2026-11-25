@@ -570,32 +570,7 @@ class TestGroupContainment:
 
 
 class TestArchiveConflictsMigrationMissingPlugin:
-    """§14/§11: archive closure rejection, migration, missing-plugin operations."""
-
-    def test_archive_export_nested_and_dict_rejected(self, tmp_path):
-        """Export rejects nested containers and dict units, not just flat lists."""
-        from aiida.tools.archive import create_archive
-        from aiida.tools.archive.exceptions import ExportValidationError
-
-        outer = DataList()
-        outer.append(DataList([Int(1)]))
-        outer.store()
-        mapping = DataDict({'a': Int(1)})
-        mapping.store()
-        for node in (outer, mapping):
-            with pytest.raises(ExportValidationError):
-                create_archive([node], filename=str(tmp_path / f'{node.pk}.aiida'))
-
-    def test_archive_export_child_selection_rejected(self, tmp_path):
-        """Selecting an owned child for export rejects (§11 closure: child implies unit)."""
-        from aiida.tools.archive import create_archive
-        from aiida.tools.archive.exceptions import ExportValidationError
-
-        container = DataList([Int(1), Int(2)])
-        container.store()
-        child = load_node(container.pk)[0]
-        with pytest.raises(ExportValidationError):
-            create_archive([child], filename=str(tmp_path / 'child.aiida'))
+    """§14: migration and missing-plugin operations."""
 
     def test_missing_element_plugin_reported(self):
         """Typed element access requires the real plugin and reports its absence."""
@@ -610,28 +585,6 @@ class TestArchiveConflictsMigrationMissingPlugin:
         from aiida.orm.nodes.data.container import _ContainerBase
 
         _ContainerBase._require_element_plugin(Data.class_node_type)
-
-    @pytest.mark.xfail(
-        reason='spec §11: import-side UUID conflicts unreachable while export safe-rejects (filed by verify agent)',
-        strict=False,
-    )
-    def test_archive_conflict_disagreement_rejected(self, tmp_path):
-        """GAP PROBE: import-side ownership disagreement under one UUID.
-
-        Unreachable via public API while export safe-rejects ownership units
-        (only hand-crafted archives could carry ownership rows); kept as a
-        probe so a future export/import round-trip must handle conflicts by
-        rejecting and rolling back, never by skipping or reconciling.
-        """
-        from aiida.tools.archive import create_archive, import_archive
-
-        container = DataList([Int(1)])
-        container.store()
-        path = str(tmp_path / 'conflict.aiida')
-        create_archive([container], filename=path)
-        # Corrupt local ownership then re-import same UUIDs -> integrity error, rollback.
-        with pytest.raises(Exception):
-            import_archive(path)
 
 
 class TestMembershipQueriesStrict:
@@ -785,19 +738,6 @@ class TestIntegrationSmokeStrict:
 
         with pytest.raises(Exception):
             bad()
-
-    def test_archive_export_ownership_rejected(self, tmp_path):
-        """Export explicitly rejects ownership units (F5 accepted safe-rejection,
-        now enforced at the relational level); plain nodes still export fine."""
-        from aiida.tools.archive import create_archive
-        from aiida.tools.archive.exceptions import ExportValidationError
-
-        container = DataList([Int(1)])
-        container.store()
-        with pytest.raises(ExportValidationError, match=r'[Oo]wned|[Oo]wnership|[Cc]ontainer'):
-            create_archive([container], filename=str(tmp_path / 'container.aiida'))
-        plain = Int(1).store()
-        create_archive([plain], filename=str(tmp_path / 'plain.aiida'))
 
     def test_structural_traversal_smoke(self):
         container = DataList([Int(1)])

@@ -20,7 +20,6 @@ convenience methods:
 - stored immutability;
 - provenance-link rejection for owned nodes;
 - ownership-closed deletion planning;
-- archive-export rejection of ownership units.
 
 Backend integration tests use the generic ``backend`` fixture and so run
 against every supported database backend (SQLite and PostgreSQL).
@@ -33,7 +32,7 @@ from sqlalchemy.orm import Session
 
 from aiida.common import exceptions
 from aiida.common.links import LinkType
-from aiida.orm import Data, Float
+from aiida.orm import Data
 from aiida.orm.entities import EntityTypes
 from aiida.storage import ownership
 from aiida.storage.ownership import (
@@ -534,28 +533,6 @@ class TestOwnershipDeletion:
             assert sa.inspect(stored_owner).deleted
         assert session.query(node_model).filter(node_model.id.in_([owner_pk])).count() == 0
         assert session.query(membership_model).filter(membership_model.owner_id == owner_pk).count() == 0
-
-
-@pytest.mark.usefixtures('aiida_profile_clean')
-class TestArchiveExportGuard:
-    """Archive export strips ownership columns and rejects ownership units."""
-
-    def test_plain_export_unaffected(self, backend, tmp_path):
-        from aiida.tools.archive.create import _assert_no_ownership_members
-
-        node = Float(1.0).store()
-        _assert_no_ownership_members(backend, {node.pk})
-
-    def test_ownership_unit_export_rejected(self, backend):
-        from aiida.tools.archive.create import _assert_no_ownership_members
-        from aiida.tools.archive.exceptions import ExportValidationError
-
-        owner, children = _make_graph()
-        backend.create_container_membership(owner.pk, _specs(children))
-        with pytest.raises(ExportValidationError, match='ownership'):
-            _assert_no_ownership_members(backend, {owner.pk})
-        with pytest.raises(ExportValidationError, match='ownership'):
-            _assert_no_ownership_members(backend, {children[0].pk})
 
 
 def test_integration_notes_present():

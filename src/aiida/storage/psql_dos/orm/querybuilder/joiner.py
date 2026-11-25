@@ -398,7 +398,7 @@ class SqlaJoiner:
 
         return JoinReturn(new_query, aliased_edge)
 
-    def _join_node_outputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_outputs(self, joined_entity, entity_to_join, isouterjoin: bool, *, provenance_only=False, **_kw):
         """Join nodes to their outgoing neighbours (``with_incoming``).
 
         :param joined_entity: The (aliased) ORMclass that is an input
@@ -419,6 +419,10 @@ class SqlaJoiner:
         aliased_member = aliased(self._entities.Membership)
 
         def new_query(q):
+            if provenance_only:
+                return q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin).join(
+                    entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin
+                )
             query = q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=True).join(
                 aliased_member, aliased_member.owner_id == joined_entity.id, isouter=True
             )
@@ -433,7 +437,7 @@ class SqlaJoiner:
 
         return JoinReturn(new_query, aliased_edge)
 
-    def _join_node_inputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_inputs(self, joined_entity, entity_to_join, isouterjoin: bool, *, provenance_only=False, **_kw):
         """Join nodes to their incoming neighbours (``with_outgoing``).
 
         :param joined_entity: The (aliased) ORMclass that is an output
@@ -452,6 +456,10 @@ class SqlaJoiner:
         aliased_member = aliased(self._entities.Membership)
 
         def new_query(q):
+            if provenance_only:
+                return q.join(aliased_edge, aliased_edge.output_id == joined_entity.id, isouter=isouterjoin).join(
+                    entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin
+                )
             query = q.join(aliased_edge, aliased_edge.output_id == joined_entity.id, isouter=True).join(
                 aliased_member, aliased_member.child_id == joined_entity.id, isouter=True
             )

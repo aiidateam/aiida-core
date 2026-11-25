@@ -15,6 +15,7 @@ import shutil
 import tempfile
 import typing as t
 import zipfile
+from collections.abc import Mapping
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -30,6 +31,7 @@ from aiida.common.hashing import chunked_file_hash
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.orm.entities import EntityTypes
 from aiida.storage.sqlite_zip import models, utils
+from aiida.tools.archive._ownership import ContainerState
 from aiida.tools.archive.abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
 
 
@@ -145,6 +147,22 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         except SqlaIntegrityError as exc:
             msg = f'Inserting {entity_type}: {exc}'
             raise IntegrityError(msg) from exc
+
+    def write_ownership(self, containers: Mapping[int, ContainerState]) -> None:
+        """Write the membership rows for container nodes already added to the archive.
+
+        Container kinds and empty containers are derived from the archived node types on read.
+        """
+        self._assert_in_context()
+        assert self._conn is not None
+
+        members = [
+            {'owner_id': owner, 'child_id': edge.child_id, 'position': edge.position, 'key': edge.key}
+            for owner, state in containers.items()
+            for edge in state.members
+        ]
+        if members:
+            self._conn.execute(insert(models.SqliteBase.metadata.tables['db_dbmembership']), members)
 
     def _stream_binary(
         self,

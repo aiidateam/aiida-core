@@ -22,6 +22,7 @@ from pathlib import Path
 from tabulate import tabulate
 
 from aiida import orm
+from aiida.common.exceptions import IntegrityError
 from aiida.common.lang import type_check
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
@@ -31,6 +32,7 @@ from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
 from aiida.orm.utils.links import LinkQuadruple
+from aiida.tools.archive._ownership import read_ownership
 from aiida.tools.archive.abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
 from aiida.tools.archive.common import entity_type_to_orm
 from aiida.tools.archive.exceptions import ArchiveExportError, ExportValidationError
@@ -258,7 +260,14 @@ def create_archive(
             filter_size,
         )
 
-    # now all the nodes have been retrieved, perform some checks
+    # Membership is projected onto the nodes selected through the ordinary export rules.
+    try:
+        selection = None if entities is None else entity_ids[EntityTypes.NODE]
+        ownership = read_ownership(backend, selection, project_selection=selection is not None)
+    except IntegrityError as exc:
+        msg = f'Cannot export inconsistent ownership: {exc}'
+        raise ExportValidationError(msg) from exc
+
     if entity_ids[EntityTypes.NODE]:
         EXPORT_LOGGER.report('Validating Nodes')
         _check_unsealed_nodes(querybuilder, entity_ids[EntityTypes.NODE], batch_size, filter_size)
@@ -285,6 +294,7 @@ def create_archive(
         return filename
 
     EXPORT_LOGGER.report(f'Creating archive with:\n{tabulate(count_summary)}')
+    changed_containers = ownership.changed_containers
 
     # Create and open the archive for writing.
     # We create in a temp dir then move to final place at end,
@@ -311,14 +321,13 @@ def create_archive(
             with get_progress_reporter()(desc='Archiving database: ', total=sum(entity_counts.values())) as progress:
                 for etype, ids in entity_ids.items():
                     if etype == EntityTypes.NODE:
-                        # Owned data containers have no archive representation yet (deferred integration):
-                        # exporting an ownership unit is explicitly rejected instead of silently dropping
-                        # ownership on round-trip. Standalone nodes carry their (NULL) ownership columns through
-                        # the archive, which shares the live node model; see `_assert_no_ownership_members`.
-                        _assert_no_ownership_members(backend, ids)
 
                         def transform(row):
                             data = row['entity']
+                            if 'owner_id' in data:
+                                data['owner_id'] = ownership.parents.get(data['id'])
+                            if data['id'] in changed_containers:
+                                data['extras'].pop('_aiida_hash', None)
                             if strip_checkpoints and data.get('node_type', '').startswith('process.'):
                                 data['attributes'].pop(orm.ProcessNode.CHECKPOINT_KEY, None)
                             return data
@@ -340,6 +349,9 @@ def create_archive(
                         ):
                             writer.bulk_insert(etype, rows)
                             progress.update(nrows)
+
+                if ownership.containers:
+                    writer.write_ownership(ownership.containers)
 
                 # stream links
                 progress.set_description_str(f'Archiving database: {EntityTypes.LINK.value}s')
@@ -415,7 +427,13 @@ def _collect_all_entities(
         qbuilder = (
             querybuilder()
             .append(orm.Node, tag='incoming', project=['id'])
-            .append(orm.Node, with_incoming='incoming', project=['id'], edge_project=['type', 'label'])
+            .append(
+                orm.Node,
+                with_incoming='incoming',
+                project=['id'],
+                edge_filters={'type': {'!==': None}},
+                edge_project=['type', 'label'],
+            )
             .distinct()
         )
         link_data = {LinkQuadruple(*row) for row in qbuilder.all(batch_size=batch_size)}
@@ -662,77 +680,6 @@ def _stream_repo_files(
             # to-do should we use assume the key here is correct, or always re-compute and check?
             writer.put_object(stream, key=key)
             progress.update()
-
-
-def _assert_no_ownership_members(backend: StorageBackend, node_ids: set[int]) -> None:
-    """Reject archive export of owned data containers.
-
-    Ownership units have no archive representation yet (deferred archive integration per
-    ``orm-container-spec.md`` section 12): exporting them would silently drop ownership on
-    round-trip, so the export is explicitly rejected instead. This includes empty
-    containers: their node type identifies them even without membership rows. Uses raw SQL against
-    the backend's session when available; backends without session access are assumed to
-    hold no ownership rows.
-
-    :raises ExportValidationError: if any node is a container, an owner, or an owned child.
-    """
-    if not node_ids:
-        return
-    from aiida.storage.ownership import is_container_node_type
-
-    # Backend-agnostic container-type check: every container (including empty ones with no
-    # membership rows) carries a reserved container ``node_type`` and must be rejected.
-    node_types = (
-        orm.QueryBuilder(backend=backend)
-        .append(orm.Node, filters={'id': {'in': list(node_ids)}}, project='node_type')
-        .all(batch_size=500, flat=True)
-    )
-    if any(is_container_node_type(node_type) for node_type in node_types):
-        msg = (
-            'Cannot export owned data containers: archive round-trip of ownership units '
-            'is not supported yet (deferred archive integration).'
-        )
-        raise ExportValidationError(msg)
-    get_session = getattr(backend, 'get_session', None)
-    if get_session is None:
-        return
-    from contextlib import nullcontext
-
-    begin = getattr(backend, 'transaction', None)
-    in_transaction = getattr(backend, 'in_transaction', False)
-    # Never leave an autobegun read transaction behind (SQLite SHARED lock
-    # would block later writes); mirror the QueryBuilder read pattern.
-    txn = nullcontext() if in_transaction or begin is None else begin()
-    try:
-        from sqlalchemy import text
-
-        with txn:
-            session = get_session()
-            ids = list(node_ids)
-            chunk = 1_000
-            for start in range(0, len(ids), chunk):
-                part = ids[start : start + chunk]
-                placeholders = ', '.join(f':id_{index}' for index in range(len(part)))
-                params = {f'id_{index}': pk for index, pk in enumerate(part)}
-                hit = session.execute(
-                    text(
-                        f'SELECT 1 FROM db_dbmembership '
-                        f'WHERE owner_id IN ({placeholders}) OR child_id IN ({placeholders}) LIMIT 1'
-                    ),
-                    params,
-                ).first()
-                if hit is not None:
-                    msg = (
-                        'Cannot export owned data containers: archive round-trip of ownership units '
-                        'is not supported yet (deferred archive integration).'
-                    )
-                    raise ExportValidationError(msg)
-    except ExportValidationError:
-        raise
-    except Exception:
-        # The membership table may not exist (e.g. a storage predating the ownership schema that
-        # has not been migrated); absence of the table means no ownership rows to protect.
-        return
 
 
 def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: int, filter_size: int) -> None:

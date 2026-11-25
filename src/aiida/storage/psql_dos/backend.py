@@ -423,6 +423,15 @@ class PsqlDosBackend(StorageBackend):
 
         ownership_contract.attach_dict_membership(self, owner_id, members)
 
+    def merge_container_membership(
+        self, owner_id: int, members: list[dict[str, t.Any]], *, kind: t.Literal['list', 'dict']
+    ) -> None:
+        """Add missing archived edges without changing existing membership."""
+        from aiida.storage.ownership import attach_membership
+
+        link_model, _ = self._get_mapper_from_entity(EntityTypes.LINK, with_pk=True)
+        attach_membership(self, owner_id, members, kind=kind, merge_with_link_model=link_model.class_)
+
     def store_container_subtree(
         self,
         entities: t.Sequence[t.Any],

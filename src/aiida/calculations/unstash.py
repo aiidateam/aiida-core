@@ -12,7 +12,6 @@ import json
 from pathlib import Path
 
 from aiida import orm
-from aiida.calculations.stash import StashCalculation
 from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import CalcInfo, CodeInfo, UnstashTargetMode
 from aiida.engine import CalcJob
@@ -87,24 +86,14 @@ class UnstashCalculation(CalcJob):
 
         if isinstance(source_node, orm.RemoteStashCustomData):
             if unstash_target_mode == UnstashTargetMode.OriginalPlace.value:
+                # Custom stash data is created by core.stash. Its source folder is a named input, not
+                # necessarily the first incoming link (the calculation also has a code input).
+                creator = source_node.creator
+                if creator is None or creator.process_type != 'aiida.calculations:core.stash':
+                    msg = 'Your stash node is not connected to a stash calculation, cannot find the source path.'
+                    raise ValueError(msg)
 
-                def traverse(node_):
-                    for link in node_.base.links.get_incoming():
-                        if (isinstance(link.node, CalcJob) and not isinstance(link.node, StashCalculation)) or (
-                            isinstance(link.node, orm.RemoteData)
-                        ):
-                            return link.node
-                        return traverse(link.node)
-                    return None
-
-                stashed_calculation_node = traverse(source_node)
-
-                if not stashed_calculation_node:
-                    raise ValueError(
-                        'Your stash node is not connected to any calcjob node, cannot find the source path.'
-                    )
-
-                target_path = stashed_calculation_node.get_remote_path()
+                target_path = creator.inputs.source_node.get_remote_path()
             else:  # UnstashTargetMode.NewRemoteData.value
                 computer = self.inputs.metadata.get('computer')
                 with computer.get_transport() as transport:

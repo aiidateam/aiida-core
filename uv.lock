@@ -142,12 +142,10 @@ pre-commit = [
     { name = "sphinx" },
     { name = "sqlalchemy", extra = ["mypy"] },
     { name = "tomli" },
-    { name = "types-click-spinner" },
     { name = "types-docutils" },
     { name = "types-psutil" },
     { name = "types-pytz" },
     { name = "types-pyyaml" },
-    { name = "types-requests" },
     { name = "types-tabulate" },
     { name = "types-tqdm" },
 ]
@@ -223,7 +221,7 @@ requires-dist = [
     { name = "chardet", marker = "sys_platform == 'win32'", specifier = "~=5.2.0" },
     { name = "circus", specifier = "~=0.19.0" },
     { name = "click", specifier = ">=8.1.0,<8.3" },
-    { name = "click-spinner", specifier = "~=0.1.8" },
+    { name = "click-spinner", specifier = "~=0.2.0" },
     { name = "cloudpickle", specifier = ">=3,<4" },
     { name = "dill", specifier = ">=0.3.6,<1" },
     { name = "disk-objectstore", specifier = "~=1.5.0" },
@@ -299,12 +297,10 @@ requires-dist = [
     { name = "tomli", marker = "extra == 'pre-commit'" },
     { name = "tqdm", specifier = "~=4.45" },
     { name = "trogon", marker = "extra == 'tui'" },
-    { name = "types-click-spinner", marker = "extra == 'pre-commit'", specifier = "~=0.1.8" },
     { name = "types-docutils", marker = "extra == 'pre-commit'", specifier = "~=0.20" },
     { name = "types-psutil", marker = "extra == 'pre-commit'", specifier = "~=5.6" },
     { name = "types-pytz", marker = "extra == 'pre-commit'", specifier = "~=2021.1" },
     { name = "types-pyyaml", marker = "extra == 'pre-commit'", specifier = "~=6.0" },
-    { name = "types-requests", marker = "extra == 'pre-commit'", specifier = "~=2.0" },
     { name = "types-tabulate", marker = "extra == 'pre-commit'", specifier = ">=0.9.0,<0.10.0" },
     { name = "types-tqdm", marker = "extra == 'pre-commit'", specifier = "~=4.45" },
     { name = "typing-extensions", specifier = "~=4.13" },
@@ -1061,11 +1057,11 @@ wheels = [
 
 [[package]]
 name = "click-spinner"
-version = "0.1.11"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/09/95/5ad903f6f83fec4a174e71a672d98a526a8e103f88ab2b6846e2f641419a/click_spinner-0.1.11.tar.gz", hash = "sha256:85dd7c11a394de0085bf8eeac172b622c5dca1303b3089bdcbed1793ab31a199", size = 3709, upload-time = "2026-06-23T18:57:51.818Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/1b/c52f8e09feab7d40577bc4da34300b78a8f44d6aaf9a2912b2ffd0edf337/click_spinner-0.2.0.tar.gz", hash = "sha256:01371550596bc18f1e1546bb2956745eed387235235e664bc96f8cc675b7d6e8", size = 3821, upload-time = "2026-06-23T19:25:07.477Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/33/ee35c5a417a0e1e8afccfea72df610f91d8eb08dffa4969165c993d8e613/click_spinner-0.1.11-py3-none-any.whl", hash = "sha256:49fa9146e4325f8a1df3dc9539123b7077aa984b6d35d8515663cfe04b317eb5", size = 3499, upload-time = "2026-06-23T18:57:50.862Z" },
+    { url = "https://files.pythonhosted.org/packages/60/5c/392b6cb50b890f82a9c3e74905704dcb47f4d495d8be64770bca26554680/click_spinner-0.2.0-py3-none-any.whl", hash = "sha256:e79634a419ccedd597c85bc24b5804f851fc7e07b1c1daf13d91576d78883522", size = 3758, upload-time = "2026-06-23T19:25:06.228Z" },
 ]
 
 [[package]]
@@ -6628,15 +6624,6 @@ wheels = [
 ]
 
 [[package]]
-name = "types-click-spinner"
-version = "0.1.13.20260712"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ac/55/a51a63eafa97c4250fe1603481afa43504ebcdf5684d654c66fb75c69c34/types_click_spinner-0.1.13.20260712.tar.gz", hash = "sha256:a0ddf573edac285cf82834bbc5070285196e12c351ae14d056985d4578699c46", size = 8335, upload-time = "2026-07-12T05:13:33.049Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/96/c42da91c29942b7733dc9996d2c7921aaddd6dceaa64abe9837d1fad7b07/types_click_spinner-0.1.13.20260712-py3-none-any.whl", hash = "sha256:b116f0fb38de883cb385d8f12e27c465147cc15d222ab411f73517468fc01b80", size = 7815, upload-time = "2026-07-12T05:13:32.156Z" },
-]
-
-[[package]]
 name = "types-docutils"
 version = "0.22.3.20260724"
 source = { registry = "https://pypi.org/simple" }
@@ -6670,18 +6657,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9f/72/b56089aeee6c496d969bac42376bedb6e3eeab4682e1018fa3137122f94b/types_pyyaml-6.0.12.20260815.tar.gz", hash = "sha256:28764110c9cf35846e733da32d8d734df7473c5dde9ef67c3b7332ec0e819858", size = 18545, upload-time = "2026-08-15T02:41:51.532Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/08/52/eefeba09be4ef2a1eb989eb92934561e8e502a6ee3c32654996e4be7e399/types_pyyaml-6.0.12.20260815-py3-none-any.whl", hash = "sha256:6f332212b7e191f3afd5016a713c510b6340593b7ebec573c7d5d20aa5386d3b", size = 21148, upload-time = "2026-08-15T02:41:50.555Z" },
-]
-
-[[package]]
-name = "types-requests"
-version = "2.33.0.20260712"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/db/51/703318f7b7be8bee126ec13bf615050f932d0179b8784420f3a0199cc769/types_requests-2.33.0.20260712.tar.gz", hash = "sha256:2141b67ab534a5c5cd2dac5034f2a35f42e699c5bf185eee608c5246a069d7fb", size = 25084, upload-time = "2026-07-12T05:14:20.455Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/62/e7/010c87f559e216d83f9dc51e939633fd0d0ead3377340181ab0e223cd3b5/types_requests-2.33.0.20260712-py3-none-any.whl", hash = "sha256:de027e28c171d3da529689cbfa023b0b4eab188c8dfa22fd834eebd2cee6e7bb", size = 21392, upload-time = "2026-07-12T05:14:19.616Z" },
 ]
 
 [[package]]

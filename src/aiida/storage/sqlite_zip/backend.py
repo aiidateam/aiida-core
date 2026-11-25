@@ -10,15 +10,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
+import sqlite3
 import tarfile
 import tempfile
 import typing as t
 import weakref
 import zipfile
 from collections.abc import Iterable, Iterator
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
@@ -104,6 +106,53 @@ def _finalize_backend(resources: _ZipBackendResources, backend_repr: str) -> Non
     if resources.has_pending_release:
         LOGGER.info(f'SqliteZipBackend {backend_repr} was not closed explicitly.')
         resources.release()
+
+
+DATABASE_CACHE_DIR = Path(tempfile.gettempdir()) / 'aiida-sqlite-zip'
+"""Directory holding the databases extracted from zipped archives, shared by all processes."""
+
+# Archives are read-only, so the extracted copy can carry extra indexes and planner statistics without any write cost.
+# The archive file itself is never modified.
+DATABASE_CACHE_OPTIMIZATIONS = (
+    # "Most recent nodes of a type" filters: without these, SQLite picks the type index and scans the whole type.
+    'CREATE INDEX IF NOT EXISTS ix_cache_db_dbnode_node_type_ctime ON db_dbnode (node_type, ctime)',
+    'CREATE INDEX IF NOT EXISTS ix_cache_db_dbnode_process_type_ctime ON db_dbnode (process_type, ctime)',
+    # Planner statistics for the links only: graph traversal (``with_ancestors``/``with_descendants``) then follows the
+    # link indexes. Statistics on ``db_dbnode`` would make joins starting from a type filter build bloom filters that
+    # slow them down.
+    'ANALYZE db_dblink',
+)
+
+
+def _get_cached_database(filepath: Path) -> Path:
+    """Return the database of the zipped archive at ``filepath``, extracted once and reused while the file is unchanged.
+
+    :param filepath: path to the zipped archive.
+    :returns: path to the extracted, optimized database.
+    """
+    from archive_path import extract_file_in_zip
+
+    stat = filepath.stat()
+    key = hashlib.sha256(f'{filepath.resolve()}:{stat.st_size}:{stat.st_mtime_ns}'.encode()).hexdigest()
+    cached = DATABASE_CACHE_DIR / f'{key}.sqlite3'
+    if cached.exists():
+        return cached
+
+    DATABASE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    handle, partial = tempfile.mkstemp(dir=DATABASE_CACHE_DIR, suffix='.partial')
+    partial_path = Path(partial)
+    try:
+        with open(handle, 'wb') as stream:
+            extract_file_in_zip(filepath, DB_FILENAME, stream, search_limit=4)
+        with closing(sqlite3.connect(partial_path)) as connection:
+            for statement in DATABASE_CACHE_OPTIMIZATIONS:
+                connection.execute(statement)
+            connection.commit()
+        # Atomic, so concurrent processes never see a partial database; the last writer wins with identical content.
+        partial_path.replace(cached)
+    finally:
+        partial_path.unlink(missing_ok=True)
+    return cached
 
 
 class SqliteZipBackend(StorageBackend):
@@ -263,20 +312,16 @@ class SqliteZipBackend(StorageBackend):
 
     def get_session(self) -> Session:
         """Return an SQLAlchemy session."""
-        from archive_path import extract_file_in_zip
-
         if self._closed:
             raise ClosedStorage(str(self))
         if self._resources.session is None:
             if is_zipfile(self._path):
-                _, path = tempfile.mkstemp()
-                db_file = self._resources.db_file = Path(path)
-                with db_file.open('wb') as handle:
-                    try:
-                        extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
-                    except Exception as exc:
-                        msg = f'database could not be read: {exc}'
-                        raise CorruptStorage(msg) from exc
+                # Not registered in ``self._resources.db_file``: the cached database outlives this backend.
+                try:
+                    db_file = _get_cached_database(self._path)
+                except Exception as exc:
+                    msg = f'database could not be read: {exc}'
+                    raise CorruptStorage(msg) from exc
             else:
                 db_file = self._path / DB_FILENAME
                 if not db_file.exists():

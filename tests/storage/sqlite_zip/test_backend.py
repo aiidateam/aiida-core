@@ -1,11 +1,15 @@
 """Tests for :mod:`aiida.storage.sqlite_zip.backend`."""
 
+import os
 import pathlib
+import sqlite3
+from contextlib import closing
 
 import pytest
 from pydantic_core import ValidationError
+from sqlalchemy import text
 
-from aiida.common.exceptions import IncompatibleExternalDependencies
+from aiida.common.exceptions import CorruptStorage, IncompatibleExternalDependencies
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend, validate_sqlite_version
 from aiida.storage.sqlite_zip.migrator import validate_storage
 
@@ -121,3 +125,66 @@ def test_initialise_migration_needed(tmp_path, caplog, monkeypatch):
     # Verify migration log message was generated
     log_msg = f'Migrating existing SqliteZipBackend from version {old_version} to version {target_version}'
     assert any(log_msg in record.message for record in caplog.records)
+
+
+@pytest.fixture
+def zipped_archive(tmp_path, monkeypatch):
+    """Return an empty zipped archive, with the extracted-database cache redirected to ``tmp_path / 'cache'``."""
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.DATABASE_CACHE_DIR', tmp_path / 'cache')
+    filepath = tmp_path / 'archive.aiida'
+    assert SqliteZipBackend.initialise(SqliteZipBackend.create_profile(filepath))
+    return filepath
+
+
+def _open_archive(filepath: pathlib.Path) -> None:
+    """Open the archive, query its database and close it, as a single ``verdi`` command does."""
+    backend = SqliteZipBackend(SqliteZipBackend.create_profile(filepath))
+    try:
+        backend.get_session().execute(text('SELECT count(*) FROM db_dbnode')).scalar_one()
+    finally:
+        backend.close()
+
+
+def test_zipped_database_extracted_once(zipped_archive, tmp_path):
+    """The database of a zipped archive is extracted on first open and reused, also after the backend is closed."""
+    _open_archive(zipped_archive)
+    cached = sorted((tmp_path / 'cache').iterdir())
+    assert len(cached) == 1
+    assert cached[0].suffix == '.sqlite3'
+    mtime = cached[0].stat().st_mtime_ns
+
+    _open_archive(zipped_archive)
+    assert sorted((tmp_path / 'cache').iterdir()) == cached
+    assert cached[0].stat().st_mtime_ns == mtime
+
+
+def test_zipped_database_cache_optimized(zipped_archive, tmp_path):
+    """The cached database carries the extra indexes and planner statistics; the archive file is left untouched."""
+    content = zipped_archive.read_bytes()
+    _open_archive(zipped_archive)
+
+    (cached,) = (tmp_path / 'cache').iterdir()
+    with closing(sqlite3.connect(cached)) as connection:
+        names = {row[0] for row in connection.execute('SELECT name FROM sqlite_master')}
+    assert {'ix_cache_db_dbnode_node_type_ctime', 'ix_cache_db_dbnode_process_type_ctime', 'sqlite_stat1'} <= names
+    assert zipped_archive.read_bytes() == content
+
+
+def test_zipped_database_cache_invalidated(zipped_archive, tmp_path):
+    """A modified archive file is extracted anew rather than served from the stale cache entry."""
+    _open_archive(zipped_archive)
+    os.utime(zipped_archive, ns=(0, 0))
+    _open_archive(zipped_archive)
+    assert len(list((tmp_path / 'cache').iterdir())) == 2
+
+
+def test_zipped_database_extraction_failure(zipped_archive, tmp_path, monkeypatch):
+    """A failed extraction raises ``CorruptStorage`` and leaves no partial database in the cache."""
+
+    def fail_extraction(*args, **kwargs):
+        raise OSError('disk full')
+
+    monkeypatch.setattr('archive_path.extract_file_in_zip', fail_extraction)
+    with pytest.raises(CorruptStorage, match='disk full'):
+        _open_archive(zipped_archive)
+    assert list((tmp_path / 'cache').iterdir()) == []

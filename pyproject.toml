@@ -25,16 +25,16 @@ classifiers = [
   'Programming Language :: Python :: 3.14',
   'Topic :: Scientific/Engineering'
 ]
-# NOTE: When updating versions of some packages, such as requests,
+# NOTE: When updating versions of some packages, such as 'tabulate',
 # you need to also update the versions of corresponding stub packages
-# in the 'pre-commit' group e.g. 'types-requests'
+# in the 'pre-commit' group e.g. 'types-tabulate'
 dependencies = [
   'aio-pika~=9.5.0',
   'alembic~=1.8',
   'archive-path~=0.4.2',
   "asyncssh~=2.22",
   'circus~=0.19.0',
-  'click-spinner~=0.1.8',
+  'click-spinner~=0.2.0',
   'click>=8.1.0,<8.3',
   'cloudpickle>=3,<4',
   'dill>=0.3.6,<1',
@@ -259,14 +259,12 @@ pre-commit = [
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
   'tomli',
-  'types-click-spinner~=0.1.8',
   'types-docutils~=0.20',
   'types-PyYAML~=6.0',
   'types-psutil~=5.6',
   'types-pytz~=2021.1',
   'types-tabulate>=0.9.0,<0.10.0',
-  'types-tqdm~=4.45',
-  'types-requests~=2.0'
+  'types-tqdm~=4.45'
 ]
 rest = [
   'flask-cors~=4.0',

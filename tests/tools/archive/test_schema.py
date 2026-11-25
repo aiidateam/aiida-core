@@ -127,9 +127,21 @@ def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):
             if uq_constraint not in psql_uq_constraints:
                 diffs.setdefault(table_name, {}).setdefault('uq_constraints', {})[uq_constraint] = 'additional'
 
-        # compare foreign key constraints
-        psql_fk_constraints = [c['name'] for c in psql_insp.get_foreign_keys(table_name)]
-        sqlite_fk_constraints = [c['name'] for c in sqlite_insp.get_foreign_keys(table_name)]
+        # Compare the local columns, referenced table, and referenced columns, not
+        # the foreign key constraint name. This works around a likely bug in
+        # SQLAlchemy's SQLite inspector: it detects inline REFERENCES constraints
+        # but does not recover their names from the stored Data Definition Language
+        # (DDL) statement. For example:
+        #     CREATE TABLE child (parent_id INTEGER CONSTRAINT fk_parent REFERENCES parent (id));
+        # Compare parent_id -> parent(id), not the constraint name fk_parent.
+        def foreign_keys(inspector: Inspector) -> set[str]:
+            return {
+                f'{",".join(fk["constrained_columns"])} -> {fk["referred_table"]}({",".join(fk["referred_columns"])})'
+                for fk in inspector.get_foreign_keys(table_name)
+            }
+
+        psql_fk_constraints = foreign_keys(psql_insp)
+        sqlite_fk_constraints = foreign_keys(sqlite_insp)
         for fk_constraint in psql_fk_constraints:
             if fk_constraint not in sqlite_fk_constraints:
                 diffs.setdefault(table_name, {}).setdefault('fk_constraints', {})[fk_constraint] = 'missing'
@@ -141,7 +153,9 @@ def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):
         psql_indexes = [
             idx['name']
             for idx in psql_insp.get_indexes(table_name)
-            if not idx['unique'] and not (idx['name'] is not None and idx['name'].startswith('ix_pat_'))
+            if not idx['unique']
+            and not (idx['name'] is not None and idx['name'].startswith('ix_pat_'))
+            and idx['dialect_options'].get('postgresql_using') != 'hash'
         ]
         sqlite_indexes = [idx['name'] for idx in sqlite_insp.get_indexes(table_name) if not idx['unique']]
         for index in psql_indexes:

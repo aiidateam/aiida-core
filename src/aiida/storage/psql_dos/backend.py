@@ -295,19 +295,35 @@ class PsqlDosBackend(StorageBackend):
         """Open a transaction to be used as a context manager.
 
         If there is an exception within the context then the changes will be rolled back and the state will be as before
-        entering. Transactions can be nested.
+        entering. Transactions can be nested. Rollback callbacks registered via
+        :meth:`add_rollback_callback <aiida.orm.implementation.storage_backend.StorageBackend.add_rollback_callback>`
+        fire when their scope rolls back and are handed to the parent scope on a clean nested exit.
         """
         session = self.get_session()
-        if session.in_transaction():
-            with session.begin_nested() as savepoint:
-                yield session
-                savepoint.commit()
-            session.commit()
-        else:
-            with session.begin():
+        scope = self._push_rollback_scope()
+        try:
+            if session.in_nested_transaction():
+                # Already inside an explicit transaction: join it through a savepoint and let the outermost
+                # transaction own the commit, so nested work rolls back together with the outer transaction on failure.
+                with session.begin_nested():
+                    yield session
+            elif session.in_transaction():
+                # An autobegun transaction (for example from preceding reads) is active, but no explicit outer
+                # transaction owns the commit, so commit on successful exit as before.
                 with session.begin_nested() as savepoint:
                     yield session
                     savepoint.commit()
+                session.commit()
+            else:
+                with session.begin():
+                    with session.begin_nested() as savepoint:
+                        yield session
+                        savepoint.commit()
+        except BaseException:
+            self._fail_rollback_scope(scope)
+            raise
+        else:
+            self._merge_rollback_scope(scope)
 
     @property
     def in_transaction(self) -> bool:
@@ -345,6 +361,117 @@ class PsqlDosBackend(StorageBackend):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
+    def _ownership_models(self) -> tuple[t.Any, t.Any]:
+        """Return the ``(DbNode, DbMembership)`` model classes for this backend.
+
+        Overridden by the SQLite backend, which uses converted model copies.
+        """
+        from aiida.storage.psql_dos.models.node import DbMembership, DbNode
+
+        return DbNode, DbMembership
+
+    def _container_models(self) -> tuple[t.Any, t.Any, t.Any]:
+        """Return the ``(DbContainer, DbListContainer, DbDictContainer)`` model classes.
+
+        Overridden by the SQLite backend, which uses converted model copies.
+        """
+        from aiida.storage.psql_dos.models.node import DbContainer, DbDictContainer, DbListContainer
+
+        return DbContainer, DbListContainer, DbDictContainer
+
+    def create_container_membership(
+        self,
+        owner_id: int,
+        members: list[dict[str, t.Any]],
+        assert_element_type: str | None = None,
+        *,
+        kind: t.Literal['list', 'dict'] | None = None,
+        assert_layout: str | None = None,
+    ) -> str | None:
+        """Atomically persist ownership edges for one container.
+
+        Validates the complete ownership graph transactionally (eligibility, list-vs-dict key
+        discipline, homogeneity, exclusivity, acyclicity, owner/membership agreement) and then, in
+        a single transaction (joining an enclosing transaction when present), creates the
+        ``DbContainer`` + kind-subtype rows (atomic base+extension writes), sets the children's
+        ``owner_id`` references, locks the container's ``element_type``/``layout``, and inserts the
+        membership rows. ``key`` must be NULL for lists and a NOT NULL string for dicts; ``kind``
+        is inferred from the owner's ``node_type`` when omitted. No provenance links are created or
+        consulted: membership rows are containment edges, not provenance.
+
+        Minimal hook for the ORM container iteration: the ORM stores the
+        owner and children as standalone nodes first, then calls this to
+        freeze the subtree atomically. On failure nothing is written and the
+        nodes remain stored standalone, so the caller can retry.
+
+        :param owner_id: pk of the stored owner container.
+        :param members: list of ``{'child_id': int, 'child_node_type': str,
+            'position': int, 'key': str | None}``. Positions must be unique
+            per owner; non-null keys must be unique per owner.
+        :param assert_element_type: pre-locked element type established before storage (a container
+            that held an element and was then emptied keeps its lock); must agree with the stored
+            lock and every child, and is persisted even when ``members`` is empty.
+        :param kind: ``'list'``/``'dict'``; inferred from the owner's ``node_type`` when omitted.
+        :param assert_layout: pre-locked layout; defaults to ``'row'``.
+        :returns: the resolved (possibly newly locked) element type.
+        :raises IntegrityError: on any ownership-invariant violation.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        return ownership_contract.attach_membership(
+            self, owner_id, members, assert_element_type, kind=kind, assert_layout=assert_layout
+        )
+
+    def create_list_membership(
+        self, owner_id: int, members: list[dict[str, t.Any]], assert_element_type: str | None = None
+    ) -> str | None:
+        """Attach ordered members to a list container (every ``key`` must be NULL).
+
+        Asserts the ``DbListContainer`` extension row; cross-kind access fails. See
+        :meth:`create_container_membership`.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        return ownership_contract.attach_list_membership(self, owner_id, members, assert_element_type)
+
+    def create_dict_membership(
+        self, owner_id: int, members: list[dict[str, t.Any]], assert_element_type: str | None = None
+    ) -> str | None:
+        """Attach keyed members to a dict container (every ``key`` must be a NOT NULL string).
+
+        Asserts the ``DbDictContainer`` extension row; cross-kind access fails. See
+        :meth:`create_container_membership`.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        return ownership_contract.attach_dict_membership(self, owner_id, members, assert_element_type)
+
+    def store_container_subtree(
+        self,
+        entities: t.Sequence[t.Any],
+        containers: t.Sequence[t.Any],
+        root_links: t.Sequence[t.Any] | None = None,
+        *,
+        clean: bool = True,
+    ) -> list[str | None]:
+        """Persist a complete owned-container subtree atomically.
+
+        Stores every node row (``entities`` in post-order, ownership root last,
+        which alone receives ``root_links``) and freezes every container edge in
+        ``containers`` (narrow :class:`~aiida.storage.ownership.OwnedContainerSpec`
+        inputs referencing backend entities, nested containers first) inside a
+        single transaction joining an enclosing transaction when present.
+        Repository content must already be prepared by the caller (repo-first).
+
+        :param entities: backend entities in post-order (root last), non-empty.
+        :param containers: per-container membership specs, nested containers first.
+        :param root_links: opaque incoming link triples applied to the root only.
+        :returns: the resolved element type per container, in input order.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        return ownership_contract.store_container_subtree(self, entities, containers, root_links, clean=clean)
+
     def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
@@ -352,6 +479,15 @@ class PsqlDosBackend(StorageBackend):
         if entity_type in (EntityTypes.COMPUTER, EntityTypes.LOG, EntityTypes.AUTHINFO):
             for row in rows:
                 row['_metadata'] = row.pop('metadata')
+        if entity_type is EntityTypes.NODE:
+            # Ownership columns default to standalone for rows predating them (old archives, existing callers).
+            # Existing standalone nodes remain standalone through migration. Container state lives in
+            # `db_dbcontainer` and is written atomically with membership rows, never bulk-inserted.
+            for row in rows:
+                row.setdefault('owner_id', None)
+            self._validate_bulk_node_insert(rows)
+        if entity_type is EntityTypes.LINK:
+            self._validate_bulk_link_insert(rows)
         if allow_defaults:
             for row in rows:
                 if not keys.issuperset(row):
@@ -370,6 +506,19 @@ class PsqlDosBackend(StorageBackend):
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
         return [row.id for row in result]
 
+    def _validate_bulk_node_insert(self, rows: list[dict]) -> None:
+        """Reject bulk node rows that would violate stored ownership invariants."""
+        from aiida.storage import ownership as ownership_contract
+
+        ownership_contract.validate_bulk_node_insert(rows)
+
+    def _validate_bulk_link_insert(self, rows: list[dict]) -> None:
+        """Reject low-level provenance links touching owned nodes."""
+        from aiida.storage import ownership as ownership_contract
+
+        node_model, _ = self._ownership_models()
+        ownership_contract.validate_link_rows(self.get_session(), node_model, rows)
+
     def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
@@ -381,6 +530,12 @@ class PsqlDosBackend(StorageBackend):
             if not keys.issuperset(row):
                 msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
                 raise IntegrityError(msg)
+        if entity_type is EntityTypes.NODE:
+            # Stored ownership and membership cannot be changed in place (no triggers; the backend
+            # contract is the enforcement boundary).
+            from aiida.storage import ownership as ownership_contract
+
+            ownership_contract.validate_bulk_node_update(rows)
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)
@@ -413,6 +568,7 @@ class PsqlDosBackend(StorageBackend):
             LOGGER.report(f'Deleted database user `{config["database_username"]}`.')
 
     def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
+        from aiida.storage import ownership as ownership_contract
         from aiida.storage.psql_dos.models.group import DbGroupNode
         from aiida.storage.psql_dos.models.node import DbLink, DbNode
 
@@ -422,6 +578,27 @@ class PsqlDosBackend(StorageBackend):
         pks = list(pks_to_delete)
 
         session = self.get_session()
+        node_model, membership_model = self._ownership_models()
+        container_model, list_model, dict_model = self._container_models()
+        # Ownership closure: deletion sets must contain complete ownership units. Targeting an owned
+        # child without its root, or a container without its full subtree, is rejected so the caller
+        # expands the set explicitly with approval instead of relying on database cascades alone.
+        ownership_contract.validate_deletion_set(session, node_model, membership_model, pks)
+        # Delete the containment edges of the ownership unit(s).
+        session.query(membership_model).filter(
+            _create_smarter_in_clause(session=session, column=membership_model.owner_id, values=pks)
+        ).delete(synchronize_session='fetch')
+        session.query(membership_model).filter(
+            _create_smarter_in_clause(session=session, column=membership_model.child_id, values=pks)
+        ).delete(synchronize_session='fetch')
+        # Delete container state (kind markers before the shared container row, which the node FK targets).
+        for kind_model in (list_model, dict_model):
+            session.query(kind_model).filter(
+                _create_smarter_in_clause(session=session, column=kind_model.node_id, values=pks)
+            ).delete(synchronize_session='fetch')
+        session.query(container_model).filter(
+            _create_smarter_in_clause(session=session, column=container_model.node_id, values=pks)
+        ).delete(synchronize_session='fetch')
         # Delete the membership of these nodes to groups.
         session.query(DbGroupNode).filter(
             _create_smarter_in_clause(session=session, column=DbGroupNode.dbnode_id, values=pks)
@@ -536,9 +713,9 @@ class PsqlDosBackend(StorageBackend):
 
             # Not part of the repository, so the sweep above cannot see them: a checkpoint is a node attribute and
             # the class it carries is a file beside the container, which nothing references once its node is gone.
-            orphaned = self.delete_orphaned_checkpoint_class_files(only_sealed=not full, dry_run=dry_run)
+            orphaned = self.delete_orphaned_checkpoint_files(only_sealed=not full, dry_run=dry_run)
             action: str = 'Would delete' if dry_run else 'Deleting'
-            STORAGE_LOGGER.info(f'{action} {len(orphaned)} orphaned process class files ...')
+            STORAGE_LOGGER.info(f'{action} {len(orphaned)} orphaned checkpoint files ...')
 
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
@@ -655,23 +832,25 @@ class PsqlDosBackend(StorageBackend):
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
 
-        # step 5: back up the checkpoint class files
-        self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)
+        # step 5: back up the checkpoint files
+        self._backup_checkpoints(manager=manager, path=path, prev_backup=prev_backup)
 
-    def _backup_checkpoint_classes(
+    def _backup_checkpoints(
         self,
         manager: backup_utils.BackupManager,
         path: pathlib.Path,
         prev_backup: pathlib.Path | None = None,
     ) -> None:
-        """Back up class files required to restore checkpoints carrying serialized classes."""
-        checkpoints: pathlib.Path = self.get_checkpoint_classes_dirpath()
+        """Back up published checkpoint files, not temporary files being written."""
+        checkpoints = self.get_checkpoint_classes_dirpath()
 
         if not checkpoints.exists():
             return
 
-        STORAGE_LOGGER.report('Backing up checkpoint class files')
-        manager.call_rsync(src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True)
+        STORAGE_LOGGER.report('Backing up checkpoint files')
+        manager.call_rsync(
+            src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True, extra_args=['--exclude=.*']
+        )
 
     def _backup(
         self,

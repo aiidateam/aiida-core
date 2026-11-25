@@ -1,0 +1,73 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.4, pytest-9.1.1, pluggy-1.6.0
+benchmark: 4.0.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /home/goscin_a/code/aiida-core/worktree/graph-benchmark
+configfile: pyproject.toml
+plugins: rerunfailures-16.6.1, regressions-2.11.0, benchmark-4.0.0, datadir-1.8.0, instafail-0.5.0, cov-7.1.0, timeout-2.4.0, asyncio-0.16.0, xdist-3.8.0
+timeout: 240.0s
+timeout method: thread
+timeout func_only: False
+collected 826 items
+
+tests/engine/processes/graphs/test_containers.py ....................... [  2%]
+.                                                                        [  2%]
+tests/engine/processes/graphs/test_graph_inline.py .............         [  4%]
+tests/engine/processes/graphs/test_graphs.py ........................... [  7%]
+........................................................................ [ 16%]
+........................................................................ [ 25%]
+........................................................................ [ 33%]
+.................................................................        [ 41%]
+tests/engine/processes/graphs/test_map_graphs.py ..........              [ 42%]
+tests/engine/processes/graphs/test_map_regions.py ...................... [ 45%]
+.......                                                                  [ 46%]
+tests/engine/processes/graphs/test_operations.py ....................... [ 49%]
+..                                                                       [ 49%]
+tests/engine/processes/graphs/test_par_map.py .......................... [ 52%]
+......                                                                   [ 53%]
+tests/engine/processes/graphs/test_restart.py ..........                 [ 54%]
+tests/engine/processes/graphs/test_results.py .......................... [ 57%]
+.......................................................                  [ 64%]
+tests/engine/processes/graphs/test_results_daemon.py ...                 [ 64%]
+tests/engine/processes/graphs/test_results_integration.py .....          [ 65%]
+tests/engine/processes/graphs/test_single_process.py ................... [ 67%]
+.....                                                                    [ 68%]
+tests/engine/processes/graphs/test_source.py ........................... [ 71%]
+........................................................................ [ 80%]
+.................                                                        [ 82%]
+tests/engine/processes/graphs/test_source_operations.py ................ [ 84%]
+...........                                                              [ 85%]
+tests/engine/processes/graphs/test_structured.py .....                   [ 86%]
+tests/engine/processes/graphs/test_viz.py .........                      [ 87%]
+tests/engine/processes/test_exit_code.py ........                        [ 88%]
+tests/engine/test_ports.py ........                                      [ 89%]
+tests/benchmark/test_graph_restart.py .......ssss...sss                  [ 91%]
+tests/benchmark/test_graph_engine_inline.py ............................ [ 94%]
+sssssssssssssss                                                          [ 96%]
+tests/benchmark/test_graph_engine.py ...................ssssssssss       [100%]
+
+=============================== warnings summary ===============================
+tests/engine/processes/graphs/test_containers.py::test_container_graphs_execute[declaration-list-chain]
+  /home/goscin_a/code/aiida-core/worktree/graph-benchmark/src/aiida/engine/processes/events.py:40: DeprecationWarning: There is no current event loop
+    loop = asyncio.get_event_loop()
+
+tests/engine/processes/graphs/test_graphs.py::test_namespace_return_runs[value]
+tests/engine/processes/graphs/test_graphs.py::test_namespace_return_runs[none]
+  /home/goscin_a/code/aiida-core/worktree/graph-benchmark/tests/engine/processes/graphs/test_graphs.py:496: AiidaDeprecationWarning: dereferencing nodes with links containing double underscores is deprecated, simply replace the double underscores with a single dot instead. For example:
+  `node.inputs.some__label` can be written as `node.inputs.some.label` instead.
+   (this will be removed in v3)
+    assert outputs['result']['settings']['count'].uuid == node.inputs.graph_inputs__config__settings__count.uuid
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 5 durations ==============================
+9.69s call     tests/benchmark/test_graph_engine.py::test_correctness_matched[serial-wc-loop]
+8.98s call     tests/benchmark/test_graph_engine_inline.py::test_correctness_inline_matched[graph-serial-wc-loop]
+7.90s call     tests/benchmark/test_graph_engine.py::test_correctness_matched[serial-calcjob-loop]
+5.44s call     tests/benchmark/test_graph_engine.py::test_correctness_matched[threaded-calcjob-loop]
+5.02s call     tests/benchmark/test_graph_engine_inline.py::test_correctness_inline_matched[graph-serial-calcjob-loop]
+=========================== short test summary info ============================
+SKIPPED [3] tests/benchmark/test_graph_restart.py:301: Skipping benchmark (--benchmark-skip active).
+SKIPPED [1] tests/benchmark/test_graph_restart.py:347: Skipping benchmark (--benchmark-skip active).
+SKIPPED [3] tests/benchmark/test_graph_restart.py:441: Skipping benchmark (--benchmark-skip active).
+SKIPPED [15] tests/benchmark/test_graph_engine_inline.py:311: Skipping benchmark (--benchmark-skip active).
+SKIPPED [10] tests/benchmark/test_graph_engine.py:301: Skipping benchmark (--benchmark-skip active).
+=========== 794 passed, 32 skipped, 3 warnings in 378.40s (0:06:18) ============

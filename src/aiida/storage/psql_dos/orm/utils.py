@@ -21,7 +21,10 @@ from aiida.common import exceptions
 if t.TYPE_CHECKING:
     from aiida.storage.psql_dos.backend import PsqlDosBackend
 
-IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
+# Stored ownership references cannot be changed in place (backend-contract immutability), so the wrapper must
+# neither auto-flush nor refresh-away in-memory changes to them: backend guards observe and reject such mutations.
+# Container state (`db_dbcontainer` + kind markers) is immutable once stored and has no model-field path here.
+IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type', 'owner_id'}
 
 
 class ModelWrapper:
@@ -109,7 +112,9 @@ class ModelWrapper:
     def save(self):
         """Store the model instance.
 
-        .. note:: If one is currently in a transaction, this method is a no-op.
+        When called inside an explicit transaction, the write joins it through a savepoint, so an integrity
+        failure rolls back only this write: the ambient transaction stays usable and the caller may catch the
+        error and continue.
 
         :raises `aiida.common.IntegrityError`: if a database integrity error is raised during the save.
         """
@@ -118,9 +123,16 @@ class ModelWrapper:
             if not self._in_transaction():
                 self.session.commit()
             else:
-                self.session.flush()
+                with self.session.begin_nested():
+                    self.session.flush()
         except IntegrityError as exception:
-            self.session.rollback()
+            if self._in_transaction():
+                # Only this savepoint was rolled back. Expunge a failed new instance so it does not poison
+                # later flushes; failed updates of persistent instances keep their restored state.
+                if inspect(self._model).pending:
+                    self.session.expunge(self._model)
+            else:
+                self.session.rollback()
             raise exceptions.IntegrityError(str(exception))
 
     def _is_mutable_model_field(self, field):

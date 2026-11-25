@@ -10,7 +10,7 @@
 
 import re
 
-from aiida.engine.processes.graphs.ir import BodyTask, BranchControl, GraphIR, OutputTree
+from aiida.engine.processes.graphs.ir import BodyTask, BranchControl, GraphIR, OptionalOutputNamespace, OutputTree
 
 __all__ = ('to_mermaid',)
 
@@ -101,6 +101,8 @@ def _render_body(spec: GraphIR, prefix: tuple[str, ...], lines: list[str], seen:
 
 def _render_output(tree: OutputTree, path: tuple[str, ...], lines: list[str]) -> None:
     """Draw one output leaf, or each leaf of a nested mapping, at its declared path."""
+    if isinstance(tree, OptionalOutputNamespace):
+        tree = tree.fields
     if isinstance(tree, dict):
         for field, child in tree.items():
             _render_output(child, (*path, field), lines)

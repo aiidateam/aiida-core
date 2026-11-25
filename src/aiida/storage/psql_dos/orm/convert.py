@@ -60,9 +60,17 @@ def _(dbmodel, backend):
 def _(dbmodel, backend):
     """get_backend_entity for SQLA DbNode. It will return an ORM instance since
     there is not Node backend entity yet.
+
+    Container rows share the ``DbNode`` table (common node identity) but map
+    to the dedicated ``SqlaContainer`` (``BackendContainer``) entity so they
+    never persist through ``BackendNode.store``.
     """
+    from aiida.storage import ownership as ownership_contract
     from aiida.storage.psql_dos.orm import nodes
 
+    # Closed container set: the shared storage identifier mapping is the single source of truth.
+    if ownership_contract.is_container_node_type(getattr(dbmodel, 'node_type', None)):
+        return nodes.SqlaContainer.from_dbmodel(dbmodel, backend)
     return nodes.SqlaNode.from_dbmodel(dbmodel, backend)
 
 

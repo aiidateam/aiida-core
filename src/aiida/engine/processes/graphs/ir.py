@@ -17,7 +17,7 @@ import sys
 import typing as t
 from collections.abc import Mapping
 from copy import copy, deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cached_property
 
 from aiida.common import _callables as callables
@@ -25,11 +25,39 @@ from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.graphs.expressions import infer_expression_shape
 from aiida.engine.processes.graphs.inputs import _port_for_shape, _shape_from_port
-from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
-from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
+from aiida.engine.processes.graphs.operations import (
+    BINARY_OPERATIONS,
+    CONSTANT_PORT,
+    LEFT_PORT,
+    OPERAND_PORT,
+    OPERATIONS,
+    RESULT_PORT,
+    RIGHT_PORT,
+    OperationKind,
+    const_result_shape,
+)
+from aiida.engine.processes.graphs.results import Result, _result_contract
+from aiida.engine.processes.graphs.shapes import (
+    LeafShape,
+    NamespaceShape,
+    Shape,
+    dump_shape,
+    load_shape,
+    shape_for_annotation,
+)
+from aiida.engine.processes.ports import (
+    InputPort,
+    OutputPort,
+    PortNamespace,
+    _infer_node_types,
+    _node_type,
+    checkpoint_leaves,
+)
 from aiida.engine.processes.process import Process
-from aiida.orm import Data
+from aiida.orm import Code, DataDict, DataList
+from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
     'BodyTask',
@@ -38,7 +66,10 @@ __all__ = (
     'Endpoint',
     'GraphIR',
     'GraphTask',
+    'InlineOperation',
     'LoopControl',
+    'MapControl',
+    'OptionalOutputNamespace',
     'OutputTree',
     'ProcessTask',
     'Route',
@@ -46,10 +77,15 @@ __all__ = (
     'TaskIR',
 )
 
-_GRAPH_IR_VERSION: t.Final = '0.1'
+_GRAPH_IR_EXPRESSION_VERSION: t.Final = '0.3'
+_GRAPH_IR_OUTPUT_TREE_VERSION: t.Final = '0.5'
+_GRAPH_IR_CHECKPOINT_PORTS_VERSION: t.Final = '0.6'
+_GRAPH_IR_RESULT_VERSION: t.Final = '0.4'
+_GRAPH_IR_VERSION: t.Final = '0.2'
+_GRAPH_IR_LEGACY_VERSION: t.Final = '0.1'
 _TASK_IR_VERSION: t.Final = '0.1'
 _CONDITION_PORT: t.Final = 'condition'
-_TaskKind: t.TypeAlias = t.Literal['process', 'graph', 'branch', 'loop']
+_TaskKind: t.TypeAlias = t.Literal['process', 'graph', 'branch', 'loop', 'map', 'operation']
 
 
 def _require_version(version: object, supported: str, what: str) -> str:
@@ -80,14 +116,21 @@ def _ancestry_required(ports: PortNamespace, path: str) -> bool:
     return True
 
 
-def _reject_dynamic_inputs(ports: PortNamespace) -> None:
-    """Reject dynamic non-metadata inputs, but permit the engine's metadata options."""
+def _reject_dynamic_inputs(ports: PortNamespace, process_class: type[Process], path: tuple[str, ...] = ()) -> None:
+    """Require fixed scientific namespaces, not externally configurable execution namespaces."""
+    from aiida.engine.processes.calcjobs import CalcJob
+    from aiida.engine.processes.workchains.workchain import WorkChain
+
+    if issubclass(process_class, (CalcJob, WorkChain)) and _is_runtime_config_path(
+        process_class, process_class.spec().inputs, path
+    ):
+        return
     if ports.dynamic and ports.required:
         msg = f'graph tasks require fixed inputs; namespace `{ports.name}` is dynamic.'
         raise GraphTypeCheckError(msg)
-    for child in ports.values():
+    for name, child in ports.items():
         if isinstance(child, PortNamespace) and not child.is_metadata and (child.required or not child.dynamic):
-            _reject_dynamic_inputs(child)
+            _reject_dynamic_inputs(child, process_class, (*path, name))
 
 
 def _reject_dynamic_outputs(ports: PortNamespace) -> None:
@@ -138,7 +181,10 @@ def _close_dynamic(
         location = f'{path}.{name}' if path else name
         existing = ports.get(name)
         if isinstance(existing, PortNamespace) and isinstance(shape, NamespaceShape):
-            closed[name] = _close_dynamic(existing, shape, port_class, location)
+            nested = _close_dynamic(existing, shape, port_class, location)
+            closed[name] = nested
+            if not nested.dynamic:
+                added = True
             continue
         if existing is not None:
             narrowed = _narrowed_port(existing, shape) if narrow else None
@@ -172,7 +218,7 @@ def _static_inputs(process_class: type[Process], declared: NamespaceShape) -> Po
     ports = process_class.spec().inputs
     if declared.fields:
         ports = _close_dynamic(ports, declared, InputPort)
-    _reject_dynamic_inputs(ports)
+    _reject_dynamic_inputs(ports, process_class)
     return ports
 
 
@@ -183,6 +229,66 @@ def _static_outputs(process_class: type[Process], declared: NamespaceShape) -> P
         ports = _close_dynamic(ports, declared, OutputPort, narrow=True)
     _reject_dynamic_outputs(ports)
     return ports
+
+
+def _code_only_types(valid_type: t.Any) -> bool:
+    """Return whether every accepted non-`None` type is an `orm.Code` subclass.
+
+    At least one non-`None` type is required, so unconstrained ports, empty
+    declarations, and mixed scientific unions never classify from the type alone.
+    """
+    kinds = valid_type if isinstance(valid_type, (tuple, list)) else (valid_type,)
+    kept = tuple(kind for kind in kinds if kind is not None and kind is not type(None))
+    return bool(kept) and all(isinstance(kind, type) and issubclass(kind, Code) for kind in kept)
+
+
+def _is_runtime_config_path(
+    process_class: type[Process],
+    ports: PortNamespace,
+    segments: tuple[str, ...],
+    seen: frozenset[type[Process]] | None = None,
+) -> bool:
+    """Return whether one concrete input path may be supplied by runtime configuration.
+
+    Classification reads the declared process specification, not values or name
+    heuristics: base-process roots, `Code`-typed leaves at any depth, and
+    exposure chains preserving both. A removed port never
+    classifies; an exposed `CalcJob` namespace alone does not make its
+    scientific siblings configuration-capable.
+    """
+    from aiida.engine.processes.calcjobs import CalcJob
+    from aiida.engine.processes.workchains.workchain import WorkChain
+
+    if not segments or _port_at(ports, '.'.join(segments)) is None:
+        return False
+    base = CalcJob if issubclass(process_class, CalcJob) else WorkChain
+    if segments[0] in base.spec().inputs:
+        return True
+    port = _port_at(ports, '.'.join(segments))
+    if _code_only_types(getattr(port, 'valid_type', None)):
+        return True
+    return _is_exposed_runtime_path(process_class, segments, seen or frozenset())
+
+
+def _is_exposed_runtime_path(
+    process_class: type[Process], segments: tuple[str, ...], seen: frozenset[type[Process]]
+) -> bool:
+    """Return whether an input path classifies through an `expose_inputs` chain."""
+    if process_class in seen:
+        return False
+    seen = seen | {process_class}
+    for namespace, source_class, absorbed in process_class.spec().input_exposures():
+        if not issubclass(source_class, Process):
+            continue
+        prefix = tuple(namespace.split('.')) if namespace else ()
+        if len(segments) <= len(prefix) or tuple(segments[: len(prefix)]) != prefix:
+            continue
+        rest = segments[len(prefix) :]
+        if rest[0] not in absorbed:
+            continue
+        if _is_runtime_config_path(source_class, source_class.spec().inputs, rest, seen):
+            return True
+    return False
 
 
 def _input_ports_at(task: GraphTask, path: str) -> list[t.Any]:
@@ -249,6 +355,65 @@ TypevarPositions: t.TypeAlias = dict[t.Any, list[str]]
 """Bare type variables mapped to the input ports declaring them."""
 
 
+def _overlay_element(base: Shape, annotated: Shape | None) -> Shape:
+    """Overlay collection members from ``annotated`` onto ``base``, keeping base types."""
+    if annotated is None:
+        return base
+    if isinstance(base, LeafShape) and isinstance(annotated, LeafShape):
+        if annotated.element is None:
+            return base
+        return replace(base, element=annotated.element)
+    if isinstance(base, NamespaceShape) and isinstance(annotated, NamespaceShape):
+        by_name = dict(annotated.fields)
+        return replace(
+            base,
+            fields=tuple((name, _overlay_element(child, by_name.get(name))) for name, child in base.fields),
+        )
+    return base
+
+
+def _task_func_annotations(process_class: type[Process]) -> dict[str, t.Any] | None:
+    """Return the task function hints, or `None` when unavailable or unresolvable."""
+    func = getattr(process_class, '_func', None)
+    if func is None or not callable(func):
+        return None
+    try:
+        return t.get_type_hints(func, include_extras=True)
+    except (NameError, TypeError, SyntaxError):
+        # String annotations name objects outside the task module; only ports describe the contract then.
+        return None
+
+
+def _with_input_elements(process_class: type[Process], shape: NamespaceShape) -> NamespaceShape:
+    """Overlay hint members onto input ``shape``; ports keep types and requiredness."""
+    hints = _task_func_annotations(process_class)
+    if not hints:
+        return shape
+    annotated = {name: shape_for_annotation(hint) for name, hint in hints.items() if name != 'return'}
+    if not annotated:
+        return shape
+    return replace(
+        shape, fields=tuple((name, _overlay_element(child, annotated.get(name))) for name, child in shape.fields)
+    )
+
+
+def _with_result_elements(process_class: type[Process], shape: Shape) -> Shape:
+    """Overlay return-annotation members onto result ``shape``; the `Result` error arm is untouched."""
+    hints = _task_func_annotations(process_class)
+    if not hints or 'return' not in hints:
+        return shape
+    success, _ = _result_contract(hints['return'])
+    annotated = shape_for_annotation(success)
+    if t.get_origin(hints['return']) is Result and isinstance(shape, NamespaceShape):
+        return replace(
+            shape,
+            fields=tuple(
+                (name, _overlay_element(child, annotated) if name == 'value' else child) for name, child in shape.fields
+            ),
+        )
+    return _overlay_element(shape, annotated)
+
+
 @dataclass(frozen=True)
 class TaskIR:
     """A task's executor and its static input/output contracts.
@@ -267,6 +432,8 @@ class TaskIR:
     typevar_output: t.Any = field(default=None, compare=False)
     exit_codes: dict[str, ExitCode] = field(default_factory=dict)
     error_enums: tuple[str, ...] = field(default_factory=tuple)
+    result_errors: tuple[str, ...] = ()
+    result_nullable: bool = False
     version: str = _TASK_IR_VERSION
 
     def __post_init__(self) -> None:
@@ -285,6 +452,8 @@ class TaskIR:
         typevar_output: t.Any | None = None,
         exit_codes: Mapping[str, ExitCode] | None = None,
         error_enums: tuple[str, ...] | None = None,
+        result_errors: tuple[str, ...] = (),
+        result_nullable: bool = False,
     ) -> TaskIR:
         """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass.
 
@@ -327,6 +496,8 @@ class TaskIR:
             typevar_output=typevar_output,
             exit_codes=dict(exit_codes or {}),
             error_enums=tuple(error_enums or ()),
+            result_errors=result_errors,
+            result_nullable=result_nullable,
         )
 
     @cached_property
@@ -366,17 +537,49 @@ class TaskIR:
 
     @property
     def input_shape(self) -> NamespaceShape:
-        """Return the fixed input contracts as nested shapes."""
+        """Return the fixed input contracts as nested shapes, with annotation elements."""
         shape = _shape_from_port(self.inputs)
         assert isinstance(shape, NamespaceShape)
-        return shape
+        return _with_input_elements(self.process_class, shape)
 
     @property
     def result_shape(self) -> Shape:
-        """Return the result port contracts, or the whole outputs namespace."""
+        """Return the result port contracts, with annotation elements, or the whole outputs namespace."""
         selected = self.outputs[self.result_port] if self.result_port else self.outputs
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
-        return _shape_from_port(selected)
+        return _with_result_elements(self.process_class, _shape_from_port(selected))
+
+    def runtime_input_paths(self) -> frozenset[str]:
+        """Return the minimal input path prefixes runtime configuration may supply.
+
+        An unwired input at or beneath each prefix may be bound externally through
+        `runtime_config` instead of graph wiring. Base-process roots, `Code`-typed
+        leaves at any depth, and `expose_inputs` chains preserving both are
+        covered; scientific siblings of an exposed namespace are not. Plain
+        function tasks classify nothing, so the set is empty for them.
+
+        :return: the topmost configuration-capable dotted input paths.
+        """
+        from aiida.engine.processes.calcjobs import CalcJob
+        from aiida.engine.processes.workchains.workchain import WorkChain
+
+        process_class = self.process_class
+        if not (issubclass(process_class, CalcJob) or issubclass(process_class, WorkChain)):
+            return frozenset()
+        ports = self.inputs
+        found: set[str] = set()
+
+        def visit(namespace: PortNamespace, prefix: str) -> None:
+            """Collect the topmost configuration-capable paths without descending beneath them."""
+            for name, child in namespace.items():
+                path = f'{prefix}.{name}' if prefix else name
+                if _is_runtime_config_path(process_class, ports, tuple(path.split('.'))):
+                    found.add(path)
+                elif isinstance(child, PortNamespace):
+                    visit(child, path)
+
+        visit(ports, '')
+        return frozenset(found)
 
     def to_dict(self) -> dict[str, t.Any]:
         """Return the task declaration without the live process class."""
@@ -389,6 +592,9 @@ class TaskIR:
             data['exit_codes'] = {label: code._asdict() for label, code in self.exit_codes.items()}
         if self.error_enums:
             data['error_enums'] = list(self.error_enums)
+        if self.result_errors:
+            data['result_errors'] = list(self.result_errors)
+            data['result_nullable'] = self.result_nullable
         return {**data, 'version': self.version}
 
     @classmethod
@@ -401,6 +607,8 @@ class TaskIR:
             declared_outputs=_load_declared(data.get('declared_outputs')),
             exit_codes={label: ExitCode(**code) for label, code in data.get('exit_codes', {}).items()},
             error_enums=tuple(data.get('error_enums', ())),
+            result_errors=tuple(data.get('result_errors', ())),
+            result_nullable=data.get('result_nullable', False),
             version=_require_version(data.get('version'), _TASK_IR_VERSION, 'task'),
         )
 
@@ -409,6 +617,8 @@ def _dump_output_tree(source: OutputTree) -> dict[str, t.Any]:
     """Serialize one output leaf or nested mapping, preserving the endpoint shape."""
     if isinstance(source, dict):
         return {'nested': {name: _dump_output_tree(child) for name, child in source.items()}}
+    if isinstance(source, OptionalOutputNamespace):
+        return {'presence': source.presence.to_dict(), **_dump_output_tree(source.fields)}
     return source.to_dict()
 
 
@@ -420,7 +630,10 @@ def _load_output_tree(data: Mapping[str, t.Any]) -> OutputTree:
             msg = 'malformed graph declaration; nested outputs must form a mapping.'
             raise GraphTypeCheckError(msg)
         children: Mapping[str, t.Any] = nested
-        return {name: _load_output_tree(child) for name, child in children.items()}
+        fields = {name: _load_output_tree(child) for name, child in children.items()}
+        if 'presence' in data:
+            return OptionalOutputNamespace(Endpoint.from_dict(data['presence']), fields)
+        return fields
     return Endpoint.from_dict(data)
 
 
@@ -441,6 +654,19 @@ def _output_required(origin: InputPort | OutputPort) -> bool:
     if isinstance(types, type):
         return types is not type(None)
     return type(None) not in types
+
+
+def _output_namespace_from_origin(name: str, origin: PortNamespace, *, required: bool) -> PortNamespace:
+    """Copy a task namespace's output contract without flattening away its optionality."""
+    result = PortNamespace(name, required=required)
+    for key, child in origin.items():
+        if isinstance(child, PortNamespace):
+            result[key] = _output_namespace_from_origin(key, child, required=child.required)
+        else:
+            result[key] = OutputPort(
+                key, valid_type=child.valid_type, required=_output_required(child), durable=child.durable
+            )
+    return result
 
 
 def _with_error_arm(ports: PortNamespace) -> PortNamespace:
@@ -604,13 +830,15 @@ class GraphTask(abc.ABC):
             common = {'name': data['name'], 'inputs': data.get('inputs', {})}
             kind = data.get('kind')
             if kind == 'process':
-                return ProcessTask(spec=TaskIR.from_dict(data['spec']), **common)
+                return ProcessTask(
+                    spec=TaskIR.from_dict(data['spec']), capture_error=data.get('capture_error', False), **common
+                )
             body = GraphIR.from_dict(data['body']) if kind in ('graph', 'branch', 'loop') else None
             if kind == 'graph':
                 if body is None:
                     msg = 'malformed graph task declaration; missing body.'
                     raise GraphTypeCheckError(msg)
-                return SubgraphTask(body=body, **common)
+                return SubgraphTask(body=body, capture_error=data.get('capture_error', False), **common)
             if kind == 'branch':
                 if body is None:
                     msg = 'malformed graph task declaration; missing body.'
@@ -632,6 +860,18 @@ class GraphTask(abc.ABC):
                     body=body,
                     condition_port=data.get('condition_port', _CONDITION_PORT),
                     max_iterations=data['max_iterations'],
+                    **common,
+                )
+            if kind == 'operation':
+                return InlineOperation.from_dict(data)
+            if kind == 'map':
+                nested = GraphIR.from_dict(data['body']) if data.get('body') is not None else None
+                mapped = TaskIR.from_dict(data['spec']) if data.get('spec') is not None else None
+                return MapControl(
+                    spec=mapped,
+                    body=nested,
+                    container=data['container'],
+                    element=data.get('element'),
                     **common,
                 )
         except KeyError as exception:
@@ -675,9 +915,28 @@ class BodyTask(GraphTask):
 
 @dataclass(frozen=True, kw_only=True)
 class SubgraphTask(BodyTask):
-    """A nested graph dispatched once as a child process."""
+    """An inlined graph with its own invocation boundary."""
 
     KIND: t.ClassVar[_TaskKind] = 'graph'
+    capture_error: bool = False
+
+    @override
+    def output_ports(self) -> PortNamespace:
+        ports = super().output_ports()
+        if not self.capture_error:
+            return ports
+        success = copy(ports[self.body.result_port] if self.body.result_port else ports)
+        success.required = False
+        arms = PortNamespace('outputs')
+        arms['value'] = success
+        return _with_error_arm(arms)
+
+    @override
+    def to_dict(self) -> dict[str, t.Any]:
+        data = super().to_dict()
+        if self.capture_error:
+            data['capture_error'] = True
+        return data
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -718,12 +977,9 @@ class BranchControl(BodyTask):
 
     @override
     def output_ports(self) -> PortNamespace:
-        """Return the output contracts of the taken side, representative of both.
-
-        Validation requires both sides to agree on output names and types, so
-        either side describes the branch outputs; the taken side is used.
-        """
-        return self.body.build_output_namespace()
+        """Return the output contracts of a continuing arm, if there is one."""
+        arm = next((branch for branch in self.branches if not branch.always_returns), self.body)
+        return arm.build_output_namespace()
 
     @override
     def to_dict(self) -> dict[str, t.Any]:
@@ -757,11 +1013,126 @@ class LoopControl(BodyTask):
 
 
 @dataclass(frozen=True, kw_only=True)
+class MapControl(GraphTask):
+    """A fan-out applying one task or graph to every element of an owned container.
+
+    ``collection`` is the input port receiving the ``DataList``/``DataDict`` wire; exactly one
+    of ``spec`` (a task) or ``body`` (a nested graph) carries the mapped callable.
+    ``container`` records the lowered collection kind, so the single ``result`` output keeps it.
+    The scheduler dispatches one child per element plus a collector calculation that creates
+    the result container; the graph itself only returns that existing container.
+
+    A plain ``par_map(task, values)`` maps a unary callable and leaves ``element`` unset.
+    A ``partial`` map binds every input but one, naming the remaining input in ``element``:
+    each element wires into ``element`` while the bound inputs travel with every item through
+    the normal ``inputs`` and dependency wires. ``element`` is ``None`` for legacy unary maps.
+    """
+
+    KIND: t.ClassVar[_TaskKind] = 'map'
+    spec: TaskIR | None = None
+    body: GraphIR | None = None
+    container: t.Literal['list', 'dict'] = 'list'
+    element: str | None = None
+
+    def __post_init__(self) -> None:
+        """Reject maps that do not carry exactly one mapped callable of a known container kind."""
+        if (self.spec is None) == (self.body is None):
+            msg = 'maps carry exactly one mapped callable: a task `spec` or a nested graph `body`.'
+            raise GraphTypeCheckError(msg)
+        if self.container not in ('list', 'dict'):
+            msg = f'maps collect `list` or `dict` containers, not `{self.container}`.'
+            raise GraphTypeCheckError(msg)
+
+    @property
+    def fixed_names(self) -> tuple[str, ...]:
+        """Return the bound input names travelling with every item, or `()` for unary maps."""
+        if self.element is None:
+            return ()
+        return tuple(name for name, _ in self.mapped_inputs.fields if name != self.element)
+
+    @property
+    def mapped_inputs(self) -> NamespaceShape:
+        """Return the input contract the mapped callable applies to each element."""
+        if self.spec is not None:
+            return self.spec.input_shape
+        if self.body is not None:
+            return self.body.input_shape
+        msg = f'map `{self.name}` carries exactly one mapped callable: a task `spec` or a nested graph `body`.'
+        raise GraphTypeCheckError(msg)
+
+    @property
+    def mapped_result_port(self) -> str:
+        """Return the single output port the mapped callable produces per element."""
+        if self.spec is not None:
+            return self.spec.result_port
+        if self.body is not None:
+            return self.body.result_port
+        msg = f'map `{self.name}` carries exactly one mapped callable: a task `spec` or a nested graph `body`.'
+        raise GraphTypeCheckError(msg)
+
+    @override
+    def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the collection input plus every `partial`-bound fixed input.
+
+        The mapped element itself is never wired: it arrives from the collection, so only
+        ``collection`` and the bound inputs resolve here. A bound input named ``collection``
+        would collide with the collection wire and is rejected when the map is lowered.
+        """
+        namespace = PortNamespace('inputs')
+        namespace['collection'] = InputPort('collection', valid_type=(DataList, DataDict))
+        if self.element is not None:
+            source = self.spec.inputs if self.spec is not None else self._body_inputs()
+            for name in self.fixed_names:
+                port = source.get(name)
+                if port is None:
+                    msg = (
+                        f'map `{self.name}` wires `{name}`, '
+                        'which is not an input of the mapped callable; check the spelling instead.'
+                    )
+                    raise GraphTypeCheckError(msg)
+                namespace[name] = port
+        return (namespace,)
+
+    def mapped_input_ports(self) -> PortNamespace:
+        """Return the mapped callable's input ports, including the element."""
+        return self.spec.inputs if self.spec is not None else self._body_inputs()
+
+    def _body_inputs(self) -> PortNamespace:
+        """Return the input contracts of the mapped nested graph."""
+        if self.body is None:
+            msg = f'map `{self.name}` carries exactly one mapped callable: a task `spec` or a nested graph `body`.'
+            raise GraphTypeCheckError(msg)
+        return self.body.build_input_namespace()
+
+    @override
+    def output_ports(self) -> PortNamespace:
+        """Return the single result container of the lowered collection kind."""
+        collected = (DataList,) if self.container == 'list' else (DataDict,)
+        namespace = PortNamespace('outputs')
+        namespace['result'] = OutputPort('result', valid_type=collected)
+        return namespace
+
+    @override
+    def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with its mapped callable, container kind, and bound element."""
+        data: dict[str, t.Any] = {
+            **super().to_dict(),
+            'spec': self.spec.to_dict() if self.spec is not None else None,
+            'body': self.body.to_dict() if self.body is not None else None,
+            'container': self.container,
+        }
+        if self.element is not None:
+            data['element'] = self.element
+        return data
+
+
+@dataclass(frozen=True, kw_only=True)
 class ProcessTask(GraphTask):
     """A decorated task function dispatched as one child process."""
 
     KIND: t.ClassVar[_TaskKind] = 'process'
     spec: TaskIR
+    capture_error: bool = False
 
     @override
     def input_ports(self) -> tuple[PortNamespace, ...]:
@@ -771,16 +1142,278 @@ class ProcessTask(GraphTask):
     @override
     def output_ports(self) -> PortNamespace:
         """Return the static outputs of the task process."""
-        return self.spec.outputs
+        ports = self.spec.outputs
+        if self.spec.result_errors and not self.capture_error:
+            success = copy(ports['value'])
+            success.required = not self.spec.result_nullable
+            ports = PortNamespace('outputs')
+            ports['value'] = success
+        return ports
 
     @override
     def to_dict(self) -> dict[str, t.Any]:
         """Return the placement with its task declaration."""
-        return {**super().to_dict(), 'spec': self.spec.to_dict()}
+        data = {**super().to_dict(), 'spec': self.spec.to_dict()}
+        if self.capture_error:
+            data['capture_error'] = True
+        return data
 
 
-OutputTree: t.TypeAlias = 'Endpoint | dict[str, OutputTree]'
+@dataclass(frozen=True)
+class OptionalOutputNamespace:
+    """A group of output endpoints emitted only if its source namespace is present."""
+
+    presence: Endpoint
+    fields: dict[str, OutputTree]
+
+
+OutputTree: t.TypeAlias = 'Endpoint | OptionalOutputNamespace | dict[str, OutputTree]'
+
+
+def _has_optional_output_namespace(tree: OutputTree) -> bool:
+    """Check whether the output needs a namespace presence guard."""
+    return isinstance(tree, OptionalOutputNamespace) or (
+        isinstance(tree, dict) and any(_has_optional_output_namespace(child) for child in tree.values())
+    )
+
+
 """A leaf endpoint or a nested mapping of those regrouping existing nodes."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class InlineOperation(GraphTask):
+    """A scalar operator evaluated inline by the engine, without a child process.
+
+    The operand contracts live in ``input_shape`` (``left`` and ``right`` for binary
+    operators, ``operand`` for unary ones); ``result_shape`` types the single ``result``
+    output. Both shapes serialize with the shared shape helpers, like every other task.
+    """
+
+    KIND: t.ClassVar[_TaskKind] = 'operation'
+    operation: OperationKind
+    input_shape: NamespaceShape
+    result_shape: LeafShape
+    expression: dict[str, t.Any] | None = None
+
+    def __post_init__(self) -> None:
+        """Reject unknown operators and operand contracts the operator cannot read."""
+        if self.operation != 'expression' and self.operation not in OPERATIONS:
+            msg = f'unknown operation `{self.operation}`; expected one of {sorted(OPERATIONS)} or expression.'
+            raise GraphTypeCheckError(msg)
+        if self.operation == 'expression':
+            if self.expression is None:
+                msg = 'an inline collection expression requires an expression tree.'
+                raise GraphTypeCheckError(msg)
+            inferred = infer_expression_shape(self.expression, dict(self.input_shape.fields))
+            if inferred != self.result_shape:
+                msg = 'inline expression result does not match its inferred contract.'
+                raise GraphTypeCheckError(msg)
+            return
+        if self.expression is not None:
+            msg = 'only expression placements carry an expression tree.'
+            raise GraphTypeCheckError(msg)
+        if self.operation == 'const':
+            self._check_const()
+            return
+        expected = (LEFT_PORT, RIGHT_PORT) if self.operation in BINARY_OPERATIONS else (OPERAND_PORT,)
+        names = tuple(name for name, _ in self.input_shape.fields)
+        if sorted(names) != sorted(expected):
+            msg = f'operation `{self.operation}` reads operand(s) {list(expected)}, not {list(names)}.'
+            raise GraphTypeCheckError(msg)
+        for name, shape in self.input_shape.fields:
+            if not isinstance(shape, LeafShape):
+                msg = f'operation `{self.operation}` reads scalar leaves; `{name}` is a namespace.'
+                raise GraphTypeCheckError(msg)
+
+    def _check_const(self) -> None:
+        """Reject bound values that are no finite scalar, and results outside their contract."""
+        names = tuple(name for name, _ in self.input_shape.fields)
+        if sorted(names) != [CONSTANT_PORT]:
+            msg = f'operation `const` binds one value under `{CONSTANT_PORT}`, not {list(names)}.'
+            raise GraphTypeCheckError(msg)
+        if set(self.inputs) != {CONSTANT_PORT}:
+            msg = f'operation `const` carries its bound value under `{CONSTANT_PORT}`.'
+            raise GraphTypeCheckError(msg)
+        bound = const_result_shape(self.inputs[CONSTANT_PORT])
+        bound_types = bound.types or ()
+        if tuple(self.result_shape.types or ()) != tuple(bound_types):
+            declared = ', '.join(f'`{kind.__name__}`' for kind in self.result_shape.types or ()) or 'untyped'
+            bound_name = bound_types[0].__name__ if bound_types else 'untyped'
+            msg = f'operation `const` declares result {declared} but binds `{bound_name}`.'
+            raise GraphTypeCheckError(msg)
+
+    @property
+    def result_port(self) -> str:
+        """Return the single output port."""
+        return RESULT_PORT
+
+    @override
+    def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the fixed operand contracts of the operator."""
+        namespace = _port_for_shape('inputs', self.input_shape)
+        assert isinstance(namespace, PortNamespace)
+        return (namespace,)
+
+    @override
+    def output_ports(self) -> PortNamespace:
+        """Return the single result output of the operator."""
+        namespace = PortNamespace('outputs')
+        namespace[RESULT_PORT] = OutputPort(RESULT_PORT, valid_type=self.result_shape.types)
+        return namespace
+
+    @override
+    def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with its operator and operand contracts."""
+        return {
+            **super().to_dict(),
+            'operation': self.operation,
+            'input_shape': dump_shape(self.input_shape),
+            'result_shape': dump_shape(self.result_shape),
+            **({'expression': self.expression} if self.expression is not None else {}),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, t.Any]) -> InlineOperation:
+        """Rebuild an operation placement from its serialized form."""
+        try:
+            input_shape = load_shape(data['input_shape'])
+            result_shape = load_shape(data['result_shape'])
+            if not isinstance(input_shape, NamespaceShape):
+                msg = 'malformed operation task declaration; operands form a namespace of scalar leaves.'
+                raise GraphTypeCheckError(msg)
+            if not isinstance(result_shape, LeafShape):
+                msg = 'malformed operation task declaration; the result is one scalar leaf.'
+                raise GraphTypeCheckError(msg)
+            return cls(
+                name=data['name'],
+                inputs=data.get('inputs', {}),
+                operation=data['operation'],
+                input_shape=input_shape,
+                result_shape=result_shape,
+                expression=data.get('expression'),
+            )
+        except KeyError as exception:
+            msg = f'malformed operation task declaration; missing key {exception}.'
+            raise GraphTypeCheckError(msg) from exception
+
+
+def _task_contains_operation(task: GraphTask, *, expression_only: bool = False) -> bool:
+    """Return whether a placement evaluates an inline operation, at any nesting depth."""
+    if isinstance(task, InlineOperation):
+        return not expression_only or task.operation == 'expression'
+    if isinstance(task, MapControl):
+        return task.body is not None and _graph_contains_operation(task.body, expression_only=expression_only)
+    if isinstance(task, BranchControl):
+        return _graph_contains_operation(task.body, expression_only=expression_only) or _graph_contains_operation(
+            task.otherwise, expression_only=expression_only
+        )
+    if isinstance(task, BodyTask):
+        return _graph_contains_operation(task.body, expression_only=expression_only)
+    return False
+
+
+def _graph_contains_operation(graph: GraphIR, *, expression_only: bool = False) -> bool:
+    """Return whether any placement of a template evaluates an inline operation."""
+    return any(_task_contains_operation(task, expression_only=expression_only) for task in graph.tasks)
+
+
+def _select_shape(shape: Shape, path: str) -> Shape | None:
+    """Return the nested contracts at a dotted path, or `None` when absent."""
+    current = shape
+    for segment in path.split('.') if path else ():
+        if not isinstance(current, NamespaceShape):
+            return None
+        try:
+            current = current.select(segment)
+        except KeyError:
+            return None
+    return current
+
+
+def _relative_shape(shape: Shape, prefix: str, port: str) -> Shape | None:
+    """Return source contracts for an endpoint port relative to a task or body result."""
+    if prefix:
+        if port == prefix:
+            return shape
+        if port.startswith(f'{prefix}.') and isinstance(shape, LeafShape) and isinstance(shape.element, NamespaceShape):
+            return _select_shape(shape.element, port[len(prefix) + 1 :])
+        return None
+    return _select_shape(shape, port) if isinstance(shape, NamespaceShape) else None
+
+
+def _normalized_value_types(types: tuple[type, ...]) -> tuple[t.Any, ...]:
+    """Return element types with ORM/Python spellings unified (`int` reads as `Int`)."""
+    return tuple(_node_type(kind) if _node_type(kind) is not None else kind for kind in types)
+
+
+def _leaf_types_agree(first: tuple[type, ...] | None, second: tuple[type, ...] | None) -> bool:
+    """Return whether two known value contracts accept each other, ignoring unknown sides."""
+    if first is None or second is None:
+        return True
+    try:
+        expected, received = _normalized_value_types(first), _normalized_value_types(second)
+        return all(any(issubclass(kind, other) for other in received) for kind in expected) and all(
+            any(issubclass(kind, other) for other in expected) for kind in received
+        )
+    except TypeError:
+        return tuple(first) == tuple(second)
+
+
+def branch_shapes_agree(first: Shape, second: Shape) -> bool:
+    """Return whether two branch outputs agree on value types, recursing into members.
+
+    Requiredness, defaults, and documentation are intentionally ignored: only the value
+    contracts matter. An unknown side (`None` types or a missing member) agrees with
+    anything, so callers must not claim the known side from such agreement.
+    """
+    if isinstance(first, NamespaceShape) and isinstance(second, NamespaceShape):
+        if {name for name, _ in first.fields} != {name for name, _ in second.fields}:
+            return False
+        other = dict(second.fields)
+        return all(branch_shapes_agree(child, other[name]) for name, child in first.fields)
+    if isinstance(first, LeafShape) and isinstance(second, LeafShape):
+        if not _leaf_types_agree(first.types, second.types):
+            return False
+        if first.element is None or second.element is None:
+            return True
+        return branch_shapes_agree(first.element, second.element)
+    return False
+
+
+def collection_members_agree(first: Shape, second: Shape) -> bool:
+    """Compare collection members without rechecking scalar port compatibility."""
+    if isinstance(first, NamespaceShape) and isinstance(second, NamespaceShape):
+        other = dict(second.fields)
+        return all(name in other and collection_members_agree(child, other[name]) for name, child in first.fields)
+    if isinstance(first, LeafShape) and isinstance(second, LeafShape):
+        if first.element is None or second.element is None:
+            return True
+        return branch_shapes_agree(first.element, second.element)
+    return False
+
+
+def merge_branch_shape(first: Shape | None, second: Shape | None) -> Shape | None:
+    """Return the branch output contract without fabricating a known member from one arm."""
+    if first is None or second is None or not branch_shapes_agree(first, second):
+        return None
+    if isinstance(first, NamespaceShape) and isinstance(second, NamespaceShape):
+        other = dict(second.fields)
+        merged = tuple((name, merge_branch_shape(child, other[name])) for name, child in first.fields)
+        if any(shape is None for _, shape in merged):
+            return None
+        return replace(first, fields=tuple((name, t.cast('Shape', shape)) for name, shape in merged))
+    if isinstance(first, LeafShape) and isinstance(second, LeafShape):
+        if first.types is None or second.types is None:
+            return replace(first, types=None, element=None)
+        if first.element is None:
+            return first
+        if second.element is None:
+            return replace(first, element=None)
+        merged_element = merge_branch_shape(first.element, second.element)
+        if merged_element is None:
+            return None
+        return replace(first, element=merged_element)
+    return None
 
 
 @dataclass(frozen=True)
@@ -795,12 +1428,104 @@ class GraphIR:
     identifier: str | None = None
     version: str = _GRAPH_IR_VERSION
     output_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
+    return_outputs: dict[str, OutputTree] | None = None
+    return_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
+    return_error: tuple[str, str] | None = None
+    checkpoint_outputs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         # Imported here: validation reads this module's port helpers at runtime.
         from aiida.engine.processes.graphs.validate import validate_graph
 
         validate_graph(self)
+        if self.has_checkpoint_ports:
+            version = _GRAPH_IR_CHECKPOINT_PORTS_VERSION
+        elif (
+            self.has_return
+            or any(_has_optional_output_namespace(tree) for tree in self.outputs.values())
+            or any(body.version == _GRAPH_IR_OUTPUT_TREE_VERSION for body in self._child_templates())
+        ):
+            version = _GRAPH_IR_OUTPUT_TREE_VERSION
+        elif self._uses_result_policy:
+            version = _GRAPH_IR_RESULT_VERSION
+        elif _graph_contains_operation(self, expression_only=True):
+            version = _GRAPH_IR_EXPRESSION_VERSION
+        else:
+            version = _GRAPH_IR_VERSION if _graph_contains_operation(self) else _GRAPH_IR_LEGACY_VERSION
+        if self.version != version:
+            object.__setattr__(self, 'version', version)
+
+    @cached_property
+    def has_checkpoint_ports(self) -> bool:
+        """Whether this template or a placement uses checkpoint-only ports."""
+        if self.checkpoint_outputs or any(checkpoint_leaves(self.build_input_namespace())):
+            return True
+        if any(body.version == _GRAPH_IR_CHECKPOINT_PORTS_VERSION for body in self._child_templates()):
+            return True
+        return any(
+            isinstance(task, (ProcessTask, MapControl))
+            and task.spec is not None
+            and (any(checkpoint_leaves(task.spec.inputs)) or any(checkpoint_leaves(task.spec.outputs)))
+            for task in self.tasks
+        )
+
+    @property
+    def has_return(self) -> bool:
+        """Whether this region ends with an explicit invocation return."""
+        return self.return_outputs is not None or self.return_error is not None
+
+    @cached_property
+    def always_returns(self) -> bool:
+        """Whether a successfully executed region can never reach its join."""
+        return self.has_return or any(
+            isinstance(task, BranchControl) and all(arm.always_returns for arm in task.branches) for task in self.tasks
+        )
+
+    def _child_templates(self, *, regions_only: bool = False) -> t.Iterator[GraphIR]:
+        """Yield immediate child templates, optionally staying within the invocation."""
+        for task in self.tasks:
+            if isinstance(task, BranchControl):
+                yield from task.branches
+            elif isinstance(task, LoopControl) or (not regions_only and isinstance(task, SubgraphTask)):
+                yield task.body
+            elif not regions_only and isinstance(task, MapControl) and task.body is not None:
+                yield task.body
+
+    def success_returns(self) -> t.Iterator[GraphIR]:
+        """Yield the explicit success-return sites of this invocation."""
+        if self.return_outputs is not None:
+            yield self
+        for region in self._child_templates(regions_only=True):
+            yield from region.success_returns()
+
+    @cached_property
+    def _uses_result_policy(self) -> bool:
+        """Version this template if it requires the new invocation semantics."""
+        for task in self.tasks:
+            if isinstance(task, ProcessTask) and task.spec.result_errors:
+                return True
+            if isinstance(task, SubgraphTask) and task.capture_error:
+                return True
+            if isinstance(task, BranchControl) and task.otherwise._uses_result_policy:
+                return True
+            if isinstance(task, (BodyTask, MapControl)) and task.body is not None and task.body._uses_result_policy:
+                return True
+        return False
+
+    @cached_property
+    def declared_errors(self) -> frozenset[str]:
+        """Infer errors that can escape this template without being captured."""
+        errors = {self.return_error[0]} if self.return_error is not None else set()
+        for task in self.tasks:
+            if isinstance(task, ProcessTask) and not task.capture_error:
+                errors.update(task.spec.result_errors)
+            elif isinstance(task, BranchControl):
+                errors.update(task.body.declared_errors, task.otherwise.declared_errors)
+            elif isinstance(task, LoopControl) or (isinstance(task, SubgraphTask) and not task.capture_error):
+                errors.update(task.body.declared_errors)
+            elif isinstance(task, MapControl) and task.body is not None:
+                errors.update(task.body.declared_errors)
+        return frozenset(errors)
 
     @property
     def task_names(self) -> tuple[str, ...]:
@@ -832,37 +1557,118 @@ class GraphIR:
     @property
     def result_port(self) -> str:
         """Return the single output port, or `''` when there is not exactly one."""
-        return next(iter(self.outputs)) if len(self.outputs) == 1 else ''
+        outputs = self.build_output_namespace()
+        return next(iter(outputs)) if len(outputs) == 1 else ''
 
     @property
     def result_shape(self) -> Shape:
-        """Return the result port contracts, or the whole outputs namespace."""
+        """Return the result port contracts, or the whole outputs namespace.
+
+        Stored ports keep types and requiredness; element contracts overlay from the
+        source endpoint so nested collections survive regrouping.
+        """
         namespace = self.build_output_namespace()
         selected = namespace[self.result_port] if self.result_port else namespace
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
-        return _shape_from_port(selected)
+        base = _shape_from_port(selected)
+        site = self._output_return_site()
+        tree = self.outputs if site is None else site.return_outputs or {}
+        source = tree[self.result_port] if self.result_port else tree
+        annotated = (site or self)._tree_shape(source)
+        return _overlay_element(base, annotated)
+
+    def _tree_shape(self, source: OutputTree | dict[str, OutputTree]) -> Shape | None:
+        """Return the source element contracts for one output subtree."""
+        if isinstance(source, Endpoint):
+            return self._endpoint_shape(source)
+        optional = isinstance(source, OptionalOutputNamespace)
+        children = source.fields if isinstance(source, OptionalOutputNamespace) else source
+        fields: list[tuple[str, Shape]] = []
+        for name, child in children.items():
+            shaped = self._tree_shape(child)
+            if shaped is None:
+                return None
+            fields.append((name, shaped))
+        return NamespaceShape(fields=tuple(fields), required=not optional)
+
+    def _endpoint_shape(self, endpoint: Endpoint) -> Shape | None:
+        """Return the source contracts for one output endpoint, or `None` when unknown."""
+        if endpoint.task is None:
+            return _select_shape(self.input_shape, endpoint.port)
+        try:
+            task = self.task(endpoint.task)
+        except KeyError:
+            return None
+        if isinstance(task, ProcessTask):
+            return _relative_shape(task.spec.result_shape, task.spec.result_port, endpoint.port)
+        if isinstance(task, InlineOperation):
+            return task.result_shape if endpoint.port == task.result_port else None
+        if isinstance(task, MapControl):
+            mapped = task.spec.result_shape if task.spec is not None else task.body.result_shape  # type: ignore[union-attr]
+            if not isinstance(mapped, LeafShape):
+                return None
+            collected = DataList if task.container == 'list' else DataDict
+            return _relative_shape(LeafShape(types=(collected,), element=mapped), 'result', endpoint.port)
+        if isinstance(task, (SubgraphTask, LoopControl)):
+            return _relative_shape(task.body.result_shape, task.body.result_port, endpoint.port)
+        if isinstance(task, BranchControl):
+            taken = _relative_shape(task.body.result_shape, task.body.result_port, endpoint.port)
+            other = _relative_shape(task.otherwise.result_shape, task.otherwise.result_port, endpoint.port)
+            return merge_branch_shape(taken, other)
+        return None
 
     def build_output_namespace(self) -> PortNamespace:
         """Return the nested outputs with their stored types.
 
-        Outputs regroup existing nodes instead of creating data; every leaf keeps
-        the stored node its task or graph input already holds.
+        Outputs describe stored nodes, including inline values materialized at publication.
         """
+        site = self._output_return_site()
+        if site is not None:
+            ports = site.build_return_namespace()
+        else:
+            ports = self._output_namespace(self.outputs, self.output_typehints)
+        if self.identifier is not None:
+            undeclared = set(checkpoint_leaves(ports)) - set(self.checkpoint_outputs)
+            if undeclared:
+                msg = f'graph outputs {sorted(undeclared)} cannot wire a checkpoint-only value to a durable port.'
+                raise GraphTypeCheckError(msg)
+        for path in self.checkpoint_outputs:
+            port = _port_at(ports, path)
+            if isinstance(port, OutputPort):
+                port.durable = False
+        return ports
+
+    def _output_return_site(self) -> GraphIR | None:
+        """Return the success site that defines the output contract, if any."""
+        if self.identifier is not None and self.always_returns:
+            return next(self.success_returns(), None)
+        return None
+
+    def build_return_namespace(self) -> PortNamespace:
+        """Return the port contract for this region's explicit success return."""
+        return self._output_namespace(self.return_outputs or {}, self.return_typehints)
+
+    def _output_namespace(self, outputs: dict[str, OutputTree], hints: dict[str, tuple[type, ...]]) -> PortNamespace:
         namespace = PortNamespace('outputs')
-        for name, source in self.outputs.items():
-            namespace[name] = self._build_output_port(name, source, path=name)
+        for name, source in outputs.items():
+            namespace[name] = self._build_output_port(name, source, hint=hints.get(name))
         return namespace
 
-    def _build_output_port(self, name: str, source: OutputTree, path: str) -> OutputPort | PortNamespace:
+    def _build_output_port(
+        self, name: str, source: OutputTree, *, hint: tuple[type, ...] | None, present: Endpoint | None = None
+    ) -> OutputPort | PortNamespace:
         """Return one output leaf or namespace, preserving the stored node types.
 
-        Outputs regroup their source nodes instead of creating data, so a leaf
-        whose source accepts `None` or stays unwired is optional downstream.
+        A leaf whose source accepts `None` or stays unwired is optional downstream.
         """
-        if isinstance(source, dict):
-            nested = PortNamespace(name)
+        if isinstance(source, (dict, OptionalOutputNamespace)):
+            optional = isinstance(source, OptionalOutputNamespace)
+            if isinstance(source, OptionalOutputNamespace):
+                present = source.presence
+                source = source.fields
+            nested = PortNamespace(name, required=not optional)
             for field, child in source.items():
-                nested[field] = self._build_output_port(field, child, path=f'{path}.{field}')
+                nested[field] = self._build_output_port(field, child, hint=hint, present=present)
             return nested
         if source.task is None:
             ports = self.build_input_namespace()
@@ -870,30 +1676,40 @@ class GraphIR:
             try:
                 task = self.task(source.task)
             except KeyError as exception:
-                msg = f'graph output `{path}` refers to unknown task `{source.task}`.'
+                msg = f'graph output `{name}` refers to unknown task `{source.task}`.'
                 raise GraphTypeCheckError(msg) from exception
             ports = task.output_ports()
         origin = _port_at(ports, source.port)
+        if isinstance(origin, PortNamespace) and source.task is not None:
+            return _output_namespace_from_origin(
+                name, origin, required=origin.required and _ancestry_required(ports, source.port)
+            )
         if origin is None or isinstance(origin, PortNamespace):
-            msg = f'graph output `{path}` must reference a declared leaf.'
+            msg = f'graph output `{name}` must reference a declared leaf or task namespace.'
             raise GraphTypeCheckError(msg)
-        top = path.split('.', maxsplit=1)[0]
-        valid_type = self._output_types(top, origin) or (Data,)
-        # A required leaf under an optional namespace, such as a `Result` success, may be absent with it.
-        required = _output_required(origin) and _ancestry_required(ports, source.port)
-        return OutputPort(name, valid_type=valid_type, required=required)
+        valid_type = self._output_types(origin, hint) or (DataNode,)
+        # A guard already represents the optionality of its source and ancestors.
+        relative = source.port
+        if present is not None and source.task == present.task and source.port.startswith(f'{present.port}.'):
+            ancestor = _port_at(ports, present.port)
+            assert isinstance(ancestor, PortNamespace)
+            ports = ancestor
+            relative = source.port[len(present.port) + 1 :]
+        required = _output_required(origin) and _ancestry_required(ports, relative)
+        return OutputPort(name, valid_type=valid_type, required=required, durable=origin.durable)
 
-    def _output_types(self, name: str, origin: InputPort | OutputPort) -> tuple[type, ...] | type | None:
+    def _output_types(
+        self, origin: InputPort | OutputPort, hint: tuple[type, ...] | None
+    ) -> tuple[type, ...] | type | None:
         """Return the stored types of a graph output, normalizing runtime declarations."""
-        hint = self.output_typehints.get(name)
+        if not origin.durable:
+            return hint or origin.valid_type
         if hint:
             return tuple(kind for declared in hint for kind in _infer_node_types(declared))
-        if isinstance(origin, InputPort):
-            kinds = origin.valid_type or ()
-            if isinstance(kinds, type):
-                kinds = (kinds,)
-            return tuple(kind for declared in kinds for kind in _infer_node_types(declared))
-        return origin.valid_type
+        kinds = origin.valid_type or ()
+        if isinstance(kinds, type):
+            kinds = (kinds,)
+        return tuple(kind for declared in kinds for kind in _infer_node_types(declared))
 
     def predecessors(self, name: str) -> set[str]:
         """Return the tasks one placement directly depends on."""
@@ -906,9 +1722,28 @@ class GraphIR:
             'dependencies': [edge.to_dict() for edge in self.dependencies],
             'inputs': {name: [list(route) for route in targets] for name, targets in self.inputs.items()},
             'outputs': {name: _dump_output_tree(source) for name, source in self.outputs.items()},
+            **(
+                {'return_outputs': {name: _dump_output_tree(source) for name, source in self.return_outputs.items()}}
+                if self.return_outputs is not None
+                else {}
+            ),
+            **({'return_error': list(self.return_error)} if self.return_error is not None else {}),
+            **(
+                {
+                    'return_typehints': {
+                        name: [
+                            None if kind is type(None) else get_object_loader().identify_object(kind) for kind in kinds
+                        ]
+                        for name, kinds in self.return_typehints.items()
+                    }
+                }
+                if self.return_typehints
+                else {}
+            ),
             'identifier': self.identifier,
             'version': self.version,
             'input_namespace': dump_shape(self.input_shape),
+            **({'checkpoint_outputs': list(self.checkpoint_outputs)} if self.checkpoint_outputs else {}),
             'output_typehints': {
                 name: [None if kind is type(None) else get_object_loader().identify_object(kind) for kind in kinds]
                 for name, kinds in self.output_typehints.items()
@@ -918,7 +1753,18 @@ class GraphIR:
     @classmethod
     def from_dict(cls, data: Mapping[str, t.Any]) -> GraphIR:
         """Rebuild a graph template from its serialized form."""
-        version = _require_version(data.get('version'), _GRAPH_IR_VERSION, 'graph')
+        version = data.get('version')
+        supported = (
+            _GRAPH_IR_LEGACY_VERSION,
+            _GRAPH_IR_VERSION,
+            _GRAPH_IR_EXPRESSION_VERSION,
+            _GRAPH_IR_RESULT_VERSION,
+            _GRAPH_IR_OUTPUT_TREE_VERSION,
+            _GRAPH_IR_CHECKPOINT_PORTS_VERSION,
+        )
+        if version not in supported:
+            msg = f'cannot read a graph declaration of version `{version}`; supported versions are {supported}.'
+            raise GraphTypeCheckError(msg)
         try:
             boundary = load_shape(data['input_namespace'])
             tasks = tuple(GraphTask.from_dict(task) for task in data['tasks'])
@@ -936,7 +1782,18 @@ class GraphIR:
                 name: tuple(Route(*target) for target in targets) for name, targets in data.get('inputs', {}).items()
             },
             outputs={name: _load_output_tree(source) for name, source in data.get('outputs', {}).items()},
+            return_outputs=(
+                {name: _load_output_tree(source) for name, source in data['return_outputs'].items()}
+                if 'return_outputs' in data
+                else None
+            ),
+            return_error=(data['return_error'][0], data['return_error'][1]) if 'return_error' in data else None,
+            return_typehints={
+                name: tuple(type(None) if kind is None else get_object_loader().load_object(kind) for kind in kinds)
+                for name, kinds in data.get('return_typehints', {}).items()
+            },
             identifier=data.get('identifier'),
+            checkpoint_outputs=tuple(data.get('checkpoint_outputs', ())),
             version=version,
             output_typehints={
                 name: tuple(type(None) if kind is None else get_object_loader().load_object(kind) for kind in kinds)

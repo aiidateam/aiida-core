@@ -735,7 +735,7 @@ def test_type_hinting_spec_inference():
     input_namespace = function.spec().inputs
 
     expected = (
-        ('a', (orm.Data,)),
+        ('a', (orm.DataNode,)),
         ('b', (orm.Str,)),
         ('c', (orm.Bool,)),
         ('d', (orm.Str,)),

@@ -181,7 +181,8 @@ def get_node_info(node: orm.Node, include_summary: bool = True) -> str:
     nodes_caller = node.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK))
     nodes_called = node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK))
     nodes_input = node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
-    nodes_output = node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
+    output_type = LinkType.RETURN if isinstance(node, orm.WorkflowNode) else LinkType.CREATE
+    nodes_output = node.base.links.get_outgoing(link_type=output_type)
 
     if nodes_input:
         result += f'\n{format_nested_links(nodes_input.nested(), headers=["Inputs", "PK", "Type"])}'
@@ -318,7 +319,7 @@ def get_calcjob_report(calcjob: orm.CalcJobNode) -> str:
     return '\n'.join(report)
 
 
-def get_process_function_report(node: orm.CalcFunctionNode | orm.WorkFunctionNode) -> str:
+def get_process_function_report(node: orm.CalcFunctionNode | orm.TaskNode | orm.WorkFunctionNode) -> str:
     """Return a multi line string representation of the log messages and output of a given process function node
 
     :param node: the node

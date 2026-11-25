@@ -1,0 +1,11 @@
+# Local-only evaluation artefacts — never commit.
+#
+# `reports/` holds per-arm run cards, prompts, transcripts, metrics and logs.
+# `tests_hidden/` holds the shared hidden acceptance tests, which agents must
+# never see (they are NOT copied into agent worktrees by `run_eval.py`).
+/reports/
+/tests_hidden/
+__pycache__/
+# Belt and braces: raw transcripts, logs, or stray session files must never be committed.
+*.jsonl
+*.log

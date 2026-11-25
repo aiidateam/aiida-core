@@ -137,7 +137,7 @@ def overwrite_both(value: int, flag: bool) -> int:
 def alias_both(value: int, flag: bool) -> int:
     """Select between two existing values; no task runs in the arms."""
     first = add(x=value, y=1)
-    second = add(x=value, y=2)
+    second = add(x=value, y=2).alias('add_2')
     if flag:
         chosen = first
     else:
@@ -232,10 +232,10 @@ def mismatched_branches(value: int, condition: bool) -> int:
     return selected_branch
 
 
-# rejected at lowering: conditions are calls or names.
+# rejected at lowering: boolean operators combine true/false values only.
 @graph
 def boolean_condition(value: int, flag: bool) -> int:
-    """Combine conditions with operators; conditions are calls or names."""
+    """Combine a flag with an integer; operands must read as booleans."""
     if flag and value:
         chosen = add(x=value, y=1)
     else:
@@ -243,10 +243,9 @@ def boolean_condition(value: int, flag: bool) -> int:
     return chosen
 
 
-# rejected at lowering: conditions are calls or names.
 @graph
 def compare_condition(value: int) -> int:
-    """Compare inline; conditions are calls or names."""
+    """Compare inline; the comparison binds a boolean wire for the branch."""
     if value > 0:
         chosen = add(x=value, y=1)
     else:
@@ -254,10 +253,9 @@ def compare_condition(value: int) -> int:
     return chosen
 
 
-# rejected at lowering: branch explicitly instead.
 @graph
 def inline_conditional(value: int, flag: bool) -> int:
-    """Select inline; branch explicitly instead."""
+    """Select between two calls; the conditional lowers to a branch selecting one side."""
     return add(x=value, y=1) if flag else add(x=value, y=2)
 
 
@@ -272,10 +270,9 @@ def walrus_condition(value: int, flag: bool) -> int:
     return chosen
 
 
-# rejected at lowering: graphs declare one output at the end.
 @graph
 def early_return(value: int, flag: bool) -> int:
-    """Return from a branch; graphs declare one output at the end."""
+    """Return from a branch or fall through to the final return."""
     if flag:
         return add(x=value, y=1)
     return add(x=value, y=2)
@@ -322,7 +319,7 @@ def loop_arm_two_names(value: int, flag: bool) -> int:
     if flag:
         while is_positive(value=total):
             total = decrement(value=total)
-            step = decrement(value=step)
+            step = decrement(value=step).alias('decrement_2')
     else:
         total = add(x=total, y=0)
     return total
@@ -343,7 +340,7 @@ def alias_mismatched(value: int, label: str, flag: bool) -> int:
 def alias_namespace_both(value: int, flag: bool) -> ArithmeticPair:
     """Select between two whole task-output namespaces."""
     first = arithmetic_pair(x=value, y=3)
-    second = arithmetic_pair(x=value, y=4)
+    second = arithmetic_pair(x=value, y=4).alias('arithmetic_pair_2')
     if flag:
         chosen = first
     else:
@@ -364,7 +361,7 @@ def alias_namespace_mixed(value: int, flag: bool) -> ArithmeticPair:
 
 # rejected at lowering: branch outputs must agree on namespace shapes.
 @graph
-def alias_namespace_mismatched(value: int, flag: bool) -> int:
+def alias_namespace_mismatched(value: int, flag: bool) -> ArithmeticPair:
     """Alias a namespace on one arm and a leaf on the other; arms must agree."""
     pair = arithmetic_pair(x=value, y=3)
     single = add(x=value, y=1)
@@ -377,7 +374,7 @@ def alias_namespace_mismatched(value: int, flag: bool) -> int:
 
 # rejected at lowering: branch outputs must agree on namespace shapes.
 @graph
-def alias_namespace_call_mismatched(value: int, flag: bool) -> int:
+def alias_namespace_call_mismatched(value: int, flag: bool) -> ArithmeticPair:
     """Alias a namespace on one arm and call a leaf on the other; arms must agree."""
     pair = arithmetic_pair(x=value, y=3)
     if flag:

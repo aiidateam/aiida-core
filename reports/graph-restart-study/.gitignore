@@ -1,0 +1,3 @@
+# The complete, immutable evaluation artifacts are versioned in evaluation-logs.tar.xz.
+/evaluation/
+__pycache__/

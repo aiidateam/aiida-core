@@ -1,0 +1,141 @@
+{
+  "baseline_commit": "596d86aa4ce1c904820b8d918b9b656c4626559a",
+  "repetitions": 3,
+  "cases": {
+    "0": [
+      0,
+      5,
+      8,
+      false
+    ],
+    "1": [
+      0,
+      5,
+      8,
+      true
+    ],
+    "2": [
+      0,
+      5,
+      2,
+      false
+    ],
+    "3": [
+      0,
+      5,
+      2,
+      true
+    ],
+    "4": [
+      3,
+      3,
+      0,
+      false
+    ],
+    "5": [
+      3,
+      3,
+      8,
+      true
+    ],
+    "6": [
+      0,
+      5,
+      0,
+      true
+    ],
+    "7": [
+      5,
+      -2,
+      7,
+      false
+    ],
+    "8": [
+      5,
+      -2,
+      4,
+      true
+    ],
+    "9": [
+      -7,
+      -1,
+      3,
+      true
+    ],
+    "10": [
+      -7,
+      -1,
+      2,
+      true
+    ],
+    "11": [
+      -3,
+      -8,
+      3,
+      true
+    ],
+    "12": [
+      2,
+      0,
+      1,
+      true
+    ]
+  },
+  "cpu": 0,
+  "kernel": "6.8.0-101-generic",
+  "perf_event_paranoid": "4",
+  "cache_hardware_metadata_not_usage": [
+    {
+      "level": "1",
+      "type": "Data",
+      "size": "32K",
+      "shared_cpu_list": "0,14"
+    },
+    {
+      "level": "1",
+      "type": "Instruction",
+      "size": "32K",
+      "shared_cpu_list": "0,14"
+    },
+    {
+      "level": "2",
+      "type": "Unified",
+      "size": "1024K",
+      "shared_cpu_list": "0,14"
+    },
+    {
+      "level": "3",
+      "type": "Unified",
+      "size": "19712K",
+      "shared_cpu_list": "0-27"
+    }
+  ],
+  "perf": {
+    "status": "unavailable",
+    "reason": "Error:\nAccess to performance monitoring and observability operations is limited.\nConsider adjusting /proc/sys/kernel/perf_event_paranoid setting to open\naccess to performance monitoring and observability operations for processes\nwithout CAP_PERFMON, CAP_SYS_PTRACE or CAP_SYS_ADMIN Linux capability.\nMore information can be found at 'Perf events and tool security' document:\nhttps://www.kernel.org/doc/html/latest/admin-guide/perf-security.html\nperf_event_paranoid setting is 4:\n  -1: Allow use of (almost) all events by all users\n      Ignore mlock limit after perf_event_mlock_kb without CAP_IPC_LOCK\n>= 0: Disallow raw and ftrace function tracepoint access\n>= 1: Disallow CPU event access\n>= 2: Disallow kernel profiling\nTo make the adjusted perf_event_paranoid setting permanent preserve it\nin /etc/sysctl.conf (e.g. kernel.perf_event_paranoid = <setting>)",
+    "events": [],
+    "permission_probe": {
+      "command": [
+        "/usr/bin/perf",
+        "stat",
+        "-e",
+        "cycles:u",
+        "--",
+        "/bin/true"
+      ],
+      "returncode": 255
+    }
+  },
+  "source_integrity": {
+    "workchain": {
+      "source_files_verified": 708,
+      "submission_matches": true
+    },
+    "graph": {
+      "source_files_verified": 708,
+      "submission_matches": true
+    }
+  },
+  "counter_scope_if_available": "whole profiling process, user-mode events",
+  "memory_scope": "run_get_node window after process-local VmHWM reset, absolute RSS including resident baseline"
+}

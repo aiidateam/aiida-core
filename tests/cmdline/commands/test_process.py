@@ -20,14 +20,14 @@ from unittest.mock import patch
 import pytest
 
 from aiida import get_profile
-from aiida.cmdline.commands import cmd_process
+from aiida.cmdline.commands import cmd_node, cmd_process
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.engine.utils import exponential_backoff_retry
-from aiida.orm import CalcJobNode, Group, Int, WorkChainNode, WorkflowNode, WorkFunctionNode
+from aiida.orm import CalcJobNode, GraphNode, Group, Int, WorkChainNode, WorkflowNode, WorkFunctionNode
 from aiida.tools.archive.exceptions import ExportValidationError
 from tests.utils.processes import WaitProcess
 
@@ -470,6 +470,18 @@ class TestVerdiProcess:
             result = run_cli_command(cmd_process.process_list, ['-r', '-X', flag, 'exit_message'])
             assert Process.exit_codes.ERROR_UNSPECIFIED.message in result.output
 
+    @pytest.mark.parametrize('command', [cmd_process.process_show, cmd_node.node_show])
+    def test_show_graph_output_once(self, run_cli_command, command):
+        """A graph-created output can share its label with its published output."""
+        graph = GraphNode().store()
+        output = Int(1)
+        output.base.links.add_incoming(graph, LinkType.CREATE, 'result')
+        output.store()
+        output.base.links.add_incoming(graph, LinkType.RETURN, 'result')
+
+        result = run_cli_command(command, [str(graph.pk)])
+        assert sum(line.split() == ['result', str(output.pk), 'Int'] for line in result.output_lines) == 1
+
     def test_process_show(self, run_cli_command):
         """Test verdi process show"""
         workchain_one = WorkChainNode()
@@ -597,6 +609,16 @@ class TestVerdiProcess:
         assert re.match(
             r'None<.*> Running\n    ├── None<.* | call_label> Finished\n    └── None<.*> Finished\n', result.output
         )
+
+    def test_task_report(self, run_cli_command):
+        """Display logs for a task just as for other process functions."""
+        from aiida.orm import TaskNode
+
+        node = TaskNode().store()
+        node.logger.log(LOG_LEVEL_REPORT, 'task report message')
+
+        result = run_cli_command(cmd_process.process_report, [str(node.pk)])
+        assert 'task report message' in result.output
 
     def test_report(self, run_cli_command):
         """Test the report command."""

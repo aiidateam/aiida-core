@@ -15,11 +15,13 @@
 from aiida.orm.nodes.process.calculation.calcfunction import *
 from aiida.orm.nodes.process.calculation.calcjob import *
 from aiida.orm.nodes.process.calculation.calculation import *
+from aiida.orm.nodes.process.calculation.task import *
 
 __all__ = (
     'CalcFunctionNode',
     'CalcJobNode',
     'CalculationNode',
+    'TaskNode',
 )
 
 # fmt: on

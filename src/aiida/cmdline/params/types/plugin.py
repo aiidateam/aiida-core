@@ -58,6 +58,7 @@ class PluginParamType(EntryPointType):
     _factory_mapping = {
         'aiida.calculations': factories.CalculationFactory,
         'aiida.data': factories.DataFactory,
+        'aiida.container': factories.ContainerFactory,
         'aiida.groups': factories.GroupFactory,
         'aiida.parsers': factories.ParserFactory,
         'aiida.schedulers': factories.SchedulerFactory,

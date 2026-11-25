@@ -41,7 +41,14 @@ __all__ = (
     'MachineInfo',
     'NodeNumberJobResource',
     'ParEnvJobResource',
+    'SchedulerFailure',
 )
+
+
+class SchedulerFailure(enum.Enum):
+    """Positive failure classifications supplied by a scheduler or calculation integration."""
+
+    OUT_OF_MEMORY = 'out_of_memory'
 
 
 class JobState(enum.Enum):

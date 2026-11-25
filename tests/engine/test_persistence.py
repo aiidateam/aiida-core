@@ -8,7 +8,7 @@
 ###########################################################################
 """Test persisting via the AiidaCheckpointPersister.
 
-Tests share one profile, so the class directory holds foreign files. Tests snapshot
+Tests share one profile, so the checkpoint directory can hold other processes' files. Tests snapshot
 its entries before acting and assert diffs, with premises pinning the snapshot.
 """
 
@@ -16,7 +16,6 @@ import asyncio
 import hashlib
 import os
 import pathlib
-import re
 import typing as t
 from collections.abc import Callable
 from uuid import uuid4
@@ -334,72 +333,42 @@ def dirpath() -> pathlib.Path:
     return get_manager().get_profile_storage().get_checkpoint_classes_dirpath()
 
 
-def checkpoint_classes() -> set[str]:
-    """Return checkpoint class directory entry names."""
+def checkpoint_files() -> set[str]:
+    """Return checkpoint directory entry names."""
     if not dirpath().exists():
         return set()
 
     return {path.name for path in dirpath().iterdir()}
 
 
-def carried_digest(node: orm.ProcessNode) -> str | None:
-    """Return the checkpoint's first digest reference, or `None`."""
-    match = re.search(r'sha256:([0-9a-f]{64})', node.checkpoint)
-
-    return match.group(1) if match else None
-
-
-def record_a_different_class(monkeypatch: pytest.MonkeyPatch, live: Process) -> None:
-    """Patch serialization to record a different, loadable class for `live`."""
-    original: Callable[..., bytes] = callables.dumps
-
-    def changed(*, value: type[Process]) -> bytes:
-        return original(value=PaddedWorkChain if value is type(live) else value)
-
-    monkeypatch.setattr(target=callables, name='dumps', value=changed)
-
-
-def test_importable_process_class_writes_no_class_file(
-    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
-):
-    """Importable process classes require no checkpoint class file."""
-    live = make_process()
-    before = checkpoint_classes()
-    persister.save_checkpoint(live)
-
-    assert carried_digest(live.node) is None
-    assert checkpoint_classes() == before
-    assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
+def checkpoint_digest(node: orm.ProcessNode) -> str:
+    """Read the SHA-256 reference stored on the node."""
+    assert node.checkpoint is not None
+    version, digest = node.checkpoint.split(':')
+    assert version == 'checkpoint-pickle-v1'
+    assert len(digest) == 64
+    return digest
 
 
 @pytest.mark.parametrize('padding', [0, LARGE_CONTEXT_PADDING])
-def test_checkpoints_remain_attributes_while_carried_classes_use_files(
-    persister: AiidaCheckpointPersister, make_process: Callable[..., Process], padding: int
+@pytest.mark.parametrize('carried', [False, True])
+def test_checkpoint_is_one_raw_pickle_with_a_fixed_size_database_reference(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process], padding: int, carried: bool
 ):
-    """Checkpoints remain node attributes at every tested size; carried classes use files."""
-    live = make_process(padding=padding, carried=True)
-    before = checkpoint_classes()
+    """The database reference does not grow with the state or carried class."""
+    live = make_process(padding=padding, carried=carried)
+    before = checkpoint_files()
     persister.save_checkpoint(live)
 
-    digest = carried_digest(live.node)
+    digest = checkpoint_digest(orm.load_node(live.pid))
+    filename = f'{live.node.uuid}-{digest}.pkl'
+    assert checkpoint_files() - before == {filename}
 
-    assert digest is not None
-    assert checkpoint_classes() - before == {f'{live.node.uuid}-{digest}.pkl'}
-    assert live.node.checkpoint.startswith('!aiida:bundle'), 'the bundle itself still lives on the node'
-    assert '!!binary' not in live.node.checkpoint, 'no bytes in the attributes column'
-
-
-def test_checkpoint_digest_matches_the_stored_class_bytes(
-    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
-):
-    """The checkpoint digest matches the stored class bytes."""
-    live = make_process(carried=True)
-    persister.save_checkpoint(live)
-
-    digest = carried_digest(live.node)
-    assert digest is not None, 'premise: this process carries a class'
-
-    assert digest == hashlib.sha256((dirpath() / f'{live.node.uuid}-{digest}.pkl').read_bytes()).hexdigest()
+    data = (dirpath() / filename).read_bytes()
+    assert data.startswith(b'\x80\x05')  # Pickle protocol 5.
+    assert hashlib.sha256(data).hexdigest() == digest
+    assert b'x' * padding in data
+    assert (META__CLASS_BYTES in persister.load_checkpoint(live.pid)[META]) is carried
 
 
 @pytest.mark.parametrize('carried', [False, True])
@@ -411,6 +380,104 @@ def test_importable_and_carried_checkpoints_round_trip(
     persister.save_checkpoint(live)
 
     assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
+
+
+def test_checkpoint_restores_python_objects_and_shared_references(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """A dynamic object and its closure can share state, including cycles and stored nodes."""
+    from dataclasses import dataclass
+
+    @dataclass
+    class Local:
+        values: list
+        node: orm.Node
+
+    live = make_process()
+    node = live.node.inputs.x
+    values: list = []
+    values.append(values)
+    live.ctx.data = Local(values, node)
+    live.ctx.callback = lambda: (values, node)
+    live.ctx.inputs = live.node.inputs
+
+    persister.save_checkpoint(live)
+    live.close()
+    restored = persister.load_checkpoint(live.pid).decode()
+    try:
+        restored_values, restored_node = restored.ctx.callback()
+        assert restored_values is restored.ctx.data.values
+        assert restored_values[0] is restored_values
+        assert restored_node is restored.ctx.data.node
+        assert restored_node.uuid == node.uuid
+        assert restored.ctx.inputs.x.uuid == node.uuid
+    finally:
+        restored.close()
+
+
+def test_checkpoint_restores_group_and_computer_references(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process], aiida_localhost: orm.Computer
+):
+    """Groups and computers round-trip by UUID, not by serializing their backends."""
+    live = make_process()
+    group = orm.Group(label=str(uuid4())).store()
+    live.ctx.references = [group, aiida_localhost]
+
+    persister.save_checkpoint(live)
+    live.close()
+    restored = persister.load_checkpoint(live.pid).decode()
+    try:
+        assert [(type(entity), entity.uuid) for entity in restored.ctx.references] == [
+            (type(group), group.uuid),
+            (type(aiida_localhost), aiida_localhost.uuid),
+        ]
+    finally:
+        restored.close()
+
+
+def test_checkpoint_loads_legacy_yaml_with_a_class_file(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """Existing YAML checkpoints still restore their context and carried classes."""
+    from aiida.orm.utils import serialize
+
+    live = make_process(padding=10, carried=True)
+    from aiida.orm.implementation.checkpoint_store import CheckpointBytes
+
+    payload = CheckpointPayload.from_object(live, CheckpointContext(loader=loaders.get_object_loader()))
+    data = CheckpointBytes(content=payload[META][META__CLASS_BYTES])
+    live.node.backend.checkpoint_store.write(node_uuid=live.node.uuid, data=data)
+    payload[META][META__CLASS_BYTES] = f'sha256:{data.digest}'
+    live.node.set_checkpoint(serialize.serialize(payload))
+
+    loaded = persister.load_checkpoint(live.pid)
+    assert loaded[META][META__CLASS_BYTES] == data.content
+    persister.save_checkpoint(live)
+    assert checkpoint_files().isdisjoint({f'{live.node.uuid}-{data.digest}.pkl'})
+    live.close()
+    restored = loaded.decode()
+    try:
+        assert type(restored) is type(live)
+        assert restored.ctx.padding == 'x' * 10
+    finally:
+        restored.close()
+
+
+def test_checkpoint_rejects_an_unstored_node_without_replacing_the_previous_checkpoint(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """Nodes must be stored before they can be referenced by a checkpoint."""
+    from aiida.engine.processes.exceptions import PersistenceError
+
+    live = make_process()
+    persister.save_checkpoint(live)
+    original = live.node.checkpoint
+    live.ctx.unstored = orm.Int(2)
+
+    with pytest.raises(PersistenceError, match='is not stored'):
+        persister.save_checkpoint(live)
+
+    assert live.node.checkpoint == original
 
 
 def test_carried_bytes_deserialize_to_the_original_class(
@@ -442,7 +509,7 @@ def test_returned_payload_equals_loaded_and_decodes(
         restored.close()
 
 
-def test_loading_class_bytes_checks_the_digest(
+def test_loading_checkpoint_checks_the_digest(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
 ):
     """A referenced file containing different bytes fails before deserialization."""
@@ -450,11 +517,11 @@ def test_loading_class_bytes_checks_the_digest(
 
     live = make_process(carried=True)
     persister.save_checkpoint(live)
-    digest = carried_digest(live.node)
+    digest = checkpoint_digest(live.node)
     filepath = dirpath() / f'{live.node.uuid}-{digest}.pkl'
     original = filepath.read_bytes()
     try:
-        filepath.write_bytes(b'wrong class bytes')
+        filepath.write_bytes(b'corrupted checkpoint')
         with pytest.raises(PersistenceError, match='digest mismatch'):
             persister.load_checkpoint(live.pid)
     finally:
@@ -462,9 +529,9 @@ def test_loading_class_bytes_checks_the_digest(
 
 
 @pytest.mark.usefixtures('aiida_profile')
-def test_class_file_write_syncs_parent_directory(monkeypatch):
+def test_checkpoint_write_syncs_parent_directory(monkeypatch):
     """The profile directory is synchronized before a new class directory can be referenced."""
-    from aiida.orm.implementation.checkpoint_class_store import CheckpointClassStore, ProcessClassBytes
+    from aiida.orm.implementation.checkpoint_store import CheckpointBytes, CheckpointStore
 
     synced: list[tuple[int, int]] = []
     fsync = os.fsync
@@ -475,11 +542,11 @@ def test_class_file_write_syncs_parent_directory(monkeypatch):
         fsync(descriptor)
 
     monkeypatch.setattr(target=os, name='fsync', value=record)
-    files = CheckpointClassStore(storage=get_manager().get_profile_storage())
+    files = CheckpointStore(storage=get_manager().get_profile_storage())
     node_uuid: str = str(uuid4())
-    content = ProcessClassBytes(content=b'class bytes')
+    content = CheckpointBytes(content=b'bytes')
     try:
-        files.write(node_uuid=node_uuid, class_bytes=content)
+        files.write(node_uuid=node_uuid, data=content)
         for directory in (dirpath().parent, dirpath()):
             info = directory.stat()
             assert (info.st_dev, info.st_ino) in synced
@@ -500,7 +567,7 @@ def test_class_digest_reads_checkpoint_metadata(style: str, checksum_key: str):
     """YAML presentation and context values preserve the metadata class-file reference."""
     import yaml
 
-    from aiida.engine.persistence import _carried_digest_in
+    from aiida.engine.persistence import _checkpoint_digest
     from aiida.engine.processes.persistence import META, META__CLASS_BYTES
 
     payload: dict = {
@@ -510,7 +577,7 @@ def test_class_digest_reads_checkpoint_metadata(style: str, checksum_key: str):
     checkpoint: str = yaml.safe_dump(
         payload, default_flow_style=style == 'flow', default_style='"' if style == 'quoted' else None
     )
-    assert _carried_digest_in(checkpoint=checkpoint) == 'a' * 64
+    assert _checkpoint_digest(checkpoint=checkpoint) == 'a' * 64
 
 
 @pytest.mark.parametrize(
@@ -524,96 +591,82 @@ def test_class_digest_reads_checkpoint_metadata(style: str, checksum_key: str):
 )
 def test_class_digest_ignores_missing_or_unreadable_metadata(checkpoint: str | None):
     """Unusable metadata defers cleanup without constructing YAML objects."""
-    from aiida.engine.persistence import _carried_digest_in
+    from aiida.engine.persistence import _checkpoint_digest
 
-    assert _carried_digest_in(checkpoint=checkpoint) is None
+    assert _checkpoint_digest(checkpoint=checkpoint) is None
 
 
 def test_class_digest_ignores_unavailable_context_types():
     """An unavailable context type leaves the class-file reference readable."""
-    from aiida.engine.persistence import _carried_digest_in
+    from aiida.engine.persistence import _checkpoint_digest
     from aiida.engine.processes.persistence import META
 
     checkpoint: str = (
         f"'{META}':\n  class_bytes: sha256:{'a' * 64}\ncontext:\n  helper: !enum 'no.such.module:Missing|x'\n"
     )
-    assert _carried_digest_in(checkpoint=checkpoint) == 'a' * 64
+    assert _checkpoint_digest(checkpoint=checkpoint) == 'a' * 64
 
 
 def test_class_digest_defers_ambiguous_metadata(caplog):
     """Duplicate metadata references emit a warning and defer cleanup."""
-    from aiida.engine.persistence import _carried_digest_in
+    from aiida.engine.persistence import _checkpoint_digest
     from aiida.engine.processes.persistence import META
 
     checkpoint: str = f"'{META}':\n  class_bytes: sha256:{'a' * 64}\n  class_bytes: sha256:{'b' * 64}\n"
-    assert _carried_digest_in(checkpoint=checkpoint) is None
+    assert _checkpoint_digest(checkpoint=checkpoint) is None
     assert 'Ambiguous checkpoint class references' in caplog.text
 
 
-@pytest.mark.parametrize(
-    'class_changes',
-    (
-        # A bundle changes far more often than the class it carries, and then both saves refer to one file.
-        False,
-        # Only a class that changed reaches the discard of the file the last save wrote.
-        True,
-    ),
-)
-def test_rewriting_leaves_exactly_one_class_byte_file(
-    persister: AiidaCheckpointPersister,
-    make_process: Callable[..., Process],
-    monkeypatch: pytest.MonkeyPatch,
-    class_changes: bool,
+def test_rewriting_keeps_only_the_current_checkpoint(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
 ):
-    """Rewriting retains the current class file, reusing its path when the class is unchanged."""
-    live = make_process(carried=True)
-    before = checkpoint_classes()
+    """Unchanged state isn't rewritten; changed state supersedes the previous file."""
+    live = make_process()
+    before = checkpoint_files()
     persister.save_checkpoint(live)
-    first = carried_digest(live.node)
+    first = checkpoint_digest(live.node)
+    path = dirpath() / f'{live.node.uuid}-{first}.pkl'
+    original_inode = path.stat().st_ino
 
-    if class_changes:
-        record_a_different_class(monkeypatch, live)
+    persister.save_checkpoint(live)
+    assert checkpoint_digest(live.node) == first
+    assert path.stat().st_ino == original_inode
 
     live.ctx.padding += 'more'
     persister.save_checkpoint(live)
-    current = carried_digest(live.node)
-
-    assert (current != first) is class_changes
-    assert checkpoint_classes() - before == {f'{live.node.uuid}-{current}.pkl'}
+    current = checkpoint_digest(live.node)
+    assert current != first
+    assert checkpoint_files() - before == {f'{live.node.uuid}-{current}.pkl'}
     assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
 
 
-def test_deleting_the_checkpoint_drops_the_class_byte_file(
-    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
-):
+def test_deleting_checkpoint_removes_file(persister: AiidaCheckpointPersister, make_process: Callable[..., Process]):
     """Checkpoint deletion clears the attribute and removes the class file with it."""
     live = make_process(carried=True)
-    before = checkpoint_classes()
+    before = checkpoint_files()
     persister.save_checkpoint(live)
     persister.delete_checkpoint(live.pid)
 
     assert live.node.checkpoint is None
-    assert checkpoint_classes() == before
+    assert checkpoint_files() == before
 
 
 @pytest.mark.parametrize('operation', ['replace', 'delete'])
 def test_checkpoint_survives_transaction_rollback(
     persister: AiidaCheckpointPersister,
     make_process: Callable[..., Process],
-    monkeypatch: pytest.MonkeyPatch,
     operation: str,
 ):
-    """Rollback preserves the class file referenced by the restored checkpoint."""
+    """Rollback preserves the file referenced by the restored checkpoint."""
     live = make_process(carried=True)
     persister.save_checkpoint(live)
     original = live.node.checkpoint
-    digest = carried_digest(live.node)
+    digest = checkpoint_digest(live.node)
     storage = get_manager().get_profile_storage()
 
     with pytest.raises(RuntimeError, match='rollback'):
         with storage.transaction():
             if operation == 'replace':
-                record_a_different_class(monkeypatch, live)
                 live.ctx.padding += 'changed'
                 persister.save_checkpoint(live)
             else:
@@ -621,7 +674,7 @@ def test_checkpoint_survives_transaction_rollback(
             raise RuntimeError('rollback')
 
     assert orm.load_node(live.pid).checkpoint == original
-    assert f'{live.node.uuid}-{digest}.pkl' in checkpoint_classes()
+    assert f'{live.node.uuid}-{digest}.pkl' in checkpoint_files()
     assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
 
 
@@ -636,7 +689,7 @@ def test_temporary_class_files_are_outside_repository_objects(aiida_config_tmp, 
         before = set(repository.list_objects())
         directory = storage.get_checkpoint_classes_dirpath()
         directory.mkdir(parents=True, exist_ok=True)
-        (directory / 'class.pkl').write_bytes(b'class bytes')
+        (directory / 'class.pkl').write_bytes(b'bytes')
         assert set(repository.list_objects()) == before
         storage.close()
         assert not directory.exists()
@@ -650,7 +703,7 @@ def test_a_staged_file_carries_the_node_uuid(
     replace = os.replace
 
     def record(source: str, destination: str) -> None:
-        # A checkpoint save renames more than this one file, so only the ones landing in the class byte directory
+        # A checkpoint save renames more than this one file, so only the ones landing in the checkpoint directory
         # are this test's business.
         if pathlib.Path(destination).parent == dirpath():
             staged.append(pathlib.Path(source).name)
@@ -671,37 +724,36 @@ def test_a_partial_write_left_by_a_killed_worker_is_dropped(
 ):
     """Checkpoint deletion removes staged files left by interrupted writes."""
     live = make_process(carried=True)
-    before = checkpoint_classes()
+    before = checkpoint_files()
     persister.save_checkpoint(live)
 
     staged = dirpath() / f'.{live.node.uuid}-{uuid4().hex}'
     staged.write_bytes(b'half of a pickle')
-    assert staged.name in checkpoint_classes(), 'premise: the staged file is there to be collected'
+    assert staged.name in checkpoint_files(), 'premise: the staged file is there to be collected'
 
     persister.delete_checkpoint(live.pid)
 
-    assert checkpoint_classes() == before
+    assert checkpoint_files() == before
 
 
 def test_superseded_file_cleanup_ignores_a_context_checksum(
-    persister: AiidaCheckpointPersister, make_process: Callable[..., Process], monkeypatch: pytest.MonkeyPatch
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
 ):
-    """A context checksum does not interfere with superseded class-file cleanup."""
+    """A context checksum does not interfere with superseded file cleanup."""
     live = make_process(carried=True)
-    before = checkpoint_classes()
+    before = checkpoint_files()
 
     live.ctx.checksum = f'sha256:{"a" * 64}'
     persister.save_checkpoint(live)
-    first = carried_digest(live.node)
-    assert first is not None and first != 'a' * 64, 'premise: the class is carried, and is not the checksum'
+    first = checkpoint_digest(live.node)
+    assert first != 'a' * 64
 
-    record_a_different_class(monkeypatch, live)
     live.ctx.padding += 'more'
     persister.save_checkpoint(live)
-    current = carried_digest(live.node)
+    current = checkpoint_digest(live.node)
 
-    assert current != first, 'premise: the second checkpoint carries a different class'
-    assert checkpoint_classes() - before == {f'{live.node.uuid}-{current}.pkl'}
+    assert current != first, 'premise: the second checkpoint carries different state'
+    assert checkpoint_files() - before == {f'{live.node.uuid}-{current}.pkl'}
 
 
 def test_maintenance_preserves_an_uncommitted_owner(
@@ -714,15 +766,15 @@ def test_maintenance_preserves_an_uncommitted_owner(
         with storage.transaction():
             live: Process = make_process(carried=True)
             persister.save_checkpoint(live)
-            digest: str = carried_digest(live.node)
+            digest: str = checkpoint_digest(live.node)
             assert not collector.in_transaction
             owners: int = (
                 orm.QueryBuilder(backend=collector).append(orm.ProcessNode, filters={'uuid': live.node.uuid}).count()
             )
             assert owners == 0
-            dropped = collector.delete_orphaned_checkpoint_class_files()
+            dropped = collector.delete_orphaned_checkpoint_files()
             assert f'{live.node.uuid}-{digest}.pkl' not in [path.name for path in dropped]
-        assert f'{live.node.uuid}-{digest}.pkl' in checkpoint_classes()
+        assert f'{live.node.uuid}-{digest}.pkl' in checkpoint_files()
         assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
     finally:
         collector.close()
@@ -734,24 +786,24 @@ def test_maintenance_defers_uncommitted_sealing(
     """A seal that can roll back cannot make its checkpoint files collectible."""
     live = make_process(carried=True)
     persister.save_checkpoint(live)
-    digest = carried_digest(live.node)
+    digest = checkpoint_digest(live.node)
     storage = get_manager().get_profile_storage()
     with pytest.raises(RuntimeError, match='rollback'):
         with storage.transaction():
             live.node.seal()
-            assert storage.delete_orphaned_checkpoint_class_files() == []
-            assert storage.delete_orphaned_checkpoint_class_files(dry_run=True) == []
+            assert storage.delete_orphaned_checkpoint_files() == []
+            assert storage.delete_orphaned_checkpoint_files(dry_run=True) == []
             msg = 'rollback'
             raise RuntimeError(msg)
     assert not orm.load_node(live.pid).is_sealed
-    assert f'{live.node.uuid}-{digest}.pkl' in checkpoint_classes()
+    assert f'{live.node.uuid}-{digest}.pkl' in checkpoint_files()
     assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
 
 
 def _populate_mixed_directory(
     storage: StorageBackend,
 ) -> tuple[list[pathlib.Path], tuple[pathlib.Path, pathlib.Path]]:
-    """Write foreign and orphaned class files, returning both groups."""
+    """Write foreign and orphaned checkpoint files, returning both groups."""
     directory = storage.get_checkpoint_classes_dirpath()
     directory.mkdir(parents=True, exist_ok=True)
     owner = str(uuid4())
@@ -761,7 +813,7 @@ def _populate_mixed_directory(
     finished = directory / f'{owner}-{"b" * 64}.pkl'
     staged = directory / f'.{owner}-{"c" * 32}'
     for path in (finished, staged):
-        path.write_bytes(b'orphaned class bytes')
+        path.write_bytes(b'orphaned bytes')
     return foreign, (finished, staged)
 
 
@@ -771,7 +823,7 @@ def test_live_collection_ignores_incomplete_formats():
     storage = get_manager().get_profile_storage()
     _, (finished, staged) = _populate_mixed_directory(storage)
 
-    dropped = storage.delete_orphaned_checkpoint_class_files()
+    dropped = storage.delete_orphaned_checkpoint_files()
 
     assert finished not in dropped and staged not in dropped
 
@@ -785,7 +837,7 @@ def test_exclusive_collection_takes_complete_formats():
     _, (finished, staged) = _populate_mixed_directory(storage)
 
     with ProfileAccessManager(storage.profile).lock():
-        collected = set(storage.delete_orphaned_checkpoint_class_files(only_sealed=False))
+        collected = set(storage.delete_orphaned_checkpoint_files(only_sealed=False))
 
     assert {finished, staged} <= collected
 
@@ -798,17 +850,15 @@ def test_collection_preserves_foreign_files():
     storage = get_manager().get_profile_storage()
     foreign, _ = _populate_mixed_directory(storage)
 
-    storage.delete_orphaned_checkpoint_class_files()
+    storage.delete_orphaned_checkpoint_files()
     with ProfileAccessManager(storage.profile).lock():
-        storage.delete_orphaned_checkpoint_class_files(only_sealed=False)
+        storage.delete_orphaned_checkpoint_files(only_sealed=False)
 
     assert all(path.read_bytes() == b'foreign content' for path in foreign)
 
 
-def test_maintenance_keeps_a_live_class_byte_file(
-    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
-):
-    """Live maintenance preserves class files required to load running processes."""
+def test_maintenance_keeps_live_checkpoint(persister: AiidaCheckpointPersister, make_process: Callable[..., Process]):
+    """Live maintenance preserves checkpoint files required to load running processes."""
     live = make_process(carried=True)
     persister.save_checkpoint(live)
 
@@ -821,36 +871,36 @@ def test_maintenance_keeps_a_live_class_byte_file(
 def test_maintenance_drops_the_file_of_a_deleted_node(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
 ):
-    """Live maintenance retains deleted owners' class files; full maintenance collects them."""
+    """Live maintenance retains deleted owners' checkpoint files; full maintenance collects them."""
     from aiida.tools import delete_nodes
 
     live = make_process(carried=True)
-    before = checkpoint_classes()
+    before = checkpoint_files()
     persister.save_checkpoint(live)
-    assert checkpoint_classes() != before, 'premise: a file was written for this node'
-    filename = f'{live.node.uuid}-{carried_digest(live.node)}.pkl'
+    assert checkpoint_files() != before, 'premise: a file was written for this node'
+    filename = f'{live.node.uuid}-{checkpoint_digest(live.node)}.pkl'
 
     delete_nodes([live.node.pk], dry_run=False)
     storage = get_manager().get_profile_storage()
     storage.maintain(full=False)
-    assert filename in checkpoint_classes()
+    assert filename in checkpoint_files()
     storage.maintain(full=True)
-    assert filename not in checkpoint_classes()
+    assert filename not in checkpoint_files()
 
 
 def test_maintenance_drops_the_file_of_a_sealed_node(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
 ):
-    """Live maintenance collects class files retained by sealed nodes."""
+    """Live maintenance collects checkpoint files retained by sealed nodes."""
     live = make_process(carried=True)
     persister.save_checkpoint(live)
-    filename = f'{live.node.uuid}-{carried_digest(live.node)}.pkl'
-    assert filename in checkpoint_classes(), 'premise: a file was written for this node'
+    filename = f'{live.node.uuid}-{checkpoint_digest(live.node)}.pkl'
+    assert filename in checkpoint_files(), 'premise: a file was written for this node'
     live.node.seal()
 
     get_manager().get_profile_storage().maintain(full=False)
 
-    assert filename not in checkpoint_classes()
+    assert filename not in checkpoint_files()
 
 
 def test_maintenance_keeps_a_live_file_beside_an_orphaned_one(
@@ -859,20 +909,20 @@ def test_maintenance_keeps_a_live_file_beside_an_orphaned_one(
     """Maintenance collects sealed owners' files while retaining unsealed owners' files."""
     live = make_process(carried=True)
     sealed = make_process(carried=True)
-    before = checkpoint_classes()
+    before = checkpoint_files()
 
     persister.save_checkpoint(live)
     persister.save_checkpoint(sealed)
     sealed.node.seal()
 
-    written = checkpoint_classes() - before
+    written = checkpoint_files() - before
     kept = {name for name in written if name.startswith(live.node.uuid)}
     dropped = {name for name in written if name.startswith(sealed.node.uuid)}
     assert kept and dropped, 'premise: each of the two nodes has a file of its own'
 
     get_manager().get_profile_storage().maintain(full=False)
 
-    assert checkpoint_classes() - before == kept
+    assert checkpoint_files() - before == kept
 
 
 def test_collection_dry_run_reports_eligible_files(
@@ -882,13 +932,13 @@ def test_collection_dry_run_reports_eligible_files(
     live = make_process(carried=True)
     persister.save_checkpoint(live)
     live.node.seal()
-    before = checkpoint_classes()
+    before = checkpoint_files()
 
     storage = get_manager().get_profile_storage()
-    would_drop = storage.delete_orphaned_checkpoint_class_files(dry_run=True)
+    would_drop = storage.delete_orphaned_checkpoint_files(dry_run=True)
 
     assert [path.name for path in would_drop] == sorted(name for name in before if name.startswith(live.node.uuid))
-    assert checkpoint_classes() == before
+    assert checkpoint_files() == before
 
 
 def test_maintenance_survives_a_file_it_cannot_delete(
@@ -898,7 +948,7 @@ def test_maintenance_survives_a_file_it_cannot_delete(
     live = make_process(carried=True)
     persister.save_checkpoint(live)
     live.node.seal()
-    before = checkpoint_classes()
+    before = checkpoint_files()
     assert before, 'premise: there is a file to collect'
 
     def refuse(self, missing_ok: bool = False) -> None:
@@ -908,26 +958,26 @@ def test_maintenance_survives_a_file_it_cannot_delete(
     monkeypatch.setattr(target=pathlib.Path, name='unlink', value=refuse)
     storage = get_manager().get_profile_storage()
 
-    assert storage.delete_orphaned_checkpoint_class_files() == [], 'a file that stayed is not reported as dropped'
+    assert storage.delete_orphaned_checkpoint_files() == [], 'a file that stayed is not reported as dropped'
 
     monkeypatch.undo()
 
-    assert checkpoint_classes() == before, 'and it is still there for the next run'
+    assert checkpoint_files() == before, 'and it is still there for the next run'
 
 
 def test_maintain_dry_run_preserves_collectible_files(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
 ):
-    """`maintain(dry_run=True)` preserves collectible class files."""
+    """`maintain(dry_run=True)` preserves collectible checkpoint files."""
     live = make_process(carried=True)
     persister.save_checkpoint(live)
     live.node.seal()
-    before = checkpoint_classes()
+    before = checkpoint_files()
     assert before, 'premise: there is a file to collect'
 
     get_manager().get_profile_storage().maintain(full=False, dry_run=True)
 
-    assert checkpoint_classes() == before
+    assert checkpoint_files() == before
 
 
 @pytest.mark.usefixtures('persister')
@@ -944,10 +994,10 @@ def test_maintenance_leaves_a_file_it_cannot_attribute():
     foreign.unlink()
 
 
-def test_a_deleted_node_leaves_a_class_byte_file_carrying_its_uuid(
+def test_deleted_node_leaves_checkpoint_identifiable_by_uuid(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
 ):
-    """Node deletion leaves class files identifiable by the deleted node's UUID."""
+    """Node deletion leaves checkpoint files identifiable by the deleted node's UUID."""
     from aiida.tools import delete_nodes
 
     live = make_process(carried=True)
@@ -955,28 +1005,29 @@ def test_a_deleted_node_leaves_a_class_byte_file_carrying_its_uuid(
     uuid = live.node.uuid
     delete_nodes([live.node.pk], dry_run=False)
 
-    assert any(name.startswith(uuid) for name in checkpoint_classes())
+    assert any(name.startswith(uuid) for name in checkpoint_files())
     remaining = orm.QueryBuilder().append(orm.Node, filters={'uuid': uuid}).all()
     assert not remaining
 
 
-def test_deleting_the_checkpoint_on_a_storage_without_class_byte_files(
+def test_deleting_legacy_checkpoint_without_file_store(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process], monkeypatch: pytest.MonkeyPatch
 ):
-    """Checkpoint deletion succeeds when storage has no class-file directory support."""
-    from aiida.manage import get_manager
+    """An inline legacy checkpoint can be loaded and deleted without file storage."""
+    from aiida.orm.utils import serialize
 
     live = make_process()
-    persister.save_checkpoint(live)
+    live.node.set_checkpoint(serialize.serialize(CheckpointPayload.from_object(live)))
 
     def keeps_none(self):
-        msg = 'keeps no checkpoint class files'
+        msg = 'keeps no checkpoint files'
         raise NotImplementedError(msg)
 
     monkeypatch.setattr(
         type(get_manager().get_profile_storage()), name='get_checkpoint_classes_dirpath', value=keeps_none
     )
 
+    assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
     persister.delete_checkpoint(live.pid)
 
     assert live.node.checkpoint is None
@@ -985,18 +1036,18 @@ def test_deleting_the_checkpoint_on_a_storage_without_class_byte_files(
 def test_checkpoint_deletion_drops_the_reference_before_the_file(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process], monkeypatch: pytest.MonkeyPatch
 ):
-    """Delete the checkpoint attribute before its class file to prevent dangling references."""
+    """Delete the checkpoint attribute before its pickle file to prevent dangling references."""
     live = make_process(carried=True)
-    before = checkpoint_classes()
+    before = checkpoint_files()
     persister.save_checkpoint(live)
-    digest = carried_digest(live.node)
-    assert digest is not None, 'premise: this process carries a class'
+    digest = checkpoint_digest(live.node)
+    assert digest
 
     seen: list[set[str]] = []
     original = type(live.node).delete_checkpoint
 
     def observe(self) -> None:
-        seen.append(checkpoint_classes())
+        seen.append(checkpoint_files())
         original(self)
 
     monkeypatch.setattr(target=type(live.node), name='delete_checkpoint', value=observe)
@@ -1007,32 +1058,23 @@ def test_checkpoint_deletion_drops_the_reference_before_the_file(
     assert f'{live.node.uuid}-{digest}.pkl' in seen[0], (
         'the file has to outlive the attribute that refers to it, so a kill between the two leaves only an orphan'
     )
-    assert checkpoint_classes() == before, 'and both are gone once it returns'
+    assert checkpoint_files() == before, 'and both are gone once it returns'
 
 
 def test_checkpoint_save_writes_the_file_before_the_reference(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process], monkeypatch: pytest.MonkeyPatch
 ):
-    """Publish class bytes before updating the checkpoint, retaining the old file until then."""
+    """Publish the new file before updating the reference, while retaining the old file."""
 
     live = make_process(carried=True)
     persister.save_checkpoint(live)
-    first = carried_digest(live.node)
-
-    # The class has to differ between the two saves, or the file the second one writes is already on disk from the
-    # first and either ordering looks the same.
-    original_dumps: Callable[..., bytes] = callables.dumps
-
-    def changed(*, value: type[Process]) -> bytes:
-        return b'a different class' if value is type(live) else original_dumps(value=value)
-
-    monkeypatch.setattr(target=callables, name='dumps', value=changed)
+    first = checkpoint_digest(live.node)
 
     seen: list[set[str]] = []
     original = type(live.node).set_checkpoint
 
     def observe(self, *, checkpoint: str) -> None:
-        seen.append(checkpoint_classes())
+        seen.append(checkpoint_files())
         original(self, checkpoint=checkpoint)
 
     monkeypatch.setattr(target=type(live.node), name='set_checkpoint', value=observe)
@@ -1040,9 +1082,9 @@ def test_checkpoint_save_writes_the_file_before_the_reference(
     persister.save_checkpoint(live)
     monkeypatch.undo()
 
-    current = carried_digest(live.node)
+    current = checkpoint_digest(live.node)
 
-    assert current != first, 'the class has to change, or the ordering is unobservable'
+    assert current != first, 'premise: the two checkpoints use different files'
     assert seen, 'the attribute was never written, so the ordering was not exercised'
     assert f'{live.node.uuid}-{current}.pkl' in seen[0], (
         'the bytes have to be on disk before the attribute refers to them'

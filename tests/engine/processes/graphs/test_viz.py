@@ -9,6 +9,7 @@
 
 import pytest
 
+from aiida.engine.processes.graphs.lowering import compile_graph
 from aiida.engine.processes.graphs.viz import _label, _node_id, to_mermaid
 from tests.engine.processes.graphs.programs import branches, calls, loops, ports
 
@@ -19,7 +20,7 @@ pytestmark = pytest.mark.presto
     ('declaration', 'present', 'absent'),
     [
         pytest.param(
-            calls.diamond.build(),
+            compile_graph(calls.diamond),
             [
                 'flowchart TD',
                 'in__x{{x}}',
@@ -33,7 +34,7 @@ pytestmark = pytest.mark.presto
             id='diamond',
         ),
         pytest.param(
-            calls.nested_multiply_add.build(),
+            compile_graph(calls.nested_multiply_add),
             [
                 'multiply_add["multiply_add"]',
                 'multiply_add__multiply["multiply_add/multiply"]',
@@ -44,7 +45,7 @@ pytestmark = pytest.mark.presto
             id='nested',
         ),
         pytest.param(
-            branches.external_choice.build(),
+            compile_graph(branches.external_choice),
             [
                 'branch_1["branch_1"]',
                 'branch_1__add["branch_1/add"]',
@@ -59,7 +60,7 @@ pytestmark = pytest.mark.presto
             id='branch',
         ),
         pytest.param(
-            ports.nested_outputs.build(),
+            compile_graph(ports.nested_outputs),
             [
                 'out__outer__inner[/outer.inner/]',
                 'add -->|result| out__outer__inner',
@@ -68,7 +69,7 @@ pytestmark = pytest.mark.presto
             id='nested-output',
         ),
         pytest.param(
-            loops.countdown.build(),
+            compile_graph(loops.countdown),
             [
                 'loop_1["loop_1"]',
                 'loop_1 --> loop_1__in__value',
@@ -80,13 +81,13 @@ pytestmark = pytest.mark.presto
             id='loop',
         ),
         pytest.param(
-            ports.nested_passthrough.build(),
+            compile_graph(ports.nested_passthrough),
             ['in__config{{config}}', 'in__config -->|config.settings.count| out__result'],
             ['in__config_settings_count'],
             id='passthrough',
         ),
         pytest.param(
-            calls.ordered.build(),
+            compile_graph(calls.ordered),
             ['in__x -->|x| add', 'prepare --> add', 'add -->|result| out__result'],
             ['prepare -->|'],
             id='after',

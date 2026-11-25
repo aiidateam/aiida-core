@@ -1,0 +1,40 @@
+{
+  "workchain": {
+    "session_usage": {
+      "input": 17550,
+      "output": 3481,
+      "cacheRead": 103168,
+      "cacheWrite": 0,
+      "totalTokens": 124199
+    },
+    "matches_event_metrics": true,
+    "new_session_header": {
+      "type": "session",
+      "version": 3,
+      "id": "c1bb0c15-db67-4431-a436-9dd2f866c1b4",
+      "timestamp": "2026-11-14T15:14:29.553Z",
+      "cwd": "/tmp/aiida-paired-workflow-eval-5nib0w6x/workchain"
+    },
+    "fixed_files_unchanged": true,
+    "validation_passed": true
+  },
+  "graph": {
+    "session_usage": {
+      "input": 35805,
+      "output": 3047,
+      "cacheRead": 501120,
+      "cacheWrite": 0,
+      "totalTokens": 539972
+    },
+    "matches_event_metrics": true,
+    "new_session_header": {
+      "type": "session",
+      "version": 3,
+      "id": "8b00c202-528c-4f3e-93ae-eafa1b43c463",
+      "timestamp": "2026-11-14T15:14:29.523Z",
+      "cwd": "/tmp/aiida-paired-workflow-eval-5nib0w6x/graph"
+    },
+    "fixed_files_unchanged": true,
+    "validation_passed": true
+  }
+}

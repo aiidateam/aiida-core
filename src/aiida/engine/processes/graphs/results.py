@@ -26,8 +26,8 @@ E = t.TypeVar('E')
 class Result(t.Generic[T, E]):
     """A task result annotated with its success type and its error enums.
 
-    Return `Ok` for successful outputs or `Err` for a declared failure. Graph calls unpack
-    into (`value`, `error`), with the absent arm reaching downstream inputs as `None`.
+    Return `Ok` for successful outputs or `Err` for a declared failure. Bare graph calls
+    expose the success value and propagate failures; use ``call(...).catch()`` to handle them.
     Error enums must have unique, positive exit codes.
     """
 

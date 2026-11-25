@@ -22,6 +22,7 @@ from aiida.engine import CalcJob, CalcJobProcessSpec
 from aiida.orm import (
     Computer,
     Data,
+    DataNode,
     Dict,
     EntryPointData,
     FolderData,
@@ -33,7 +34,9 @@ from aiida.orm import (
 )
 from aiida.parsers import Parser
 
-ParserFunctionType = t.Callable[[pathlib.Path, Parser], dict[str, Data]] | t.Callable[[pathlib.Path], dict[str, Data]]
+ParserFunctionType = (
+    t.Callable[[pathlib.Path, Parser], dict[str, DataNode]] | t.Callable[[pathlib.Path], dict[str, DataNode]]
+)
 
 
 class ShellJob(CalcJob):
@@ -214,8 +217,8 @@ class ShellJob(CalcJob):
 
         if sorted(parameters) not in (['dirpath'], ['dirpath', 'parser']):
             correct_signature = (
-                '(dirpath: pathlib.Path) -> dict[str, Data]: or '
-                '(dirpath: pathlib.Path, parser: Parser) -> dict[str, Data]:'
+                '(dirpath: pathlib.Path) -> dict[str, DataNode]: or '
+                '(dirpath: pathlib.Path, parser: Parser) -> dict[str, DataNode]:'
             )
             return f'The `parser` has an invalid function signature, it should be: {correct_signature}'
 

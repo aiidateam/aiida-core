@@ -521,7 +521,7 @@ To test if the restoration worked, run ``verdi -p <profile-name> status`` to ver
 
             rsync -arvz /path/to/backup/container <storage.config.repository_uri>
 
-        A backup taken while processes were running also holds a ``checkpoint_classes`` directory beside ``container``, which carries the class of any process whose class the daemon cannot import.
+        A backup taken while processes were running can also hold a ``checkpoint_classes`` directory beside ``container``, containing the files needed to resume those processes.
         Restore it the same way, or those processes cannot be continued:
 
         .. code-block:: console

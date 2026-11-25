@@ -6,11 +6,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tasks declarations shared by the graph behavior suites."""
+"""Tasks declarations shared by the graph behavior suites.
+
+The arithmetic and predicate tasks here (``add``, ``decrement``, ``is_positive``, ...) deliberately
+exercise stored provenance: each call records a calculation node. Ordinary orchestration prefers
+inline operations for counters, comparisons, and branch/loop gates, which leave no nodes behind;
+see :func:`tests.engine.processes.graphs.programs.loops.bounded_steps` and
+:func:`tests.engine.processes.graphs.programs.loops.retry_until_present` for the recommended inline
+authoring examples.
+"""
 
 import typing as t
 
-from aiida.engine import calcfunction
+from aiida.engine import ExitCodeEnum, Ok, Result, calcfunction
 from aiida.engine.processes.graphs.lowering import graph, task
 from aiida.engine.processes.port_model import PortModel
 from aiida.orm.nodes.data.int import Int
@@ -53,7 +61,7 @@ def branch_2(value: int) -> int:
     return value + 1
 
 
-class ArithmeticPair(t.TypedDict):
+class ArithmeticPair(PortModel):
     """Named outputs of the arithmetic pair task."""
 
     sum: int
@@ -63,7 +71,7 @@ class ArithmeticPair(t.TypedDict):
 @task
 def arithmetic_pair(x: int, y: int) -> ArithmeticPair:
     """Return sum and product as named outputs."""
-    return {'sum': x + y, 'product': x * y}
+    return ArithmeticPair(sum=x + y, product=x * y)
 
 
 class PairInput(PortModel):
@@ -122,7 +130,7 @@ def decrement(value: int) -> int:
     return value - 1
 
 
-class SummaryStats(t.TypedDict):
+class SummaryStats(PortModel):
     """Named outputs of the statistics task."""
 
     mean: float
@@ -139,16 +147,16 @@ def statistics(values: list[float]) -> SummaryStats:
         total += sample
     mean = total / len(values)
     variance = sum((sample - mean) ** 2 for sample in values) / len(values)
-    return {'mean': mean, 'stdev': math.sqrt(variance)}
+    return SummaryStats(mean=mean, stdev=math.sqrt(variance))
 
 
-class Alpha(t.TypedDict):
+class Alpha(PortModel):
     """Single named output."""
 
     alpha: int
 
 
-class Beta(t.TypedDict):
+class Beta(PortModel):
     """Single named output."""
 
     beta: int
@@ -157,7 +165,7 @@ class Beta(t.TypedDict):
 @task
 def mismatched_alpha(value: int) -> Alpha:
     """Return its input under the `alpha` output."""
-    return {'alpha': value}
+    return Alpha(alpha=value)
 
 
 @task
@@ -178,15 +186,26 @@ def empty_outputs(value: int) -> Alpha:
     return {}
 
 
-class Partial(t.TypedDict, total=False):
-    """Partial outputs, rejected: every output must be declared."""
+class LegacyTaskOutput(t.TypedDict):
+    """A legacy named output declaration that must no longer expand to ports."""
 
     alpha: int
 
 
-def partial_outputs(value: int) -> Partial:
-    """Return a partial mapping; registering the task rejects it."""
+def legacy_task_output(value: int) -> LegacyTaskOutput:
+    """Return a TypedDict that task registration rejects."""
     return {'alpha': value}
+
+
+class LegacyOutputError(ExitCodeEnum):
+    """Failure arm for the rejected legacy output declaration."""
+
+    FAILED = (460, 'Could not produce a value.')
+
+
+def legacy_result_output(value: int) -> Result[LegacyTaskOutput, LegacyOutputError]:
+    """Use a TypedDict in the success annotation, which registration rejects."""
+    return Ok({'alpha': value})
 
 
 def pair_outputs(value: int) -> tuple[int, int]:
@@ -210,7 +229,7 @@ unhinted.__annotations__ = {'value': 'int[', 'return': 'int'}
 @task
 def mismatched_beta(value: int) -> Beta:
     """Return its input under the `beta` output."""
-    return {'beta': value}
+    return Beta(beta=value)
 
 
 @task
@@ -257,6 +276,11 @@ def unannotated_function(x: int):  # rejected at decoration
     return x
 
 
+def unannotated_inputs(a, b=0) -> float:  # rejected at decoration
+    """Reject missing input annotations even for parameters with defaults."""
+    return float(a) + b
+
+
 def kwargs_function(**kwargs: t.Any) -> int:  # rejected at decoration
     """Reject undecorated functions with kwargs at decoration."""
     return 1
@@ -267,9 +291,10 @@ def args_function(*args: int) -> int:  # rejected at decoration
     return args[0]
 
 
-def after_parameter(x: int, after: int = 0) -> int:  # rejected at decoration
-    """Reserve `after` for ordering; it cannot be a task parameter."""
-    return x
+@task
+def after_parameter(x: int, after: int = 0) -> int:
+    """Use `after` as an ordinary input."""
+    return x + after
 
 
 @task

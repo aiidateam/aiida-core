@@ -12,6 +12,7 @@ Topics
    provenance/index
    daemon
    data_types
+   data_containers
    database
    repository
    storage

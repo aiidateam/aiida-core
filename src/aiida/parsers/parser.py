@@ -21,7 +21,7 @@ from aiida.engine.processes.ports import CalcJobOutputPort
 
 if t.TYPE_CHECKING:
     from aiida import orm
-    from aiida.orm import CalcJobNode, Data, FolderData
+    from aiida.orm import CalcJobNode, DataNode, FolderData
 
 __all__ = ('Parser',)
 
@@ -83,7 +83,7 @@ class Parser(ABC):
         """
         return self._outputs
 
-    def out(self, link_label: str, node: Data) -> None:
+    def out(self, link_label: str, node: DataNode) -> None:
         """Register a node as an output with the given link label.
 
         :param link_label: the name of the link label

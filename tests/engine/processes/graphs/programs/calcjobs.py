@@ -39,5 +39,5 @@ def add_inner(x: int, y: int, code: Code) -> int | float:
 def add_twice(x: int, y: int, code: Code) -> int | float:
     """Add two numbers through two chained `CalcJob` placements."""
     first = add_calc(x=x, y=y, code=code)
-    second = add_calc(x=first.sum, y=y, code=code)
+    second = add_calc(x=first.sum, y=y, code=code).alias('add_calc_2')
     return second.sum

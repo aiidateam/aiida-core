@@ -6,18 +6,35 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Declare source graphs and execute their static task dependencies."""
+"""Declare source graphs and execute their static task dependencies.
 
-from aiida.engine.processes.graphs.lowering import Forward, GraphHandle, graph, task
+See :func:`graph` for inline orchestration and retry examples, and :func:`task`
+for provenance-bearing calculations.
+"""
+
+from aiida.engine.processes.graphs.lowering import GraphHandle, dataflow, expose, forward_outputs, graph, par_map, task
+from aiida.engine.processes.graphs.preview import (
+    DeferredGraphInput,
+    GraphLaunchPreview,
+    GraphPlacementPreview,
+    ResolvedGraphInput,
+)
 from aiida.engine.processes.graphs.results import Err, Ok, RestartErrors, Result
 
 __all__ = (
+    'DeferredGraphInput',
     'Err',
-    'Forward',
     'GraphHandle',
+    'GraphLaunchPreview',
+    'GraphPlacementPreview',
     'Ok',
+    'ResolvedGraphInput',
     'RestartErrors',
     'Result',
+    'dataflow',
+    'expose',
+    'forward_outputs',
     'graph',
+    'par_map',
     'task',
 )

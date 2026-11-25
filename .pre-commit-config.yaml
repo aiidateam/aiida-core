@@ -79,6 +79,7 @@ repos:
         .molecule/.*|
         .docker/.*|
         docs/.*|
+        reports/.*|
         utils/.*|
         tests/.*|
 

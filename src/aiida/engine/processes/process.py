@@ -19,13 +19,15 @@ import logging
 import traceback
 import typing as t
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from types import TracebackType
 from uuid import UUID
 
 from aio_pika.exceptions import ConnectionClosed
 
 from aiida import orm
-from aiida.brokers.exceptions import UnroutableError
+from aiida.brokers.exceptions import CommunicatorClosed, DeliveryFailed, RemoteException
 from aiida.common import _callables as callables
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict, AttributesFrozendict
@@ -54,6 +56,8 @@ if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
 
 __all__ = ('Process', 'ProcessState')
+
+_CALL_PARENT: ContextVar[tuple[Process, int] | None] = ContextVar('_CALL_PARENT', default=None)
 
 
 def _with_runtime_values(port: InputPort | PortNamespace | None, original: t.Any, runtime: t.Any) -> t.Any:
@@ -135,7 +139,7 @@ class Process(ProcessBase):
             valid_type=bool,
             help='Do not consider the cache for this process, ignoring all other caching configuration rules.',
         )
-        spec.inputs.valid_type = orm.Data
+        spec.inputs.valid_type = (orm.DataNode,)
         spec.inputs.dynamic = False  # Settings a ``valid_type`` automatically makes it dynamic, so we reset it again
         spec.exit_code(
             1, 'ERROR_UNSPECIFIED', invalidates_cache=True, message='The process has failed with an unspecified error.'
@@ -202,6 +206,25 @@ class Process(ProcessBase):
         if self._enable_persistence and self.runner.persister is None:
             self.logger.warning('Disabling persistence, runner does not have a persister')
             self._enable_persistence = False
+
+    def _detach_owned_inputs(self, inputs: dict[str, t.Any] | None) -> dict[str, t.Any] | None:
+        """Replace owned container children in process inputs with standalone copies (spec §7).
+
+        The process executes with the returned copies and records those same
+        copies as its provenance inputs. Copying is recursive for nested
+        containers; standalone nodes (including standalone containers) pass
+        through untouched with their identity preserved. Created copies are
+        remembered on ``self._owned_input_copies`` so the output boundary
+        can avoid closing a provenance cycle over them.
+        """
+        if inputs is None:
+            self._owned_input_copies: list[orm.Node] = []
+            return None
+        from aiida.orm.nodes.data.container import detach_owned_inputs_and_copies
+
+        detached, copies = detach_owned_inputs_and_copies(inputs)
+        self._owned_input_copies = copies
+        return detached
 
     def init(self) -> None:
         super().init()
@@ -359,9 +382,11 @@ class Process(ProcessBase):
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
     def kill(self, msg_text: str | None = None, force_kill: bool = False) -> bool | futures.Future:
-        """Kill the process and all the children calculations it called
+        """Kill the process and request cancellation of its active children.
 
-        :param msg: message
+        :param msg_text: message for this process.
+        :param force_kill: skip scheduler cancellation for this process.
+        :return: whether the kill succeeded, or a future awaiting the outstanding cancellations.
         """
         self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
@@ -393,44 +418,43 @@ class Process(ProcessBase):
                 return False
 
         result = super().kill(msg_text, force_kill)
+        if result is False:
+            return False
 
-        had_been_terminated = self.has_terminated()
+        # A synchronous kill has already changed our state. This does not mean
+        # the children were killed, so check them even when the parent is terminal.
+        children = self._active_called_processes()
+        if not children:
+            return result
 
-        # Only kill children if we could be killed ourselves
-        if result is not False and not had_been_terminated:
-            killing = []
-            for child in self.node.called:
-                if self.runner.controller is None:
-                    self.logger.info('no controller available to kill child<%s>', child.pk)
-                    continue
-                try:
-                    kill_request = self.runner.controller.kill_process(
-                        child.pk, msg_text=f'Killed by parent<{self.node.pk}>'
-                    )
-                    wrapped_kill = asyncio.wrap_future(kill_request)
-                    if asyncio.isfuture(wrapped_kill):
-                        killing.append(wrapped_kill)
-                except ConnectionClosed:
-                    self.logger.info('no connection available to kill child<%s>', child.pk)
-                except UnroutableError:
-                    self.logger.info('kill signal was unable to reach child<%s>', child.pk)
+        controller = self.runner.controller
+        parent_pk = self.node.pk
 
+        async def kill_child(child: orm.ProcessNode) -> bool:
+            pk = child.pk
+            assert pk is not None  # CALL links only exist between stored nodes.
+            if controller is None:
+                self.logger.info('no controller available to kill child<%s>', pk)
+                return False
+            try:
+                request = controller.kill_process(pk, msg_text=f'Killed by parent<{parent_pk}>')
+                reply = await asyncio.wrap_future(futures.unwrap_kiwi_future(request))
+            except (CommunicatorClosed, ConnectionClosed, DeliveryFailed, RemoteException, TimeoutError) as exc:
+                self.logger.info('could not confirm cancellation of child<%s>: %s', pk, exc)
+                return False
+            return reply is True
+
+        async def wait_for_kills() -> bool:
+            killing = [kill_child(child) for child in children]
             if asyncio.isfuture(result):
-                # We ourselves are waiting to be killed so add it to the list
-                killing.append(result)
+                return all(await asyncio.gather(result, *killing))
+            return all(await asyncio.gather(*killing))
 
-            if killing:
-                # We are waiting for things to be killed, so return the 'gathered' future
-                kill_future = futures.gather(*killing)
-                result = self.loop.create_future()
+        return self.loop.create_task(wait_for_kills())
 
-                def done(done_future: futures.Future):
-                    is_all_killed = all(done_future.result())
-                    result.set_result(is_all_killed)
-
-                kill_future.add_done_callback(done)
-
-        return result
+    def _active_called_processes(self) -> list[orm.ProcessNode]:
+        """Return called processes with independent executions that can be cancelled."""
+        return [child for child in self.node.called if not child.is_terminated]
 
     async def _launch_task(self, coro, *args, **kwargs):
         """Launch a coroutine as a task, making sure to make it interruptable."""
@@ -491,6 +515,7 @@ class Process(ProcessBase):
     @override
     def _pre_process_inputs(self, inputs: dict[str, t.Any]) -> AttributesFrozendict:
         """Keep provenance sources separate from the values validated and consumed at runtime."""
+        inputs = self._detach_owned_inputs(inputs)  # type: ignore[assignment]
         prepared = super()._pre_process_inputs(inputs)
         resolved = self.spec().inputs.prepare(prepared)
         namespace = self.spec().inputs
@@ -510,7 +535,10 @@ class Process(ProcessBase):
         if self._parent_pid is None and Process.current():
             current = Process.current()
             if isinstance(current, Process):
-                self._parent_pid = current.pid  # type: ignore[assignment]
+                caller = _CALL_PARENT.get()
+                self._parent_pid = (
+                    caller[1] if caller is not None and caller[0] is current else t.cast(int, current.pid)
+                )
         self._pid = self._create_and_setup_db_record()
 
     @override
@@ -626,8 +654,8 @@ class Process(ProcessBase):
         super().on_output_emitting(output_port, value)
 
         # Note that `PortNamespaces` should be able to receive non `Data` types such as a normal dictionary
-        if isinstance(output_port, OutputPort) and not isinstance(value, orm.Data):
-            msg = f'Processes can only return `orm.Data` instances as output, got {value.__class__}'
+        if isinstance(output_port, OutputPort) and not isinstance(value, orm.DataNode):
+            msg = f'Processes can only return `orm.DataNode` instances as output, got {value.__class__}'
             raise TypeError(msg)
 
     def set_status(self, status: str | None) -> None:
@@ -647,6 +675,15 @@ class Process(ProcessBase):
         :return: The process node.
         """
         return self.runner.submit(process, inputs, **kwargs)
+
+    @contextmanager
+    def _call_as(self, caller_pk: int) -> Iterator[None]:
+        """Attribute a child submission to a provenance scope of this process."""
+        token = _CALL_PARENT.set((self, caller_pk))
+        try:
+            yield
+        finally:
+            _CALL_PARENT.reset(token)
 
     @property
     def runner(self) -> Runner:
@@ -728,9 +765,10 @@ class Process(ProcessBase):
                         self.out(label, entry.node)
                     # This is needed for CalcJob. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
-                    for entry in self.node.base.links.get_outgoing(link_type=LinkType.CREATE):
-                        label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
-                        self.out(label, entry.node)
+                    if isinstance(self.node, orm.CalculationNode):
+                        for entry in self.node.base.links.get_outgoing(link_type=LinkType.CREATE):
+                            label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
+                            self.out(label, entry.node)
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass
@@ -744,7 +782,7 @@ class Process(ProcessBase):
         return UUID(self.node.uuid)
 
     @override
-    def _encode_input_args(self, inputs: dict[str, t.Any]) -> str:
+    def _encode_input_args(self, inputs: dict[str, t.Any]) -> dict[str, t.Any] | str:
         """Encode input arguments such that they may be saved in a CheckpointPayload
 
         :param inputs: A mapping of the inputs as passed to the process
@@ -753,13 +791,13 @@ class Process(ProcessBase):
         return serialize.serialize(inputs)
 
     @override
-    def _decode_input_args(self, encoded: str) -> dict[str, t.Any]:
+    def _decode_input_args(self, encoded: dict[str, t.Any] | str) -> dict[str, t.Any]:
         """Decode saved input arguments as they came from the saved instance state CheckpointPayload
 
         :param encoded: encoded (serialized) inputs
         :return: The decoded input args
         """
-        return serialize.deserialize_unsafe(encoded)
+        return serialize.deserialize_unsafe(encoded) if isinstance(encoded, str) else encoded
 
     def update_outputs(self) -> None:
         """Attach new outputs to the node since the last call.
@@ -770,9 +808,8 @@ class Process(ProcessBase):
             return
 
         outputs_flat = self._flat_outputs()
-        outputs_stored = self.node.base.links.get_outgoing(
-            link_type=(LinkType.CREATE, LinkType.RETURN)
-        ).all_link_labels()
+        link_type = LinkType.RETURN if isinstance(self.node, orm.WorkflowNode) else LinkType.CREATE
+        outputs_stored = self.node.base.links.get_outgoing(link_type=link_type).all_link_labels()
         outputs_new = set(outputs_flat.keys()) - set(outputs_stored)
 
         for link_label, output in outputs_flat.items():
@@ -780,11 +817,69 @@ class Process(ProcessBase):
                 continue
 
             if isinstance(self.node, orm.CalculationNode):
-                output.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
+                # Exposing an owned child creates an independent standalone
+                # copy (recursive for nested containers) and attaches CREATE
+                # to that copy; the exposed output is the object recorded in
+                # provenance. Ordinary CREATE validation applies.
+                exposed = self._detach_owned_output(output)
+                if exposed is not output:
+                    # Keep the exposed handle in sync with the recorded copy so callers
+                    # observing process outputs see the standalone copy, not the pre-copy handle.
+                    self.out(link_label, exposed)
+                exposed.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
+                exposed.store()
             elif isinstance(self.node, orm.WorkflowNode):
+                # Workflows may RETURN a whole standalone container but must
+                # never return owned children (including owned nested
+                # containers); outputs are not copied automatically.
+                self._reject_owned_workflow_output(output)
+                if isinstance(self.node, orm.GraphNode) and not output.is_stored:
+                    output.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
+                    output.store()
                 output.base.links.add_incoming(self.node, LinkType.RETURN, link_label)
 
-            output.store()
+    def _detach_owned_output(self, output: t.Any) -> t.Any:
+        """Return the recordable calculation output for ``output`` (spec §7).
+
+        Calculation-output boundary: exposing an owned container child copies
+        it (new identity, no ownership or provenance links, recursive for
+        nested containers); standalone containers link directly with their
+        descendants remaining owned by them. If the output is one of the
+        standalone copies created at the input boundary, it is copied again:
+        returning a recorded input as-is would close a provenance cycle, and
+        that cycle would otherwise only be an artefact of the input copy the
+        engine itself introduced (returning an input unchanged remains a
+        cycle error for ordinary nodes).
+        """
+        from aiida.orm.nodes.data.container import ensure_standalone, is_owned
+
+        if not isinstance(output, orm.DataNode):
+            return output
+        if is_owned(output):
+            return ensure_standalone(output)
+        detached = getattr(self, '_owned_input_copies', ())
+        if any(output is candidate or output.uuid == candidate.uuid for candidate in detached):
+            return output.clone()
+        return output
+
+    @staticmethod
+    def _reject_owned_workflow_output(output: t.Any) -> None:
+        """Reject a workflow output that is an owned container child (spec §7).
+
+        Workflows may return a whole standalone container under ordinary
+        RETURN validation; separately returning owned children — including
+        owned nested containers — is rejected without automatic copying.
+
+        :raises aiida.common.exceptions.InvalidOperation: if ``output`` is owned.
+        """
+        from aiida.orm.nodes.data.container import is_owned
+
+        if isinstance(output, orm.DataNode) and is_owned(output):
+            msg = (
+                'workflow processes cannot return an owned container child'
+                f'({output!r}); return the whole standalone container instead'
+            )
+            raise exceptions.InvalidOperation(msg)
 
     def _build_process_label(self) -> str:
         """Construct the process label that should be set on ``ProcessNode`` instances for this process class.
@@ -1120,8 +1215,8 @@ class Process(ProcessBase):
         output_key_map = {}
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
-        link_types = (LinkType.CREATE, LinkType.RETURN)
-        process_outputs_dict = node.base.links.get_outgoing(link_type=link_types).nested()
+        link_type = LinkType.RETURN if isinstance(node, orm.WorkflowNode) else LinkType.CREATE
+        process_outputs_dict = node.base.links.get_outgoing(link_type=link_type).nested()
 
         for port_name in process_outputs_dict:
             top_namespace = port_name.split(namespace_separator)[0]

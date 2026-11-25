@@ -148,18 +148,18 @@ Process tasks
 The previous section explained how launching a process means creating an instance of the ``Process`` class in memory.
 When the process is being 'run' (see the section on :ref:`launching processes<topics:processes:usage:launch>` for more details) that is to say in a local interpreter, the particular process instance will die as soon as the interpreter dies.
 This is what often makes 'submitting' the preferred method of launching a process.
-When a process is 'submitted', an instance of the ``Process`` is created, along with the node that represents it in the database, and its state is then persisted (stored) in the database.
+When a process is 'submitted', an instance of the ``Process`` is created, along with the node that represents it in the database, and its state is then saved in the profile's file store.
 This is called a 'process checkpoint', more information on which :ref:`will follow later<topics:processes:concepts:checkpoints>`.
 Subsequently, the process instance is shut down and a 'continuation task' is sent to the process queue of RabbitMQ.
 This task is simply a small message that just contains an identifier for the process.
 In order to reconstruct the process from a `checkpoint`, the daemon worker has to get the process class back.
 It does so from the name the checkpoint recorded, which resolves where the class has an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or where :ref:`its module path<how-to:faq:process-not-importable-daemon>` is on the ``PYTHONPATH`` of the daemon workers.
-Where neither reaches it, as for a class defined in a notebook cell, the class is pickled with `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and written to a ``checkpoint_classes`` directory beside the ``container`` of the profile's storage. The checkpoint records the SHA-256 digest of those bytes beside the name, and a load falls back to the name when the bytes fail to unpickle.
+Where neither reaches it, as for a class defined in a notebook cell, the checkpoint also carries the class serialized with `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and falls back to the name if those bytes cannot be unpickled.
 Helper modules travel by reference: a module the worker cannot import fails when first used, and the error names it.
 The submitting interpreter and daemon workers need compatible AiiDA, Python and `cloudpickle` environments to restore the checkpoint.
 
 All the daemon runners, when they are launched, subscribe to the process queue and RabbitMQ will distribute the continuation tasks to them as they come in, making sure that each task is only sent to one runner at a time.
-The receiving daemon runner can restore the process instance in memory from the checkpoint that was stored in the database and continue the execution.
+The receiving daemon runner can restore the process instance in memory from the checkpoint file referenced in the database and continue the execution.
 As soon as the process reaches a terminal state, the daemon runner will acknowledge to RabbitMQ that the task has been completed.
 Until the runner has confirmed that a task is completed, RabbitMQ will consider the task as incomplete.
 If a daemon runner is shut down or dies before it got the chance to finish running a process, the task will automatically be requeued by RabbitMQ and sent to another daemon runner.
@@ -179,9 +179,10 @@ Similarly, as soon as the task disappears, either because the process was intent
 
 Process checkpoints
 -------------------
-A process checkpoint is a complete representation of a ``Process`` instance in memory that can be stored in the database.
-Since it is a complete representation, the ``Process`` instance can also be fully reconstructed from such a checkpoint.
-At any state transition of a process, a checkpoint will be created, by serializing the process instance and storing it as an attribute on the corresponding process node.
+A process checkpoint is a serialized representation of the state needed to reconstruct a ``Process`` instance.
+The engine saves the checkpoint as a pickle file in the profile's ``checkpoint_classes`` directory and stores its SHA-256 reference as an attribute on the process node.
+Daemon workers must have access to that same directory.
+Only load checkpoints from trusted profiles, since unpickling can execute code.
 This mechanism is the final cog in the machine, together with the persisted process queue of RabbitMQ as explained in the previous section, that allows processes to continue after the machine they were running on, has been shut down and restarted.
 
 

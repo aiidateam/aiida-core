@@ -89,6 +89,7 @@ class Runner:
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
         self._process_tasks: set[asyncio.Task[t.Any]] = set()
+        self._local_process_tasks: dict[int, asyncio.Task[t.Any]] = {}
 
         if communicator is not None:
             self._communicator = wrap_communicator(communicator, self._loop)
@@ -208,9 +209,7 @@ class Runner:
             process_inited.close()
             self.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
         else:
-            task = self.loop.create_task(process_inited.step_until_terminated())
-            self._process_tasks.add(task)
-            task.add_done_callback(self._process_tasks.discard)
+            self._schedule_process(process_inited)
 
         return process_inited.node
 
@@ -227,10 +226,29 @@ class Runner:
 
         inputs = utils.prepare_inputs(inputs, **kwargs)
         process_inited = self.instantiate_process(process, **inputs)
-        task = self.loop.create_task(process_inited.step_until_terminated())
-        self._process_tasks.add(task)
-        task.add_done_callback(self._process_tasks.discard)
+        self._schedule_process(process_inited)
         return process_inited.node
+
+    def _schedule_process(self, process: Process) -> None:
+        """Track local execution so completion watchers do not need database polling."""
+        task = self.loop.create_task(process.step_until_terminated())
+        self._process_tasks.add(task)
+        pk = process.node.pk
+        if pk is not None:
+            self._local_process_tasks[pk] = task
+
+        def on_done(done: asyncio.Task[t.Any]) -> None:
+            self._process_tasks.discard(done)
+            if pk is not None and self._local_process_tasks.get(pk) is done:
+                del self._local_process_tasks[pk]
+            if not done.cancelled() and (exception := done.exception()) is not None:
+                LOGGER.error(
+                    'Local execution of process %s failed',
+                    pk,
+                    exc_info=(type(exception), exception, exception.__traceback__),
+                )
+
+        task.add_done_callback(on_done)
 
     def _run(
         self, process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
@@ -322,14 +340,18 @@ class Runner:
     def call_on_process_finish(self, pk: int, callback: Callable[[], t.Any]) -> None:
         """Schedule a callback when the process of the given pk is terminated.
 
-        This method will add a broadcast subscriber that will listen for state changes of the target process to be
-        terminated. As a fail-safe, a polling-mechanism is used to check the state of the process, should the broadcast
-        message be missed by the subscriber, in order to prevent the caller to wait indefinitely.
+        Locally scheduled processes notify watchers when their execution task completes. Other processes use
+        broadcast notifications with database polling as a fallback. If local execution stops without recording
+        a terminal process state, polling remains available without reporting a false completion.
 
         :param pk: pk of the process
         :param callback: function to be called upon process termination
         """
         node = load_node(pk=pk)
+        if (task := self._local_process_tasks.get(pk)) is not None:
+            task.add_done_callback(lambda _task: self._poll_process(node, callback))
+            return
+
         subscriber_identifier = str(uuid.uuid4())
         event = threading.Event()
 

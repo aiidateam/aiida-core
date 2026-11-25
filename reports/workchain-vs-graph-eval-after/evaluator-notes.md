@@ -1,0 +1,11 @@
+# Methodology and limits
+
+- This is a new pair of OS-level Pi processes, each with a fresh UUID session, no parent session, and its own Git/source snapshot and AiiDA configuration directory. Prior reports, sessions, solutions and the parent conversation were not supplied. Context isolation is not a filesystem security sandbox.
+- Both arms use openai-codex/gpt-6.1-sol with medium thinking and the same four built-in tools, timeout, task contract, collaborators and visible acceptance tests. These task/evaluator files are byte-identical to the previous final measured pair. Neither agent changed the fixed files.
+- Source snapshots include the integrated commits and existing tracked/untracked working-tree source/tests/docs, not just HEAD. Both arms received the same snapshot. No report directories are copied; only installed dependencies are shared. PYTHONPATH selects each snapshot's own source.
+- Wall time is monotonic launch-to-exit time including discovery, reasoning, edits and agent test execution. Independent validation is timed separately. Every arm's full events, persisted session, invocation, prompts, stderr, solution and tests are retained.
+- Token usage is summed once per assistant message_end event. audit.json independently verifies those totals against saved session messages and distinct fresh session IDs. Total tokens include repeated cached context. Provider-reported costs are not an invoice.
+- The integrated graph test suite ran concurrently with this eval, adding host-load noise. In addition, the model wrote different numbers of tests and reran them differently. The WorkChain arm improved too although its API did not change. Do not infer causal speedups from one before/after pair.
+- The graph solution uses new literal bindings and iteration locals, but retains branch-armed conditions instead of using and/or or conditional expressions. Dedicated feature tests, not this single eval solution, cover those other features.
+- No pilot, evaluator test corrections or hints were needed during this new pair. The old excluded pilot remains only in the previous report folder.
+- No actual daemon/scheduler runtime benchmark was performed. The graph suite covers local execution, serialization, checkpoint restore and provenance; broker/daemon-dependent tests are excluded by --broker-backend=none.

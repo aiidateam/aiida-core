@@ -120,6 +120,8 @@ class Port:
     properties like whether it is required, valid types, the help string, etc.
     """
 
+    durable: bool = True
+
     def __init__(
         self,
         name: str,
@@ -348,7 +350,9 @@ class InputPort(Port):
 
 
 class OutputPort(Port):
-    pass
+    def __init__(self, *args: t.Any, durable: bool = True, **kwargs: t.Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.durable = durable
 
 
 class PortNamespace(collections.abc.MutableMapping, Port):

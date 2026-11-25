@@ -14,6 +14,18 @@ from aiida.engine.processes.ports import InputPort, PortNamespace
 from aiida.orm import Dict, Int, Str, to_aiida_type
 
 
+def test_typed_data_list_annotations():
+    """Parameterized lists retain the container contract, including in optional ports."""
+    from aiida.engine.processes.ports import _infer_node_types, _infer_runtime_types, _is_storable
+    from aiida.orm import DataList, StructureData
+
+    assert _infer_runtime_types(DataList[StructureData]) == (DataList,)
+    assert _infer_node_types(DataList[StructureData]) == (DataList,)
+    assert _infer_runtime_types(DataList[StructureData] | None) == (DataList, type(None))
+    assert _infer_runtime_types(DataList) == (DataList,)
+    assert _is_storable(DataList[StructureData])
+
+
 class TestInputPort:
     """Tests for the `InputPort` class."""
 

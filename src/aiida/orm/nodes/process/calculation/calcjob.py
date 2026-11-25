@@ -67,6 +67,7 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
+    SCHEDULER_FAILURE_KEY = 'scheduler_failure'
 
     class AttributesModel(CalculationNode.AttributesModel):
         scheduler_state: str | None = OrmMetadataField(
@@ -173,6 +174,7 @@ class CalcJobNode(CalculationNode):
             cls.SCHEDULER_LAST_CHECK_TIME_KEY,
             cls.SCHEDULER_LAST_JOB_INFO_KEY,
             cls.SCHEDULER_DETAILED_JOB_INFO_KEY,
+            cls.SCHEDULER_FAILURE_KEY,
         )
 
     @classproperty

@@ -20,10 +20,25 @@ from types import UnionType
 
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
+from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
 from aiida.engine.processes.port_model import _is_a_plain_class, _is_structured, _namespace_value, _without_marks
-from aiida.orm import Bool, Data, Dict, EnumData, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
+from aiida.orm import (
+    Bool,
+    DataDict,
+    DataList,
+    Dict,
+    EnumData,
+    Float,
+    Int,
+    List,
+    Node,
+    Str,
+    from_aiida_type,
+    to_aiida_type,
+)
+from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -141,20 +156,22 @@ class WithSerialize:
     def __init__(self, *args, **kwargs) -> None:
         serializer = kwargs.pop('serializer', None)
         super().__init__(*args, **kwargs)
-        self._serializer: Callable[[t.Any], Data] | None = serializer
+        self._serializer: Callable[[t.Any], Node] | None = serializer
 
     @property
-    def serializer(self) -> Callable[[t.Any], Data] | None:
+    def serializer(self) -> Callable[[t.Any], Node] | None:
         """Return the serializer."""
         return self._serializer
 
-    def serialize(self, value: t.Any) -> Data:
-        """Serialize the given value, unless it is ``None``, already a Data type, or no serializer function is defined.
+    def serialize(self, value: t.Any) -> Node:
+        """Serialize the given value, unless it is ``None``, already a storable node, or no serializer is defined.
+
+        Containers pass through like data (shared node identity, decoupled storage).
 
         :param value: the value to be serialized
         :returns: a serialized version of the value or the unchanged value
         """
-        if self._serializer is None or value is None or isinstance(value, Data):
+        if self._serializer is None or value is None or isinstance(value, DataNode):
             return value
 
         return self._serializer(value)
@@ -174,8 +191,12 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
     process their specific keywords.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, durable: bool = True, mutable: bool = False, **kwargs) -> None:
         """Override the constructor to check the type of the default if set and warn if not immutable."""
+        self.mutable = mutable
+        self.durable = durable
+        if not durable:
+            kwargs['non_db'] = True
         if 'default' in kwargs:
             default = kwargs['default']
             # If the default is specified and it is a node instance, raise a warning. This is to try and prevent that
@@ -221,6 +242,20 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
                 raise TypeError(msg)
 
         super().__init__(*args, **kwargs)
+
+    def serialize(self, value: t.Any) -> t.Any:
+        """Serialize owned-container declarations without routing through JSON containers."""
+        if not self.durable:
+            from aiida.engine._checkpoint_pickle import validate_port_value
+
+            validate_port_value(self.name, value)
+            return value
+        kinds = self.valid_type if isinstance(self.valid_type, tuple) else (self.valid_type,)
+        if DataList in kinds and isinstance(value, list):
+            return DataList(value)
+        if DataDict in kinds and isinstance(value, dict):
+            return DataDict(value)
+        return super().serialize(value)
 
     def prepare(self, value: t.Any) -> PreparedInputs:
         """Convert a filled input to its runtime type without coercing unrelated values.
@@ -423,6 +458,16 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         return result
 
 
+def checkpoint_leaves(namespace: PortNamespace, prefix: str = '') -> t.Iterator[str]:
+    """Yield dotted paths of checkpoint-only ports."""
+    for name, port in namespace.items():
+        path = f'{prefix}{name}'
+        if isinstance(port, PortNamespace):
+            yield from checkpoint_leaves(port, f'{path}.')
+        elif not port.durable:
+            yield path
+
+
 def _is_storable(annotation: t.Any) -> bool:
     """Return whether values of an annotation can reach provenance storage.
 
@@ -438,7 +483,7 @@ def _is_storable(annotation: t.Any) -> bool:
         return True
     # `_is_a_plain_class`, not `isinstance(., type)`: parametrized generics pass the latter on some versions.
     if _is_a_plain_class(annotation):
-        return issubclass(annotation, Data) or _has_conversion(annotation)
+        return issubclass(annotation, DataNode) or _has_conversion(annotation)
     return _origin_storable(t.get_origin(annotation), annotation)
 
 
@@ -450,9 +495,38 @@ def _has_conversion(annotation: type) -> bool:
 
 def _origin_storable(origin: t.Any, annotation: t.Any) -> bool:
     """Return whether a generic alias stores through its origin or its members."""
+    if origin is DataList:
+        return True
     if origin in (list, dict, t.Union, UnionType):
         return all(_is_storable(argument) for argument in t.get_args(annotation))
     return False
+
+
+def _canonical_enum_member(valid_type: type | tuple[type, ...] | None, value: t.Any) -> Enum | None:
+    """Resolve a stored member onto the declared enum class duplicated by executor serialization."""
+    kinds = valid_type if isinstance(valid_type, tuple) else (valid_type,)
+    enums = tuple(kind for kind in kinds if isinstance(kind, type) and issubclass(kind, Enum))
+    if not enums or not isinstance(value, (Enum, EnumData)):
+        return None
+    loader = get_object_loader()
+    if isinstance(value, EnumData):
+        identifier = value.identifier
+    else:
+        try:
+            identifier = loader.identify_object(type(value))
+        except ImportError:
+            return None
+    for kind in enums:
+        try:
+            declared_identifier = loader.identify_object(kind)
+        except ImportError:
+            continue
+        if declared_identifier != identifier:
+            continue
+        member = kind.__members__.get(value.name)
+        if member is not None and member.value == value.value:
+            return member
+    return None
 
 
 def _runtime_value(
@@ -463,10 +537,18 @@ def _runtime_value(
     """Preserve accepted nodes and unwrap only values matching the runtime declaration."""
     if valid_type is None or isinstance(value, valid_type):
         return value
-    if isinstance(value, Data):
+    canonical = _canonical_enum_member(valid_type, value)
+    if canonical is not None:
+        return canonical
+    if isinstance(value, DataNode):
         converted = from_aiida_type(value)
         return converted if isinstance(converted, valid_type) else value
     types = valid_type if isinstance(valid_type, tuple) else (valid_type,)
+    for kind in types:
+        if kind is DataList and isinstance(value, list):
+            return DataList(value)
+        if kind is DataDict and isinstance(value, dict):
+            return DataDict(value)
     if serializer is not None and any(issubclass(kind, Node) for kind in types):
         return serializer(value)
     return value
@@ -493,7 +575,7 @@ def _infer_runtime_types(annotation: t.Any) -> tuple[t.Any, ...]:
     origin = t.get_origin(annotation)
     inferred: tuple[t.Any, ...] = ()
 
-    if _is_a_plain_class(annotation) or origin in (list, dict):
+    if _is_a_plain_class(annotation) or origin in (list, dict, DataList):
         inferred = (_runtime_type(annotation),)
     elif origin is t.Union or origin is UnionType:
         inferred = tuple(_runtime_type(item) for item in t.get_args(annotation))
@@ -519,7 +601,7 @@ def _node_type(annotation: t.Any) -> t.Any | None:
     if annotation is t.Any:
         return None
     if _is_a_plain_class(annotation):
-        if issubclass(annotation, Data):
+        if issubclass(annotation, DataNode):
             return annotation
         if issubclass(annotation, Enum):
             return EnumData
@@ -527,12 +609,32 @@ def _node_type(annotation: t.Any) -> t.Any | None:
     return _VALID_TYPE_MAP.get(annotation)
 
 
+def _owned_container_type(annotation: t.Any) -> type[DataList] | type[DataDict] | None:
+    """Map Python containers of data nodes to their owned storage representation."""
+    annotation = _without_marks(annotation)
+    origin = t.get_origin(annotation)
+    arguments = t.get_args(annotation)
+    if origin is list and len(arguments) == 1:
+        member = arguments[0]
+    elif origin is dict and len(arguments) == 2 and arguments[0] is str:
+        member = arguments[1]
+    else:
+        return None
+    member = _without_marks(member)
+    if _is_a_plain_class(member) and issubclass(member, DataNode):
+        return DataList if origin is list else DataDict
+    return None
+
+
 def _runtime_type(annotation: t.Any) -> t.Any | None:
     """Return the runtime type for one annotation, or None when it declares none."""
     if annotation is t.Any:
         return None
-    if t.get_origin(annotation) in (list, dict):
-        return t.get_origin(annotation)
+    origin = t.get_origin(annotation)
+    if origin in (list, dict):
+        return _owned_container_type(annotation) or origin
+    if origin is DataList:
+        return origin
     if _is_a_plain_class(annotation):
         return annotation
     return None

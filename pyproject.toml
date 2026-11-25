@@ -108,6 +108,10 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.cmdline.data.structure.import']
 
+[project.entry-points.'aiida.container']
+'core.data_dict' = 'aiida.orm.nodes.data.container:DataDict'
+'core.data_list' = 'aiida.orm.nodes.data.container:DataList'
+
 [project.entry-points.'aiida.data']
 'core.array' = 'aiida.orm.nodes.data.array.array:ArrayData'
 'core.array.bands' = 'aiida.orm.nodes.data.array.bands:BandsData'
@@ -156,6 +160,7 @@ requires-python = '>=3.10'
 'process.calculation' = 'aiida.orm.nodes.process.calculation.calculation:CalculationNode'
 'process.calculation.calcfunction' = 'aiida.orm.nodes.process.calculation.calcfunction:CalcFunctionNode'
 'process.calculation.calcjob' = 'aiida.orm.nodes.process.calculation.calcjob:CalcJobNode'
+'process.calculation.task' = 'aiida.orm.nodes.process.calculation.task:TaskNode'
 'process.workflow' = 'aiida.orm.nodes.process.workflow.workflow:WorkflowNode'
 'process.workflow.graph' = 'aiida.orm.nodes.process.workflow.graph:GraphNode'
 'process.workflow.workchain' = 'aiida.orm.nodes.process.workflow.workchain:WorkChainNode'

@@ -1258,6 +1258,60 @@ class TestQueryBuilderJoins:
         assert query.count() == 1
 
 
+def test_scientific_graph_paths(aiida_profile_clean):
+    """Recursive queries traverse graph inputs and creations, but not ordinary workflow inputs or returns."""
+    source = orm.Int(1).store()
+    first = orm.GraphNode()
+    first.base.links.add_incoming(source, LinkType.INPUT_WORK, 'value')
+    first.store()
+    middle = orm.Int(2)
+    middle.base.links.add_incoming(first, LinkType.CREATE, 'result')
+    middle.store()
+    second = orm.GraphNode()
+    second.base.links.add_incoming(middle, LinkType.INPUT_WORK, 'value')
+    second.store()
+    result = orm.Int(3)
+    result.base.links.add_incoming(second, LinkType.CREATE, 'result')
+    result.store()
+    result.base.links.add_incoming(second, LinkType.RETURN, 'result')
+
+    child = orm.TaskNode()
+    child.base.links.add_incoming(second, LinkType.CALL_CALC, 'child')
+    child.store()
+    forwarded = orm.Int(4)
+    forwarded.base.links.add_incoming(child, LinkType.CREATE, 'result')
+    forwarded.store()
+    forwarded.base.links.add_incoming(second, LinkType.RETURN, 'forwarded')
+    workflow = orm.WorkChainNode()
+    workflow.base.links.add_incoming(result, LinkType.INPUT_WORK, 'value')
+    workflow.store()
+
+    descendants = orm.QueryBuilder().append(orm.Node, filters={'id': source.pk}).children().all(flat=True)
+    assert sorted(node.pk for node in descendants) == sorted(node.pk for node in (first, middle, second, result))
+
+    ancestors = orm.QueryBuilder().append(orm.Node, filters={'id': result.pk}).parents().all(flat=True)
+    assert sorted(node.pk for node in ancestors) == sorted(node.pk for node in (source, first, middle, second))
+
+    links = (
+        orm.QueryBuilder()
+        .append(orm.GraphNode, filters={'id': second.pk}, tag='graph')
+        .append(orm.Int, with_incoming='graph', filters={'id': result.pk}, edge_project='type')
+        .all(flat=True)
+    )
+    assert sorted(links) == [LinkType.CREATE.value, LinkType.RETURN.value]
+
+
+def test_create_cannot_close_scientific_cycle_through_graph_input(aiida_profile_clean):
+    """The cycle check considers a graph's existing INPUT_WORK links."""
+    source = orm.Int(1).store()
+    graph = orm.GraphNode()
+    graph.base.links.add_incoming(source, LinkType.INPUT_WORK, 'value')
+    graph.store()
+
+    with pytest.raises(ValueError, match='would generate a cycle'):
+        source.base.links.add_incoming(graph, LinkType.CREATE, 'result')
+
+
 class QueryBuilderPath:
     @pytest.fixture(autouse=True)
     def init_db(self, backend):

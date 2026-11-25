@@ -56,7 +56,7 @@ class ProcessLauncher(BaseProcessLauncher):
         """
         from aiida.common import exceptions
         from aiida.engine.exceptions import PastException
-        from aiida.orm import Data, load_node
+        from aiida.orm import DataNode, load_node
         from aiida.orm.utils import serialize
 
         try:
@@ -77,7 +77,7 @@ class ProcessLauncher(BaseProcessLauncher):
 
             if node.is_finished:
                 future.set_result(
-                    {entry.link_label: entry.node for entry in node.base.links.get_outgoing(node_class=Data)}
+                    {entry.link_label: entry.node for entry in node.base.links.get_outgoing(node_class=DataNode)}
                 )
             elif node.is_excepted:
                 future.set_exception(PastException(node.exception))

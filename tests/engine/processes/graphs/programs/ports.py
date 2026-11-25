@@ -10,7 +10,9 @@
 
 import typing as t
 
+from aiida.engine import PortModel
 from aiida.engine.processes.graphs.lowering import graph
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.programs.port_models import (
     Configuration,
@@ -21,6 +23,7 @@ from tests.engine.processes.graphs.programs.port_models import (
 )
 from tests.engine.processes.graphs.programs.tasks import (
     ArithmeticPair,
+    SummaryStats,
     add,
     arithmetic_pair,
     read_answer,
@@ -31,6 +34,46 @@ from tests.engine.processes.graphs.programs.tasks import (
     read_point_count,
     statistics,
 )
+
+
+class OnlyOutput(PortModel):
+    """One named graph output."""
+
+    only: int
+
+
+class PairOutputs(PortModel):
+    """The sum and product of a pair under the names `total` and `product`."""
+
+    total: int
+    product: int
+
+
+class TextPairOutputs(PortModel):
+    """A `total` declared as text, which a stored integer cannot fill."""
+
+    total: str
+    product: int
+
+
+class OptionalProductOutputs(PortModel):
+    """A `total` with a `product` that the return may leave out."""
+
+    total: int
+    product: int | None = None
+
+
+class TextSumPair(PortModel):
+    """A `sum` declared as text, which a stored integer cannot fill."""
+
+    sum: str
+    product: int
+
+
+class NestedTextSumPair(PortModel):
+    """A nested `pair` whose `sum` the annotation mistypes."""
+
+    pair: TextSumPair
 
 
 @graph
@@ -47,10 +90,22 @@ def named(x: int, y: int) -> dict[str, int]:
 
 
 @graph
-def single_named_scalar(value: int) -> int:
-    """Return one named output with a scalar-style hint."""
+def single_named_scalar(value: int) -> OnlyOutput:
+    """Return one named output declared by a `PortModel`."""
     out = add(x=value, y=0)
     return {'only': out}
+
+
+class LegacyOutput(t.TypedDict):
+    """A legacy named output declaration that must no longer expand to ports."""
+
+    only: int
+
+
+@graph
+def legacy_graph_output(value: int) -> LegacyOutput:
+    """Use a TypedDict as the graph return annotation."""
+    return {'only': value}
 
 
 @graph
@@ -123,7 +178,7 @@ def nested_passthrough(config: Configuration) -> int:
 
 
 @graph
-def summarize(values: list[float]):
+def summarize(values: list[float]) -> SummaryStats:
     """Expose summary statistics computed by plain Python, selected by key."""
     stats = statistics(values=values)
     return {'mean': stats['mean'], 'stdev': stats['stdev']}
@@ -163,19 +218,18 @@ def nullable_forward(value: int | None = None) -> int | None:
 def nullable_chain(value: int | None = None) -> int | None:
     """Wire the optional output of a child graph; an absent value leaves the next input unwired."""
     forwarded = nullable_return(value=value)
-    return nullable_return(value=forwarded)
+    return nullable_return(value=forwarded).alias('nullable_return_2')
 
 
 @graph
-def unrestricted_return(value: t.Any) -> t.Any:
+def unrestricted_return(value: Data | None) -> Data:
     """Return an unrestricted required input; a `None` value emits no output."""
     return value
 
 
-# rejected at lowering: workflows return existing nodes, they never create data.
 @graph
 def literal_return() -> int:
-    """Return a literal; workflows return existing nodes, they never create data."""
+    """Return a literal to be materialized at the graph boundary."""
     return 42
 
 
@@ -213,10 +267,9 @@ def wrong_type(x: str) -> int:
     return add(x=x, y=1)
 
 
-# rejected at lowering: collections travel whole.
 @graph
 def subscript_load(values: list[int]) -> int:
-    """Read one element; collections travel whole."""
+    """Read one element inline and pass it to a task."""
     return add(x=values[0], y=1)
 
 
@@ -226,6 +279,97 @@ def make_config(x: int) -> Configuration:
     """Build a namespace from task data; wrap construction in a task instead."""
     total = add(x=x, y=1)
     return Configuration(settings=Settings(count=total, nullable=None), label='test')
+
+
+# rejected at lowering: graph outputs are checked against the return annotation.
+@graph
+def unannotated_return(value: int):
+    """Leave out the return annotation; every graph declares one."""
+    return add(x=value, y=1)
+
+
+# rejected at lowering: `Any` declares no outputs to check the return against.
+@graph
+def any_return(value: int) -> t.Any:
+    """Annotate the return with `Any`; graphs declare checkable outputs."""
+    return add(x=value, y=1)
+
+
+# rejected at lowering: graph inputs need annotations, `Any` included.
+@graph
+def unannotated_param(value, scale: int) -> int:
+    """Add an unannotated input; annotate each input instead."""
+    return add(x=value, y=scale)
+
+
+@graph
+def any_param(value: t.Any) -> int:
+    """Add an `Any` input; `Any` declares no input to wire against."""
+    return add(x=value, y=1)
+
+
+# rejected at lowering: the return must produce every declared output.
+@graph
+def missing_declared_output(x: int, y: int) -> PairOutputs:
+    """Omit the declared `product` output."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum}
+
+
+# rejected at lowering: the return produces only declared outputs.
+@graph
+def undeclared_output(x: int, y: int) -> PairOutputs:
+    """Return an `extra` output the annotation does not declare."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum, 'product': pair.product, 'extra': pair.sum}
+
+
+# rejected at lowering: a single-value annotation requires one returned value.
+@graph
+def mapping_for_single_value(x: int, y: int) -> int:
+    """Return a mapping under a single-value annotation."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum, 'product': pair.product}
+
+
+# rejected at lowering: every early return agrees with the annotation too.
+@graph
+def early_return_missing_output(x: int, y: int, flag: bool) -> PairOutputs:
+    """Omit a declared output on the early return only."""
+    pair = arithmetic_pair(x=x, y=y)
+    if flag:
+        return {'total': pair.sum}
+    return {'total': pair.sum, 'product': pair.product}
+
+
+# rejected at validation: declared field types fit the stored outputs.
+@graph
+def mistyped_declared_output(x: int, y: int) -> TextPairOutputs:
+    """Declare `total` as text while returning an integer."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum, 'product': pair.product}
+
+
+# rejected at lowering: nested field types agree with the annotation too.
+@graph
+def mistyped_nested_output(x: int, y: int) -> TextSumPair:
+    """Return a whole namespace whose `sum` field the annotation mistypes."""
+    return arithmetic_pair(x=x, y=y)
+
+
+# rejected at lowering: nested mapping fields agree with the annotation too.
+@graph
+def mistyped_nested_mapping(x: int, y: int) -> NestedTextSumPair:
+    """Return a nested mapping whose `pair.sum` field the annotation mistypes."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'pair': {'sum': pair.sum, 'product': pair.product}}
+
+
+@graph
+def optional_output_absent(x: int, y: int) -> OptionalProductOutputs:
+    """Leave out an output the annotation gives a default."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum}
 
 
 # rejected at lowering: values must be finite JSON.

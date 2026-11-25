@@ -7,6 +7,8 @@ import pytest
 
 from aiida.brokers import communicator as broker_communicator
 from aiida.brokers import futures as broker_futures
+from aiida.brokers.exceptions import UnroutableError
+from aiida.common.links import LinkType
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.communications import (
     LocalProcessController,
@@ -38,6 +40,61 @@ def test_local_process_controller_kills_process(runner):
 
     assert process.node.is_killed
     assert process.node.process_status == 'Stopped by local controller'
+
+
+@pytest.mark.parametrize('stepping', [False, True], ids=['immediate', 'interrupted'])
+@pytest.mark.parametrize('response', [True, False, UnroutableError], ids=['killed', 'refused', 'unroutable'])
+def test_killing_parent_awaits_child(runner, monkeypatch, stepping, response):
+    """Killing a parent with an active child requires the child's final reply."""
+    parent = runner.instantiate_process(test_processes.WaitProcess)
+    child = runner.instantiate_process(test_processes.WaitProcess, metadata={'store_provenance': False})
+    child.node.base.links.add_incoming(parent.node, link_type=LinkType.CALL_WORK, link_label='active')
+    child.node.store()
+    child_controller = LocalProcessController(child, runner.loop)
+    reply = broker_futures.Future()
+    delivery = broker_futures.Future()
+    delivery.set_result(reply)
+    controller = Mock()
+    requested = asyncio.Event()
+
+    def request_kill(*args, **kwargs):
+        requested.set()
+        return delivery
+
+    controller.kill_process.side_effect = request_kill
+    monkeypatch.setattr(runner, '_controller', controller)
+
+    async def exercise():
+        while parent.state != ProcessState.WAITING:
+            await parent.step()
+        while child.state != ProcessState.WAITING:
+            await child.step()
+        if stepping:
+            parent_step = asyncio.create_task(parent.step())
+            await asyncio.sleep(0)
+
+        result = parent.kill()
+        assert asyncio.isfuture(result)
+        await asyncio.wait_for(requested.wait(), timeout=5)
+        controller.kill_process.assert_called_once_with(child.node.pk, msg_text=f'Killed by parent<{parent.pid}>')
+        if stepping:
+            await parent_step
+        assert parent.node.is_killed
+        assert not result.done()
+        assert not child.node.is_terminated
+
+        if response is True:
+            reply.set_result(await child_controller.kill_process(child.pid))
+        elif response is False:
+            reply.set_result(False)
+        else:
+            reply.set_exception(response('Could not route child kill'))
+        assert await asyncio.wait_for(result, timeout=5) is (response is True)
+        assert child.node.is_killed is (response is True)
+        if not child.node.is_terminated:
+            child.kill()
+
+    runner.loop.run_until_complete(exercise())
 
 
 def test_local_process_controller_pauses_and_plays_process(runner):

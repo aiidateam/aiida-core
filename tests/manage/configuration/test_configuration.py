@@ -1,5 +1,6 @@
 """Tests for the :mod:`aiida.manage.configuration` module."""
 
+from contextlib import nullcontext
 from pathlib import Path
 
 import pytest
@@ -88,8 +89,9 @@ def test_check_version_development(monkeypatch, suppress_warning, version, manag
         assert f'You are using a development version of AiiDA ({version}).' in first_call_msg
 
 
-def test_profile_context(config_with_profile, profile_factory):
-    """Test that the original profile is restored when ``profile_context`` returns from the context."""
+@pytest.mark.parametrize('raise_in_context', [False, True])
+def test_profile_context(config_with_profile, profile_factory, raise_in_context):
+    """Test that the original profile is restored on both normal and exceptional exits."""
     config = config_with_profile
 
     # Get current profile
@@ -100,8 +102,12 @@ def test_profile_context(config_with_profile, profile_factory):
     profile_alternate = profile_factory()
     config.add_profile(profile_alternate)
 
-    with profile_context(profile_alternate.name):
+    expectation = pytest.raises(RuntimeError, match='test failure') if raise_in_context else nullcontext()
+    with expectation, profile_context(profile_alternate.name):
         assert get_profile() == profile_alternate
+        if raise_in_context:
+            msg = 'test failure'
+            raise RuntimeError(msg)
 
     assert get_profile() == profile_original
 

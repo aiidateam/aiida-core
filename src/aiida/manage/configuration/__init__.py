@@ -191,11 +191,14 @@ def profile_context(profile: 'Profile | str | None' = None, allow_switch=False) 
 
     manager = get_manager()
     current_profile = manager.get_profile()
-    yield manager.load_profile(profile, allow_switch)
-    if current_profile is None:
-        manager.unload_profile()
-    else:
-        manager.load_profile(current_profile, allow_switch=True)
+    loaded_profile = manager.load_profile(profile, allow_switch)
+    try:
+        yield loaded_profile
+    finally:
+        if current_profile is None:
+            manager.unload_profile()
+        else:
+            manager.load_profile(current_profile, allow_switch=True)
 
 
 def create_default_user(

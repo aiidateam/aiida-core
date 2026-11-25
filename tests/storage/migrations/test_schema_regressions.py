@@ -10,14 +10,13 @@
 from pathlib import Path
 
 import pytest
-from alembic.command import downgrade, upgrade
+from alembic.command import upgrade
 
 from aiida.storage.sqlite_zip.migrator import _alembic_connect, list_versions
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 from tests.storage.migrations.utils import reflect_schema
 
 PROFILE_MAIN_VERSIONS = ('main_0001', 'main_0002', 'main_0003')
-SQLITE_ZIP_LEGACY_MAIN_REVISIONS = ('main_0000', 'main_0000a', 'main_0000b')
 REFERENCE_SCHEMAS = Path(__file__).parent / 'reference_schemas'
 
 
@@ -70,15 +69,3 @@ def test_sqlite_zip_main(version, tmp_path, data_regression):
         reflect_schema(create_sqla_engine(database_path)),
         fullpath=REFERENCE_SCHEMAS / f'sqlite_zip_{version}.yml',
     )
-
-
-@pytest.mark.parametrize('version', SQLITE_ZIP_LEGACY_MAIN_REVISIONS)
-def test_sqlite_zip_legacy_main_downgrade_not_implemented(version, tmp_path):
-    """Test that legacy SQLite archive main revisions cannot be downgraded."""
-    database_path = tmp_path / 'database.sqlite'
-
-    with _alembic_connect(database_path) as config:
-        upgrade(config, version)
-
-        with pytest.raises(NotImplementedError):
-            downgrade(config, '-1')

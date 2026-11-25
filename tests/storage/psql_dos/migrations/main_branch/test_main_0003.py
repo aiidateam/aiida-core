@@ -51,17 +51,6 @@ def test_migration(perform_migrations: PsqlDosMigrator):
     assert perform_migrations.get_schema_version_profile() == 'main_0003'
 
 
-def test_downgrade(perform_migrations: PsqlDosMigrator):
-    """Test that downgrading from ``main_0003`` restores the ``main_0002`` revision.
-
-    The transport rename has no inverse, so the downgrade only moves the revision back.
-    """
-    perform_migrations.migrate_up('main@main_0003')
-    perform_migrations.migrate_down('main@main_0002')
-
-    assert perform_migrations.get_schema_version_profile() == 'main_0002'
-
-
 def test_rename_ssh_async_transport(perform_migrations: PsqlDosMigrator, ssh_dir):
     """``core.ssh_async`` computers are renamed, and a legacy one is moved to a configuration entry."""
     perform_migrations.migrate_up('main@main_0002')

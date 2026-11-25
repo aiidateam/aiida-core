@@ -21,7 +21,7 @@ import pathlib
 import typing as t
 from collections.abc import Iterator
 
-from alembic.command import downgrade, upgrade
+from alembic.command import upgrade
 from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
 from alembic.runtime.migration import MigrationContext, MigrationInfo
@@ -415,12 +415,13 @@ class PsqlDosMigrator:
             upgrade(config, version)
 
     def migrate_down(self, version: str) -> None:
-        """Migrate the database down to a specific version.
+        """Reject downgrading profile storage to an earlier schema revision.
 
-        :param version: string with schema version to migrate to
+        :param version: requested target schema revision
+        :raises NotImplementedError: profile storage only supports upgrades
         """
-        with self._alembic_connect() as config:
-            downgrade(config, version)
+        msg = 'Profile storage downgrades are not supported.'
+        raise NotImplementedError(msg)
 
     @staticmethod
     def _alembic_config() -> Config:

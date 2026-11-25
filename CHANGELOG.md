@@ -4,6 +4,8 @@
 
 ### Breaking changes
 
+Profile storage migrations for PostgreSQL and SQLite are now upgrade-only: `migrate_down()` raises `NotImplementedError`. SQLite archives also no longer support downgrading from schema revision `main_0003`.
+
 `Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
 
 Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`. They are no longer re-exported from `aiida.schedulers`.

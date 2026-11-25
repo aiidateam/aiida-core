@@ -100,6 +100,7 @@ Process checkpoints are stored as `<node uuid>-<digest>.pkl` in the profile's `c
 Backups must include this directory; storage plugins provide its location through `StorageBackend.get_checkpoint_directory`.
 
 `verdi node delete` also deletes the checkpoint files of the nodes it deletes.
+`verdi storage backup` deletes checkpoint files of sealed nodes after a successful backup, since deletions skip while the backup holds the checkpoint lock.
 `verdi storage maintain` deletes checkpoint files of sealed nodes.
 `verdi storage maintain --full` also deletes files that node deletion left, for example while a backup held the lock.
 

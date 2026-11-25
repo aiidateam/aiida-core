@@ -283,6 +283,60 @@ def test_backup_implemented(backend, monkeypatch, tmp_path):
     [
         pytest.param('core.sqlite_dos', id='sqlite'),
         pytest.param('core.psql_dos', id='postgresql', marks=pytest.mark.requires_psql),
+    ],
+)
+def test_backup_collects_checkpoints_of_processes_sealed_during_backup(
+    storage_backend,
+    aiida_config,
+    aiida_profile_factory,
+    config_sqlite_dos,
+    config_psql_dos,
+    manager,
+    tmp_path,
+    monkeypatch,
+):
+    """Backup retains a finishing process's checkpoint in the snapshot and collects its source file afterward."""
+    from aiida.orm.implementation.checkpoint_store import CheckpointBytes
+
+    config = config_sqlite_dos() if storage_backend == 'core.sqlite_dos' else config_psql_dos()
+    with aiida_profile_factory(aiida_config, storage_backend=storage_backend, storage_config=config):
+        storage = manager.get_profile_storage()
+        store = storage.checkpoint_store
+        finished = orm.WorkChainNode().store()
+        live = orm.WorkChainNode().store()
+        data = CheckpointBytes(content=b'checkpoint')
+        for node in (finished, live):
+            store.write(node_uuid=node.uuid, data=data)
+            node.set_checkpoint(f'checkpoint-pickle-v1:{data.digest}')
+        orphan_uuid: str = str(uuid.uuid4())
+        store.write(node_uuid=orphan_uuid, data=data)
+        directory: pathlib.Path = storage.get_checkpoint_directory()
+        finished_path: pathlib.Path = directory / f'{finished.uuid}-{data.digest}.pkl'
+        live_path: pathlib.Path = directory / f'{live.uuid}-{data.digest}.pkl'
+        orphan_path: pathlib.Path = directory / f'{orphan_uuid}-{data.digest}.pkl'
+        copy = storage._backup_checkpoints
+
+        def finish_before_copy(**kwargs):
+            finished.delete_checkpoint()
+            store.discard_all(node_uuid=finished.uuid)
+            finished.seal()
+            assert finished_path.is_file(), 'Backup must retain the checkpoint referenced by its database snapshot.'
+            copy(**kwargs)
+
+        monkeypatch.setattr(storage, '_backup_checkpoints', finish_before_copy)
+        storage.backup(str(tmp_path))
+
+        assert (tmp_path / 'last-backup' / directory.name / finished_path.name).read_bytes() == data.content
+        assert not finished_path.exists()
+        assert live_path.read_bytes() == data.content
+        assert orphan_path.read_bytes() == data.content
+
+
+@pytest.mark.parametrize(
+    'storage_backend',
+    [
+        pytest.param('core.sqlite_dos', id='sqlite'),
+        pytest.param('core.psql_dos', id='postgresql', marks=pytest.mark.requires_psql),
         pytest.param('core.sqlite_temp', id='sqlite_temp'),
     ],
 )

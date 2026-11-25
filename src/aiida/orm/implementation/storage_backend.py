@@ -481,6 +481,8 @@ class StorageBackend(abc.ABC):
     ) -> None:
         """Create a backup of the storage contents.
 
+        After a successful backup, delete checkpoint files belonging to sealed process nodes.
+
         :param dest: The path to the destination folder.
         :param keep: The number of backups to keep in the target destination, if the backend supports it.
         :raises ValueError: If the input parameters are invalid.
@@ -523,6 +525,7 @@ class StorageBackend(abc.ABC):
 
         STORAGE_LOGGER.report(f'Overwriting the `{DEFAULT_CONFIG_FILE_NAME} file.')
         self._write_backup_config(backup_manager)
+        self.delete_orphaned_checkpoint_files(only_sealed=True)
 
     def get_info(self, detailed: bool = False) -> dict[str, t.Any]:
         """Return general information on the storage.

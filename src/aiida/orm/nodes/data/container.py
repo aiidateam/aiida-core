@@ -67,6 +67,8 @@ from aiida.orm.nodes.data.data import Data
 from aiida.orm.nodes.node import Node
 
 if t.TYPE_CHECKING:
+    from datetime import datetime
+
     from typing_extensions import Self
 
     from aiida.storage.ownership import OwnedContainerSpec
@@ -112,57 +114,26 @@ def stored_owner_id(node: Node) -> int | None:
     try:
         node_model, _ = get_models()
         with _joined_transaction(node.backend):
-            row = get_session().query(node_model).filter(node_model.id == node.pk).one_or_none()
+            return get_session().query(node_model.owner_id).filter(node_model.id == node.pk).scalar()
     except Exception:
         return None
-    return getattr(row, 'owner_id', None) if row is not None else None
 
 
 def is_owned(node: Node) -> bool:
-    """Return whether ``node`` is an owned container child (in memory or stored).
+    """Return whether ``node`` is an owned container child.
 
-    Draft memberships do not confer ownership. Check the in-memory owner of
-    stored or materialized members, falling back to the stored ``owner_id``.
+    Stored ownership is authoritative: a retained member handle can outlive
+    its owner when the owner is deleted with detachment enabled.
     """
-    if getattr(node, '_container_owner', None) is not None:
-        return True
-    return stored_owner_id(node) is not None
+    if node.is_stored:
+        return stored_owner_id(node) is not None
+    return getattr(node, '_container_owner', None) is not None
 
 
 def ownership_root(node: Node) -> Node:
     """Return the outermost in-memory owner of ``node`` (itself if standalone)."""
     root = _owned_root(node)
     return root if root is not None else node
-
-
-def stored_ownership_root_pk(backend: t.Any, pk: int) -> int:
-    """Return the pk of the ownership root of the stored node ``pk`` (itself if standalone).
-
-    Follows stored ``owner_id`` references upward. Backends without the
-    ownership schema return ``pk`` unchanged.
-    """
-    get_models = getattr(backend, '_ownership_models', None)
-    get_session = getattr(backend, 'get_session', None)
-    if get_models is None or get_session is None:
-        return pk
-    node_model, _ = get_models()
-    try:
-        with _joined_transaction(backend):
-            session = get_session()
-            cursor = pk
-            seen: set[int] = set()
-            while cursor not in seen:
-                seen.add(cursor)
-                row = session.query(node_model).filter(node_model.id == cursor).one_or_none()
-                if row is None:
-                    break
-                parent = getattr(row, 'owner_id', None)
-                if parent is None:
-                    break
-                cursor = parent
-            return cursor
-    except Exception:
-        return pk
 
 
 def ensure_standalone(node: Node) -> Node:
@@ -215,30 +186,6 @@ def detach_owned_inputs(value: t.Any) -> t.Any:
         return entry
 
     return walk(value)
-
-
-def expand_ownership_unit(backend: t.Any, pks: t.Iterable[int]) -> set[int]:
-    """Expand node pks to their complete ownership unit (roots plus all descendants).
-
-    Follows stored ``owner_id`` references upward to the ownership root(s),
-    then collects every owned descendant through membership rows. Backends
-    without the ownership schema cannot hold containers and return the
-    input unchanged.
-    """
-    targets = set(pks)
-    get_models = getattr(backend, '_ownership_models', None)
-    get_session = getattr(backend, 'get_session', None)
-    if not targets or get_models is None or get_session is None:
-        return set(targets)
-    try:
-        from aiida.storage import ownership as ownership_contract
-
-        node_model, membership_model = get_models()
-        with _joined_transaction(backend):
-            expanded = ownership_contract.expand_ownership_closure(get_session(), node_model, membership_model, targets)
-        return set(expanded)
-    except Exception:
-        return set(targets)
 
 
 class ContainerCaching(NodeCaching):
@@ -316,7 +263,9 @@ class Container(Data):
         """Initialize the in-memory state of a standalone, unmaterialized container."""
         super().initialize()
         self._container_owner: Container | None = None
+        self._container_entries: list[Node] | dict[str, Node]
         self._container_materialized = False
+        self._container_membership_mtime: datetime | None = None
         self._container_guard_armed = False
         self._container_recovery_snapshot: dict[str, dict[str, t.Any]] | None = None
 
@@ -485,27 +434,28 @@ class Container(Data):
     def _ensure_materialized(self) -> None:
         """Load owned children and element-type metadata for stored containers.
 
-        Fresh (unstored) containers start empty. Stored containers reconstruct
-        their in-memory subtree from the relational owner reference,
-        membership rows and element-type metadata, ordered by persisted
-        position. Loaded children are marked as owned in memory. Typed child
-        loading requires the real element plugins and reports missing ones;
-        structural inspection without element plugins uses
-        :meth:`_iter_storage_edges` instead.
+        Stored container handles refresh when storage changes membership on deletion or archive import.
+        Loaded children are ordered by persisted position and marked as owned in memory when applicable.
+        Structural inspection without loading element plugins uses :meth:`_iter_storage_edges` instead.
         """
-        if getattr(self, '_container_materialized', False):
-            return
-        self._container_materialized = True
         if not self.is_stored:
+            self._container_materialized = True
+            return
+        mtime = self.mtime
+        if self._container_materialized and self._container_membership_mtime in (None, mtime):
+            self._container_membership_mtime = mtime
             return
         edges = self._read_storage_records()
         if edges is None:
             return
-        for _position, key, child_id, child_node_type, owned in edges:
-            child = self._load_stored_child(child_id, child_node_type)
+        children = [(key, self._load_stored_child(pk, node_type), owned) for _, key, pk, node_type, owned in edges]
+        self._container_entries.clear()
+        for key, child, owned in children:
             if owned:
                 child._container_owner = self  # type: ignore[attr-defined]
             self._materialize_child(key, child)
+        self._container_materialized = True
+        self._container_membership_mtime = mtime
 
     def _iter_storage_edges(self) -> Iterator[tuple[int, str | None, int, str]]:
         """Yield ``(position, key, child_id, child_node_type)`` from storage records.
@@ -851,6 +801,7 @@ class Container(Data):
                         child._container_owner = node  # type: ignore[attr-defined]
         self.base.links.incoming_cache = []
         self.base.caching.rehash()
+        self._container_membership_mtime = self.mtime
         if joined_outer:
             # The rows may still be rolled back with the enclosing transaction: recover eagerly through a
             # rollback hook (child-first safe, no root check needed), keeping lazy verification (see

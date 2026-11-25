@@ -49,6 +49,7 @@ __all__ = (
     'COMPUTER',
     'COMPUTERS',
     'CONFIG_FILE',
+    'CONTAINS_FORWARD',
     'DATA',
     'DATUM',
     'DB_BACKEND',
@@ -347,6 +348,13 @@ NODES = OverridableOption(
     type=types.NodeParamType(),
     cls=MultipleValueOption,
     help='One or multiple nodes identified by their ID or UUID.',
+)
+
+CONTAINS_FORWARD = OverridableOption(
+    '--contains-forward/--no-contains-forward',
+    default=True,
+    show_default=True,
+    help='Follow container ownership when deleting nodes. Disable to detach and keep surviving owned members.',
 )
 
 FORCE = OverridableOption('-f', '--force', is_flag=True, default=False, help='Do not ask for confirmation.')

@@ -14,6 +14,7 @@ import abc
 import typing as t
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
+from dataclasses import dataclass
 from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
@@ -38,7 +39,7 @@ if t.TYPE_CHECKING:
     from aiida.orm.users import User
     from aiida.repository.backend.abstract import AbstractRepositoryBackend
 
-__all__ = ('RollbackCallback', 'StorageBackend')
+__all__ = ('MembershipDeletion', 'RollbackCallback', 'StorageBackend')
 
 LOGGER = AIIDA_LOGGER.getChild('orm.implementation.storage_backend')
 
@@ -46,6 +47,14 @@ TransactionType = t.TypeVar('TransactionType')
 
 #: Zero-argument callable restoring a caller's in-memory state after a backend transaction rolls back.
 RollbackCallback = t.Callable[[], None]
+
+
+@dataclass(frozen=True)
+class MembershipDeletion:
+    """Membership effects on surviving nodes when deleting part of a container tree."""
+
+    detached: frozenset[int] = frozenset()
+    edited_containers: frozenset[int] = frozenset()
 
 
 class StorageBackend(abc.ABC):
@@ -341,15 +350,21 @@ class StorageBackend(abc.ABC):
         """Delete the storage and all the data."""
         raise NotImplementedError()
 
+    def get_membership_deletion(self, pks_to_delete: Iterable[int]) -> MembershipDeletion:
+        """Return the effects of deleting these nodes on surviving nodes' membership."""
+        return MembershipDeletion()
+
     @abc.abstractmethod
-    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
+    def delete_nodes_and_connections(
+        self, pks_to_delete: Iterable[int], *, membership: MembershipDeletion | None = None
+    ) -> None:
         """Delete all nodes corresponding to pks in the input and any links to/from them.
 
         This method is intended to be used within a transaction context.
 
         :param pks_to_delete: an iterable of node pks to delete
-
-        :raises: ``AssertionError`` if a transaction is not active
+        :param membership: approved changes to surviving members and containers; by default, reject partial units
+        :raises AssertionError: if a transaction is not active
         """
 
     @abc.abstractmethod

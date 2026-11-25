@@ -31,6 +31,7 @@ from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
+from aiida.orm.implementation.storage_backend import MembershipDeletion
 from aiida.repository.backend.sandbox import SandboxRepositoryBackend
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head
@@ -408,7 +409,9 @@ class SqliteTempBackend(StorageBackend):
         assert self._repo
         self._repo.erase()
 
-    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
+    def delete_nodes_and_connections(
+        self, pks_to_delete: Iterable[int], *, membership: MembershipDeletion | None = None
+    ) -> None:
         raise NotImplementedError
 
 

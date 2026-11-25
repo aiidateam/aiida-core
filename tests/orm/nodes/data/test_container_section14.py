@@ -409,6 +409,231 @@ class TestLowLevelLinkRejectionStrict:
                 )
 
 
+class TestDeletionApproval:
+    """§14: ownership-expanded deletion approval and execution-time revalidation.
+
+    The backend contract path (``delete_nodes_and_connections`` inside a
+    transaction) enforces closure strictly. The ORM single-row
+    ``nodes.delete(pk)`` path bypasses closure validation (filed below).
+    """
+
+    def test_child_only_set_rejected(self, backend):
+        container = DataList([Int(1), Int(2)])
+        container.store()
+        child_pk = load_node(container.pk)[0].pk
+        with pytest.raises(IntegrityError, match=r'[Cc]losure|[Ee]xpand|[Cc]losed'):
+            with backend.transaction():
+                backend.delete_nodes_and_connections([child_pk])
+
+    def test_container_only_set_rejected(self, backend):
+        container = DataList([Int(1), Int(2)])
+        container.store()
+        with pytest.raises(IntegrityError, match=r'[Cc]losure|[Ee]xpand|[Cc]losed|[Ss]ubtree'):
+            with backend.transaction():
+                backend.delete_nodes_and_connections([container.pk])
+
+    def test_approved_whole_unit_deletes(self, backend):
+        from aiida.common.exceptions import NotExistent
+
+        container = DataList([Int(1)])
+        container.store()
+        root_pk = container.pk
+        child_pk = load_node(root_pk)[0].pk
+        with backend.transaction():
+            backend.delete_nodes_and_connections([root_pk, child_pk])
+        with pytest.raises(NotExistent):
+            load_node(child_pk)
+        with pytest.raises(NotExistent):
+            load_node(root_pk)
+
+    def test_orm_single_row_delete_requires_expansion(self):
+        """ORM ``nodes.delete`` rejects owned-child and container targets (closure UX)."""
+        container = DataList([Int(1), Int(2)])
+        container.store()
+        child_pk = load_node(container.pk)[0].pk
+        with pytest.raises(IntegrityError, match=r'[Ee]xpand|[Oo]wnership unit|[Oo]wned'):
+            load_node(container.pk).backend.nodes.delete(child_pk)
+        with pytest.raises(IntegrityError, match=r'[Ee]xpand|[Oo]wnership unit|[Ss]ubtree'):
+            load_node(container.pk).backend.nodes.delete(container.pk)
+
+    def test_delete_container_without_following_members(self, caplog):
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Group
+        from aiida.orm.nodes.data.container import is_owned
+        from aiida.tools import delete_nodes
+
+        reference = Int(3).store()
+        container = DataList([DataList([Int(1)]), Int(2), reference]).store()
+        nested, child, _ = container
+        leaf = nested[0]
+        root_pk = container.pk
+        group = Group(label='keep-members').store()
+        group.add_nodes([container, nested, child, leaf, reference])
+
+        assert delete_nodes([root_pk], contains_forward=False) == ({root_pk}, False)
+        assert 'Owned members to detach' in caplog.text
+        assert is_owned(child)
+        assert delete_nodes([root_pk], dry_run=False, contains_forward=False) == ({root_pk}, True)
+        with pytest.raises(NotExistent):
+            load_node(root_pk)
+        assert {node.uuid for node in group.nodes} == {nested.uuid, child.uuid, leaf.uuid, reference.uuid}
+        assert not is_owned(nested)
+        assert not is_owned(child)
+        assert is_owned(leaf)
+        assert load_node(nested.uuid)[0].uuid == leaf.uuid
+
+    @pytest.mark.parametrize('owned', [True, False])
+    @pytest.mark.parametrize('contains_forward', [True, False])
+    def test_delete_member_keeps_its_container(self, caplog, owned, contains_forward):
+        from aiida.tools import delete_nodes
+
+        child = Int(1)
+        if not owned:
+            child.store()
+        sibling = Int(2)
+        container = DataList([child, sibling]).store()
+        child_pk = container[0].pk
+        assert delete_nodes([child_pk], contains_forward=contains_forward) == ({child_pk}, False)
+        assert f'Surviving containers that will lose members: [{container.pk}]' in caplog.text
+        assert [member.value for member in container] == [1, 2]
+        assert delete_nodes([child_pk], dry_run=False, contains_forward=contains_forward) == ({child_pk}, True)
+        assert [member.uuid for member in container] == [sibling.uuid]
+        assert container.base.caching.get_hash() is None
+
+    def test_delete_container_follows_owned_children_but_not_references(self):
+        from aiida.common.exceptions import NotExistent
+        from aiida.tools import delete_nodes
+
+        reference = Int(2).store()
+        root = DataList([DataList([Int(1)]), reference]).store()
+        expected = {root.pk, root[0].pk, root[0][0].pk}
+        assert delete_nodes([root.pk], dry_run=False) == (expected, True)
+        for pk in expected:
+            with pytest.raises(NotExistent):
+                load_node(pk)
+        assert load_node(reference.uuid).value == 2
+
+
+class TestGroupContainment:
+    """Group updates select nodes exactly, without traversing membership edges."""
+
+    def test_child_add_does_not_add_parent_or_siblings(self):
+        from aiida.orm import Group
+        from aiida.orm.nodes.data.container import is_owned
+
+        container = DataList([Int(1), Int(2)]).store()
+        group = Group(label='g1').store()
+        child = container[0]
+        group.add_nodes(child)
+        assert {node.uuid for node in group.nodes} == {child.uuid}
+        assert is_owned(child)
+
+    def test_child_remove_does_not_remove_parent_or_siblings(self):
+        from aiida.orm import Group
+
+        container = DataList([Int(1), Int(2)]).store()
+        group = Group(label='g1r').store()
+        group.add_nodes([container, *container])
+        group.remove_nodes(container[0])
+        assert {node.uuid for node in group.nodes} == {container.uuid, container[1].uuid}
+
+    def test_add_and_remove_container_selects_only_container(self):
+        from aiida.orm import Group
+
+        container = DataList([Int(1)]).store()
+        group = Group(label='g2').store()
+        group.add_nodes(container)
+        assert {node.uuid for node in group.nodes} == {container.uuid}
+        group.add_nodes(container[0])
+        group.remove_nodes(container)
+        assert {node.uuid for node in group.nodes} == {container[0].uuid}
+
+    def test_group_updates_with_nested_ownership(self):
+        """Selecting either nested or root containers does not include owned or referenced members."""
+        from aiida.orm import Group
+
+        reference = Int(1).store()
+        standalone = Int(2).store()
+        root = DataList([DataList([Int(3)]), reference]).store()
+        nested = root[0]
+        leaf = nested[0]
+        assert root[1].pk == reference.pk
+        group = Group(label='nested-ownership').store()
+
+        group.add_nodes([standalone, nested])
+        assert {node.pk for node in group.nodes} == {nested.pk, standalone.pk}
+
+        group.add_nodes([root, leaf])
+        assert {node.pk for node in group.nodes} == {root.pk, nested.pk, leaf.pk, standalone.pk}
+        group.remove_nodes(root)
+        assert {node.pk for node in group.nodes} == {nested.pk, leaf.pk, standalone.pk}
+
+
+class TestArchiveConflictsMigrationMissingPlugin:
+    """§14/§11: archive closure rejection, migration, missing-plugin operations."""
+
+    def test_archive_export_nested_and_dict_rejected(self, tmp_path):
+        """Export rejects nested containers and dict units, not just flat lists."""
+        from aiida.tools.archive import create_archive
+        from aiida.tools.archive.exceptions import ExportValidationError
+
+        outer = DataList()
+        outer.append(DataList([Int(1)]))
+        outer.store()
+        mapping = DataDict({'a': Int(1)})
+        mapping.store()
+        for node in (outer, mapping):
+            with pytest.raises(ExportValidationError):
+                create_archive([node], filename=str(tmp_path / f'{node.pk}.aiida'))
+
+    def test_archive_export_child_selection_rejected(self, tmp_path):
+        """Selecting an owned child for export rejects (§11 closure: child implies unit)."""
+        from aiida.tools.archive import create_archive
+        from aiida.tools.archive.exceptions import ExportValidationError
+
+        container = DataList([Int(1), Int(2)])
+        container.store()
+        child = load_node(container.pk)[0]
+        with pytest.raises(ExportValidationError):
+            create_archive([child], filename=str(tmp_path / 'child.aiida'))
+
+    def test_missing_element_plugin_reported(self):
+        """Typed element access requires the real plugin and reports its absence."""
+        from aiida.orm.nodes.data.container import _ContainerBase
+
+        with pytest.raises(Exception, match=r'[Pp]lugin|[Ee]ntry point|[Nn]ot found|[Uu]nknown'):
+            _ContainerBase._require_element_plugin('data.core.nonexistent.Missing.')
+
+    def test_genuine_data_element_not_mistaken_for_missing(self):
+        """A genuine base-Data element passes the plugin check (no false missing)."""
+        from aiida.orm import Data
+        from aiida.orm.nodes.data.container import _ContainerBase
+
+        _ContainerBase._require_element_plugin(Data.class_node_type)
+
+    @pytest.mark.xfail(
+        reason='spec §11: import-side UUID conflicts unreachable while export safe-rejects (filed by verify agent)',
+        strict=False,
+    )
+    def test_archive_conflict_disagreement_rejected(self, tmp_path):
+        """GAP PROBE: import-side ownership disagreement under one UUID.
+
+        Unreachable via public API while export safe-rejects ownership units
+        (only hand-crafted archives could carry ownership rows); kept as a
+        probe so a future export/import round-trip must handle conflicts by
+        rejecting and rolling back, never by skipping or reconciling.
+        """
+        from aiida.tools.archive import create_archive, import_archive
+
+        container = DataList([Int(1)])
+        container.store()
+        path = str(tmp_path / 'conflict.aiida')
+        create_archive([container], filename=path)
+        # Corrupt local ownership then re-import same UUIDs -> integrity error, rollback.
+        with pytest.raises(Exception):
+            import_archive(path)
+
+
 class TestMembershipQueriesStrict:
     """§14/§12: initial membership queries and subclass discovery (implemented)."""
 
@@ -539,6 +764,107 @@ class TestContentHashingCacheReuse:
         """F4 resolved as explicit safe rejection: containers never serve/store cache."""
         assert DataList._cachable is False
         assert DataDict._cachable is False
+
+
+class TestIntegrationSmokeStrict:
+    """Strict smoke tests for already-integrated paths (relational storage).
+
+    Caveats live in the verify-agent status file; remaining xfail tests track
+    the still-open contract gaps (process auto-copy, groups, QB joins, archive
+    import, deletion UX).
+    """
+
+    def test_workflow_return_owned_child_rejected(self):
+        """Workfunctions returning an owned child are rejected (no auto-copy)."""
+        from aiida.engine import workfunction
+
+        @workfunction
+        def bad():
+            container = DataList([Int(1)])
+            return container[0]
+
+        with pytest.raises(Exception):
+            bad()
+
+    def test_archive_export_ownership_rejected(self, tmp_path):
+        """Export explicitly rejects ownership units (F5 accepted safe-rejection,
+        now enforced at the relational level); plain nodes still export fine."""
+        from aiida.tools.archive import create_archive
+        from aiida.tools.archive.exceptions import ExportValidationError
+
+        container = DataList([Int(1)])
+        container.store()
+        with pytest.raises(ExportValidationError, match=r'[Oo]wned|[Oo]wnership|[Cc]ontainer'):
+            create_archive([container], filename=str(tmp_path / 'container.aiida'))
+        plain = Int(1).store()
+        create_archive([plain], filename=str(tmp_path / 'plain.aiida'))
+
+    def test_structural_traversal_smoke(self):
+        container = DataList([Int(1)])
+        container.store()
+        reloaded = load_node(container.pk)
+        assert len(reloaded) == 1
+
+    def test_membership_reload_relational(self):
+        """Membership reloads from relational storage, not attributes."""
+        container = DataList([Int(1)])
+        container.store()
+        reloaded = load_node(container.pk)
+        assert isinstance(reloaded[0], Int)
+        assert '_container_element_type' not in reloaded.base.attributes.all
+        assert '_container_membership' not in reloaded.base.attributes.all
+
+
+class TestCliBehavior:
+    """CLI containment expansion and explicit approval."""
+
+    def test_cli_group_add_child_only(self, run_cli_command):
+        from aiida.cmdline.commands import cmd_group
+        from aiida.orm import load_group
+
+        container = DataList([Int(1), Int(2)]).store()
+        child_pk = container[0].pk
+        run_cli_command(cmd_group.group_create, ['clitest'])
+        run_cli_command(cmd_group.group_add_nodes, ['--force', '--group=clitest', str(child_pk)])
+        assert {node.pk for node in load_group(label='clitest').nodes} == {child_pk}
+
+    def test_cli_group_add_child_requires_confirmation(self, run_cli_command):
+        from aiida.cmdline.commands import cmd_group
+
+        container = DataList([Int(1)])
+        container.store()
+        child_pk = load_node(container.pk)[0].pk
+        run_cli_command(cmd_group.group_create, ['clitest2'])
+        # Declining the prompt aborts without changing the group.
+        run_cli_command(cmd_group.group_add_nodes, ['--group=clitest2', str(child_pk)], user_input='n', raises=True)
+
+    def test_cli_node_delete_child_keeps_container(self, run_cli_command):
+        from aiida.cmdline.commands import cmd_node
+        from aiida.common.exceptions import NotExistent
+
+        container = DataList([Int(1), Int(2)]).store()
+        child_pk = container[0].pk
+        run_cli_command(cmd_node.node_delete, [str(child_pk)], user_input='n', raises=True)
+        assert len(container) == 2
+        run_cli_command(cmd_node.node_delete, ['--force', str(child_pk)])
+        with pytest.raises(NotExistent):
+            load_node(child_pk)
+        assert [member.value for member in container] == [2]
+
+    def test_cli_node_delete_without_following_members(self, run_cli_command):
+        from aiida.cmdline.commands import cmd_node
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm.nodes.data.container import is_owned
+
+        container = DataList([Int(1)]).store()
+        root_pk, child_pk = container.pk, container[0].pk
+        args = ['--no-contains-forward', str(root_pk)]
+        run_cli_command(cmd_node.node_delete, [*args, '--dry-run'])
+        assert is_owned(load_node(child_pk))
+        run_cli_command(cmd_node.node_delete, [*args, '--force'])
+        with pytest.raises(NotExistent):
+            load_node(root_pk)
+        assert not is_owned(load_node(child_pk))
 
 
 class TestPlainListDictUnchanged:

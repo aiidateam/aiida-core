@@ -39,6 +39,7 @@ from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
+from aiida.orm.implementation.storage_backend import MembershipDeletion
 from aiida.repository.backend.abstract import AbstractRepositoryBackend, InfoDictType
 from aiida.storage.sqlite_zip import orm
 from aiida.storage.sqlite_zip.utils import (
@@ -367,7 +368,9 @@ class SqliteZipBackend(StorageBackend):
             filepath.unlink()
             LOGGER.report(f'Deleted archive at `{filepath}`.')
 
-    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
+    def delete_nodes_and_connections(
+        self, pks_to_delete: Iterable[int], *, membership: MembershipDeletion | None = None
+    ) -> None:
         raise ReadOnlyError()
 
     def get_global_variable(self, key: str) -> t.NoReturn:

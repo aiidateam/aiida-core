@@ -54,10 +54,17 @@ def verdi_node():
 @options.RAW()
 def node_list(entry_point, subclassing, project, past_days, order_by, order_dir, limit, raw):
     """Query all nodes with optional filtering and ordering."""
+    from aiida.common.exceptions import InvalidEntryPointTypeError, MissingEntryPointError
     from aiida.orm import Node
-    from aiida.plugins.factories import DataFactory
+    from aiida.plugins.factories import ContainerFactory, DataFactory
 
-    node_class = DataFactory(entry_point) if entry_point else Node
+    if entry_point is None:
+        node_class = Node
+    else:
+        try:
+            node_class = DataFactory(entry_point)
+        except (InvalidEntryPointTypeError, MissingEntryPointError):
+            node_class = ContainerFactory(entry_point)
 
     if past_days is not None:
         filters = {'ctime': {'>': timezone.now() - datetime.timedelta(days=past_days)}}
@@ -377,14 +384,16 @@ def _warn_about_stash_nodes(pks_to_delete: set[int]) -> None:
     help='Also clean the remote work directory, if applicable.',
 )
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
+@options.CONTAINS_FORWARD()
 @with_dbenv()
-def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
+def node_delete(identifier, dry_run, force, clean_workdir, contains_forward, **traversal_rules):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
     the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
+    from aiida.common.exceptions import IntegrityError
     from aiida.orm.utils.loaders import NodeEntityLoader
     from aiida.tools import delete_nodes
 
@@ -405,7 +414,15 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
         return not click.confirm('Shall I continue?', abort=True)
 
     def _perform_delete():
-        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        try:
+            _, was_deleted = delete_nodes(
+                pks,
+                dry_run=dry_run or _dry_run_callback,
+                contains_forward=contains_forward,
+                **traversal_rules,
+            )
+        except IntegrityError as exc:
+            echo.echo_critical(str(exc))
         if was_deleted:
             echo.echo_success('Finished deletion.')
 
@@ -469,7 +486,9 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
 @click.option(
     '-e',
     '--entry-point',
-    type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.node', 'aiida.workflows'), load=True),
+    type=PluginParamType(
+        group=('aiida.calculations', 'aiida.data', 'aiida.container', 'aiida.node', 'aiida.workflows'), load=True
+    ),
     default=None,
     help='Only include nodes that are class or sub class of the class identified by this entry point.',
 )

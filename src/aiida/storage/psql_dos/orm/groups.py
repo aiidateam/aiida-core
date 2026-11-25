@@ -10,7 +10,7 @@
 
 import logging
 
-from aiida.common.exceptions import IntegrityError, UniquenessError
+from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 from aiida.storage.psql_dos.models.group import DbGroup, DbGroupNode
@@ -188,15 +188,12 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
         with utils.disable_expire_on_commit(self.backend.get_session()) as session:
-            ins_dict = []
+            if not nodes:
+                return
+            group_id = self.id
             for node in nodes:
                 check_node(node)
-                ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})
-            if len(ins_dict) == 0:
-                return
-            # Groups contain a complete ownership unit or none of it (spec §9); the ORM expands
-            # container roots before delegating here, direct backend callers must pass whole units.
-            self._validate_complete_units(session, [node.id for node in nodes], operation='add')
+            ins_dict = [{'dbnode_id': node.id, 'dbgroup_id': group_id} for node in nodes]
 
             table = self.GROUP_NODE_CLASS.__table__
             ins = insert(table)
@@ -206,44 +203,6 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
             if not session.in_nested_transaction():
                 session.commit()
 
-    def _validate_complete_units(self, session, ids: list[int], operation: str) -> None:
-        """Enforce complete-unit group membership at the backend contract level (spec §9).
-
-        A group contains a complete ownership unit or none of it: every requested node set must
-        already cover whole units (the ORM expands container roots before delegating here).
-        Child-targeted requests name the required root; root-only requests name the missing
-        subtree members.
-
-        :raises IntegrityError: if the set cuts an ownership unit.
-        """
-        from aiida.storage import ownership as ownership_contract
-
-        get_models = getattr(self.backend, '_ownership_models', None)
-        if get_models is None:
-            # Backends without the ownership schema cannot hold containers; nothing to enforce.
-            return
-        node_model, membership_model = get_models()
-        targets = set(ids)
-        rows = {row.id: row for row in session.query(node_model).filter(node_model.id.in_(sorted(targets))).all()}
-        for pk in sorted(targets):
-            owner = getattr(rows.get(pk), 'owner_id', None)
-            if owner is not None and owner not in targets:
-                msg = (
-                    f'cannot {operation} node<{pk}> to a group: it is an owned container '
-                    f'child (ownership root is node<{owner}>). Groups contain a complete '
-                    'ownership unit or none of it; pass the ownership root instead.'
-                )
-                raise IntegrityError(msg)
-        expanded = ownership_contract.expand_ownership_closure(session, node_model, membership_model, targets)
-        if expanded != targets:
-            missing = sorted(expanded - targets)
-            msg = (
-                f'cannot {operation} nodes to a group: the set cuts ownership unit(s), missing '
-                f'node(s) {missing}. Add or remove the complete ownership unit (root plus every '
-                'descendant) atomically.'
-            )
-            raise IntegrityError(msg)
-
     def remove_nodes(self, nodes, **kwargs):
         """Remove a node or a set of nodes from the group.
 
@@ -251,7 +210,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
 
         :param nodes: a list of `BackendNode` instance to be added to this group
         """
-        from sqlalchemy import and_
+        from aiida.storage.utils import _create_smarter_in_clause
 
         super().remove_nodes(nodes)
 
@@ -268,10 +227,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
             for node in nodes:
                 check_node(node)
             if nodes:
-                self._validate_complete_units(session, [node.id for node in nodes], operation='remove')
-            for node in nodes:
-                clause = and_(table.c.dbnode_id == node.id, table.c.dbgroup_id == self.id)
-                statement = table.delete().where(clause)
+                ids = [node.id for node in nodes]
+                statement = table.delete().where(
+                    table.c.dbgroup_id == self.id, _create_smarter_in_clause(session, table.c.dbnode_id, ids)
+                )
                 session.execute(statement)
 
             if not session.in_nested_transaction():

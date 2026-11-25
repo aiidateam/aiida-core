@@ -18,7 +18,7 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 
 from disk_objectstore import Container, backup_utils
-from sqlalchemy import column, insert, update
+from sqlalchemy import column, insert, or_, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common import exceptions
@@ -28,6 +28,7 @@ from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
+from aiida.orm.implementation.storage_backend import MembershipDeletion
 from aiida.storage.log import STORAGE_LOGGER
 from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 from aiida.storage.psql_dos.models import base
@@ -542,7 +543,15 @@ class PsqlDosBackend(StorageBackend):
             postgres.drop_dbuser(config['database_username'])
             LOGGER.report(f'Deleted database user `{config["database_username"]}`.')
 
-    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
+    def get_membership_deletion(self, pks_to_delete: Iterable[int]) -> MembershipDeletion:
+        """Return the membership changes for surviving nodes."""
+        from aiida.storage.ownership import get_membership_deletion
+
+        return get_membership_deletion(self.get_session(), *self._ownership_models(), list(pks_to_delete))
+
+    def delete_nodes_and_connections(
+        self, pks_to_delete: Iterable[int], *, membership: MembershipDeletion | None = None
+    ) -> None:
         from aiida.storage import ownership as ownership_contract
 
         if not self.in_transaction:
@@ -552,13 +561,22 @@ class PsqlDosBackend(StorageBackend):
 
         session = self.get_session()
         node_model, membership_model = self._ownership_models()
-        # Ownership closure: deletion sets must contain complete ownership units. Targeting an owned
-        # child without its root, or a container without its full subtree, is rejected so the caller
-        # expands the set explicitly with approval instead of relying on database cascades alone.
-        ownership_contract.validate_deletion_set(session, node_model, membership_model, pks)
-        # Delete the containment edges of the ownership unit(s).
+        if membership is None:
+            ownership_contract.validate_deletion_set(session, node_model, membership_model, pks)
+        else:
+            if self.get_membership_deletion(pks) != membership:
+                msg = 'Container membership changed since deletion was planned; rerun the deletion.'
+                raise exceptions.IntegrityError(msg)
+            if membership.detached:
+                session.query(node_model).filter(
+                    _create_smarter_in_clause(session, node_model.id, sorted(membership.detached))
+                ).update({node_model.owner_id: None}, synchronize_session='fetch')
+            ownership_contract.invalidate_container_hashes(session, node_model, membership.edited_containers)
         session.query(membership_model).filter(
-            _create_smarter_in_clause(session=session, column=membership_model.owner_id, values=pks)
+            or_(
+                _create_smarter_in_clause(session, membership_model.owner_id, pks),
+                _create_smarter_in_clause(session, membership_model.child_id, pks),
+            )
         ).delete(synchronize_session='fetch')
         group_node_model = self._get_mapper_from_entity(EntityTypes.GROUP_NODE, with_pk=True)[0].class_
         link_model = self._get_mapper_from_entity(EntityTypes.LINK, with_pk=True)[0].class_

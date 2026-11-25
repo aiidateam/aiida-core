@@ -70,7 +70,12 @@ from __future__ import annotations
 import typing as t
 from dataclasses import dataclass, field
 
+from sqlalchemy.orm import Session
+
+from aiida.common import timezone
 from aiida.common.exceptions import IntegrityError
+from aiida.orm.implementation.storage_backend import MembershipDeletion
+from aiida.storage.utils import _create_smarter_in_clause
 
 __all__ = (
     'CONTAINER_KINDS',
@@ -86,7 +91,10 @@ __all__ = (
     'attach_membership',
     'container_kind_for',
     'default_bulk_node_rows',
+    'expand_owned_members',
     'expand_ownership_closure',
+    'get_membership_deletion',
+    'invalidate_container_hashes',
     'is_container_node_type',
     'is_data_node_type',
     'is_ownable_node_type',
@@ -408,7 +416,9 @@ def validate_ownership_graph(
         cursor = parent
 
 
-def expand_ownership_closure(session, node_model, membership_model, pks: t.Iterable[int]) -> set[int]:
+def expand_ownership_closure(
+    session: Session, node_model: t.Any, membership_model: t.Any, pks: t.Iterable[int]
+) -> set[int]:
     """Expand node pks to their complete ownership unit.
 
     Follows ``owner_id`` upward to the ownership root, then collects the
@@ -419,39 +429,95 @@ def expand_ownership_closure(session, node_model, membership_model, pks: t.Itera
     :returns: the expanded set of node ids (roots plus all descendants).
     """
     targets = set(pks)
-    if not targets:
-        return set()
-    rows = _node_rows_by_id(session, node_model, set(targets))
+    # Fetch each frontier in bulk; a wide ownership unit should not require a query per node.
+    parents: dict[int, int | None] = {}
+    frontier = targets
+    while frontier:
+        owners = dict(
+            session.query(node_model.id, node_model.owner_id)
+            .filter(_create_smarter_in_clause(session, node_model.id, list(frontier)))
+            .tuples()
+        )
+        parents.update((pk, owners.get(pk)) for pk in frontier)
+        frontier = {owner for owner in owners.values() if owner is not None and owner not in parents}
+
     roots: set[int] = set()
     for pk in targets:
         cursor = pk
         seen: set[int] = set()
-        while True:
-            if cursor in seen:
-                break
+        while cursor not in seen:
             seen.add(cursor)
-            row = rows.get(cursor)
-            if row is None:
-                row = session.query(node_model).filter(node_model.id == cursor).one_or_none()
-                if row is None:
-                    break
-                rows[cursor] = row
-            parent = getattr(row, 'owner_id')
+            parent = parents[cursor]
             if parent is None:
                 break
             cursor = parent
         roots.add(cursor)
 
-    expanded = set(roots)
-    frontier = list(roots)
+    return _expand_owned_members(session, node_model, membership_model, roots)
+
+
+def _expand_owned_members(session: Session, node_model: t.Any, membership_model: t.Any, targets: set[int]) -> set[int]:
+    expanded = targets.copy()
+    frontier = targets
     while frontier:
-        current = frontier.pop()
-        children = session.query(membership_model.child_id).join(node_model, node_model.id == membership_model.child_id)
-        for (child_id,) in children.filter(membership_model.owner_id == current, node_model.owner_id == current):
-            if child_id not in expanded:
-                expanded.add(child_id)
-                frontier.append(child_id)
+        children = (
+            session.query(membership_model.child_id)
+            .join(node_model, node_model.id == membership_model.child_id)
+            .filter(
+                _create_smarter_in_clause(session, membership_model.owner_id, list(frontier)),
+                node_model.owner_id == membership_model.owner_id,
+            )
+        )
+        frontier = {child_id for (child_id,) in children} - expanded
+        expanded.update(frontier)
     return expanded
+
+
+def expand_owned_members(backend: t.Any, pks: t.Iterable[int]) -> set[int]:
+    """Include owned descendants without following links to references or parents."""
+    targets = set(pks)
+    get_models = getattr(backend, '_ownership_models', None)
+    if not targets or get_models is None:
+        return targets
+    node_model, membership_model = get_models()
+    return _expand_owned_members(backend.get_session(), node_model, membership_model, targets)
+
+
+def get_membership_deletion(
+    session: Session, node_model: t.Any, membership_model: t.Any, ids: list[int]
+) -> MembershipDeletion:
+    """Determine which surviving nodes are detached and which containers lose members."""
+    if not ids:
+        return MembershipDeletion()
+    deleting_owner = _create_smarter_in_clause(session, membership_model.owner_id, ids)
+    deleting_child = _create_smarter_in_clause(session, membership_model.child_id, ids)
+    edited = session.query(membership_model.owner_id).filter(deleting_child, ~deleting_owner).distinct()
+    detached = (
+        session.query(membership_model.child_id)
+        .join(node_model, node_model.id == membership_model.child_id)
+        .filter(deleting_owner, ~deleting_child, node_model.owner_id == membership_model.owner_id)
+    )
+    return MembershipDeletion(
+        detached=frozenset(child for (child,) in detached),
+        edited_containers=frozenset(owner for (owner,) in edited),
+    )
+
+
+def invalidate_container_hashes(session: Session, node_model: t.Any, ids: t.Iterable[int]) -> None:
+    """Invalidate changed containers and their ancestors in the same transaction."""
+    seen: set[int] = set()
+    frontier = set(ids)
+    now = timezone.now()
+    while frontier:
+        seen.update(frontier)
+        rows = session.query(node_model).filter(_create_smarter_in_clause(session, node_model.id, list(frontier)))
+        frontier = set()
+        for row in rows:
+            if '_aiida_hash' in row.extras:
+                row.extras = {key: value for key, value in row.extras.items() if key != '_aiida_hash'}
+            row.mtime = now
+            if row.owner_id is not None and row.owner_id not in seen:
+                frontier.add(row.owner_id)
 
 
 def validate_deletion_set(session, node_model, membership_model, pks: t.Iterable[int]) -> None:
@@ -477,9 +543,13 @@ def validate_deletion_set(session, node_model, membership_model, pks: t.Iterable
             'and revalidate with explicit approval; database cascades alone are not sufficient.'
         )
         raise IntegrityError(msg)
+    ids = list(targets)
     edge = (
         session.query(membership_model)
-        .filter(membership_model.child_id.in_(targets), membership_model.owner_id.not_in(targets))
+        .filter(
+            _create_smarter_in_clause(session, membership_model.child_id, ids),
+            ~_create_smarter_in_clause(session, membership_model.owner_id, ids),
+        )
         .first()
     )
     if edge is not None:

@@ -420,31 +420,25 @@ class PsqlDosBackend(StorageBackend):
             LOGGER.report(f'Deleted database user `{config["database_username"]}`.')
 
     def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
-        from aiida.storage.psql_dos.models.group import DbGroupNode
-        from aiida.storage.psql_dos.models.node import DbLink, DbNode
-
         if not self.in_transaction:
             raise AssertionError('Cannot delete nodes and links outside a transaction')
 
         pks = list(pks_to_delete)
 
         session = self.get_session()
-        # Delete the membership of these nodes to groups.
-        session.query(DbGroupNode).filter(
-            _create_smarter_in_clause(session=session, column=DbGroupNode.dbnode_id, values=pks)
-        ).delete(synchronize_session='fetch')
-        # Delete the links coming out of the nodes marked for deletion.
-        session.query(DbLink).filter(
-            _create_smarter_in_clause(session=session, column=DbLink.input_id, values=pks)
-        ).delete(synchronize_session='fetch')
-        # Delete the links pointing to the nodes marked for deletion.
-        session.query(DbLink).filter(
-            _create_smarter_in_clause(session=session, column=DbLink.output_id, values=pks)
-        ).delete(synchronize_session='fetch')
-        # Delete the actual nodes
-        session.query(DbNode).filter(_create_smarter_in_clause(session=session, column=DbNode.id, values=pks)).delete(
-            synchronize_session='fetch'
-        )
+        group_node_model = self._get_mapper_from_entity(EntityTypes.GROUP_NODE, with_pk=True)[0].class_
+        link_model = self._get_mapper_from_entity(EntityTypes.LINK, with_pk=True)[0].class_
+        node_model = self._get_mapper_from_entity(EntityTypes.NODE, with_pk=True)[0].class_
+        # Use the active backend's mapped classes so the deletes also update its session identity map.
+        for model, id_column in (
+            (group_node_model, group_node_model.dbnode_id),
+            (link_model, link_model.input_id),
+            (link_model, link_model.output_id),
+            (node_model, node_model.id),
+        ):
+            session.query(model).filter(
+                _create_smarter_in_clause(session=session, column=id_column, values=pks)
+            ).delete(synchronize_session='fetch')
 
     def get_backend_entity(self, model: base.Base) -> BackendEntity:
         """Return the backend entity that corresponds to the given Model instance

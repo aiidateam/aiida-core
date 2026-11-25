@@ -769,13 +769,16 @@ class Process(ProcessBase):
         if self.metadata.store_provenance is False:
             return
 
-        outputs_flat = self._flat_outputs()
+        outputs_flat = {
+            PORT_NAMESPACE_SEPARATOR.join(path): (path, output)
+            for path, output in self._flatten_outputs(self.output_ports, self.outputs)
+        }
         outputs_stored = self.node.base.links.get_outgoing(
             link_type=(LinkType.CREATE, LinkType.RETURN)
         ).all_link_labels()
-        outputs_new = set(outputs_flat.keys()) - set(outputs_stored)
+        outputs_new = set(outputs_flat) - set(outputs_stored)
 
-        for link_label, output in outputs_flat.items():
+        for link_label, (_, output) in outputs_flat.items():
             if link_label not in outputs_new:
                 continue
 
@@ -964,15 +967,6 @@ class Process(ProcessBase):
             self._provenance_inputs = dict(self._flatten_inputs(self.spec().inputs, inputs))
         return dict(self._provenance_inputs)
 
-    def _flat_outputs(self) -> dict[str, t.Any]:
-        """Return a flattened version of the registered outputs dictionary.
-
-        The eventual keys will be a concatenation of the nested keys.
-
-        :return: flat dictionary of parsed outputs
-        """
-        return dict(self._flatten_outputs(self.output_ports, self.outputs))
-
     def _flatten_inputs(
         self,
         port: InputPort | PortNamespace | None,
@@ -1023,40 +1017,24 @@ class Process(ProcessBase):
         self,
         port: OutputPort | PortNamespace | None,
         port_value: t.Any,
-        parent_name: str = '',
-        separator: str = PORT_NAMESPACE_SEPARATOR,
-    ) -> list[tuple[str, t.Any]]:
-        """Function that will recursively flatten the outputs dictionary.
-
-        :param port: port against which to map the port value, can be OutputPort or PortNamespace
-        :param port_value: value for the current port, can be a Mapping
-        :param parent_name: the parent key with which to prefix the keys
-        :param separator: character to use for the concatenation of keys
-
-        :return: flat list of outputs
-
-        """
+        path: tuple[str, ...] = (),
+    ) -> Iterator[tuple[tuple[str, ...], t.Any]]:
+        """Yield output leaves with their original port paths."""
         if (port is None and isinstance(port_value, orm.Node)) or isinstance(port, OutputPort):
-            return [(parent_name, port_value)]
+            yield path, port_value
+            return
 
         if (port is None and isinstance(port_value, Mapping)) or isinstance(port, PortNamespace):
-            items = []
             for name, value in port_value.items():
-                prefixed_key = parent_name + separator + name if parent_name else name
-
                 try:
                     nested_port = t.cast(OutputPort | PortNamespace, port[name]) if port else None
                 except (KeyError, TypeError):
                     nested_port = None
 
-                sub_items = self._flatten_outputs(
-                    port=nested_port, port_value=value, parent_name=prefixed_key, separator=separator
-                )
-                items.extend(sub_items)
-            return items
+                yield from self._flatten_outputs(nested_port, value, (*path, name))
+            return
 
         assert port is None, port
-        return []
 
     def exposed_inputs(
         self, process_class: type[Process], namespace: str | None = None, agglomerate: bool = True

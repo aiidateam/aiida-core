@@ -295,6 +295,11 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         return self._backend_entity.time
 
     @property
+    def ctime(self) -> datetime.datetime:
+        """:return: the creation time"""
+        return self.time
+
+    @property
     def user(self) -> User:
         """:return: the user associated with this group"""
         return entities.from_backend_entity(users.User, self._backend_entity.user)

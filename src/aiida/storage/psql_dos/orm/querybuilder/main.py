@@ -66,6 +66,7 @@ PROJECT_MAP = {
     'db_dbgroup': {
         'pk': 'id',
         'user': 'user_id',
+        'ctime': 'time',
     },
     'db_dbcomment': {
         'pk': 'id',
@@ -940,8 +941,9 @@ def get_column(colname: str, alias: AliasedClass) -> InstrumentedAttribute:
         return getattr(alias, colname)
     except AttributeError as exc:
         keys = []
+        reverse_projections = {v: k for k, v in projections.items()} if projections else {}
         for key in alias._sa_class_manager.mapper.c.keys():
-            if colalias := ALIAS_MAP.get(key):
+            if colalias := reverse_projections.get(key, ALIAS_MAP.get(key)):
                 keys.append(f'{colalias} (alias for {key})')
             else:
                 keys.append(key)

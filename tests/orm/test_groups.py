@@ -591,6 +591,33 @@ class TestGroupsSubclasses:
 
     @staticmethod
     @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_querying_ctime():
+        """Test projecting, filtering, and ordering by `ctime` on groups."""
+        group1 = orm.Group(label='group_ctime_1').store()
+        group2 = orm.Group(label='group_ctime_2').store()
+
+        assert group1.ctime == group1.time
+        assert group2.ctime == group2.time
+
+        # Test project ctime
+        qb = orm.QueryBuilder().append(orm.Group, project=['label', 'ctime'], tag='group')
+        qb.order_by({'group': {'ctime': 'asc'}})
+        results = qb.all()
+        assert results[0][0] == 'group_ctime_1'
+        assert results[1][0] == 'group_ctime_2'
+        assert results[0][1] == group1.ctime
+
+        # Test order_by desc
+        qb = orm.QueryBuilder().append(orm.Group, project=['label'], tag='group')
+        qb.order_by({'group': {'ctime': 'desc'}})
+        assert [r[0] for r in qb.all()] == ['group_ctime_2', 'group_ctime_1']
+
+        # Test filter by ctime
+        qb = orm.QueryBuilder().append(orm.Group, filters={'ctime': {'>=': group2.ctime}})
+        assert qb.count() == 1
+
+    @staticmethod
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_querying():
         """Test querying for groups with and without subclassing."""
         orm.Group(label=uuid.uuid4().hex).store()

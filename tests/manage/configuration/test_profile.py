@@ -64,6 +64,67 @@ def test_set_option(profile_factory):
     assert profile.get_option(option_key) == option_value_two
 
 
+@pytest.mark.parametrize(
+    'valid_uuid',
+    (
+        'c02e1fd7-1bf1-42ec-a059-86cbff2eb87c',
+        'c02e1fd71bf142eca05986cbff2eb87c',
+        '00000000-0000-0000-0000-000000000000',
+        '00000000000000000000000000000000',
+        uuid.UUID('c02e1fd7-1bf1-42ec-a059-86cbff2eb87c'),
+    ),
+)
+def test_uuid_setter_valid(profile_factory, valid_uuid):
+    """Test setting a valid UUID on a ``Profile`` instance."""
+    profile = profile_factory()
+    profile.uuid = valid_uuid
+    assert profile.uuid == str(valid_uuid)
+
+
+@pytest.mark.parametrize(
+    'invalid_uuid, error_cls',
+    (
+        ('invalid-uuid', ValueError),
+        ('', ValueError),
+        ('12345', ValueError),
+        ('c02e1fd7-1bf1-42ec-a059-86cbff2eb87g', ValueError),
+        (12345, TypeError),
+        (None, TypeError),
+        ([], TypeError),
+        ({}, TypeError),
+    ),
+)
+def test_uuid_setter_invalid(profile_factory, invalid_uuid, error_cls):
+    """Test that setting an invalid UUID on a ``Profile`` instance raises an error."""
+    profile = profile_factory()
+    with pytest.raises(error_cls):
+        profile.uuid = invalid_uuid
+
+
+def test_init_uuid_validation():
+    """Test that ``Profile.__init__`` validates UUID when validate=True."""
+    from aiida.common import exceptions
+    from aiida.manage.configuration import Profile
+
+    config = {
+        'storage': {'backend': 'core.sqlite_temp', 'config': {}},
+        'process_control': {'backend': None, 'config': None},
+        'PROFILE_UUID': 'not-a-valid-uuid',
+    }
+    with pytest.raises(exceptions.ConfigurationError, match='has an invalid UUID'):
+        Profile('test_profile', config, validate=True)
+
+    # Invalid type should also raise ConfigurationError
+    config['PROFILE_UUID'] = 12345
+    with pytest.raises(exceptions.ConfigurationError, match='has an invalid UUID'):
+        Profile('test_profile', config, validate=True)
+
+    # With validate=False, it should not raise
+    config['PROFILE_UUID'] = 'not-a-valid-uuid'
+    profile = Profile('test_profile', config, validate=False)
+    assert profile.uuid == 'not-a-valid-uuid'
+
+
 TEST_GROUP_LABEL = 'test_profile_dump_group'
 
 

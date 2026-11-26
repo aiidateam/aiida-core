@@ -53,8 +53,43 @@ def test_unicode(tmp_path_factory):
 
 def test_get_abs_path_without_limit():
     """Check that the absolute path function can get an absolute path."""
+    import os
+
     folder = Folder('/tmp')
-    assert folder.get_abs_path('test_file.txt') == '/tmp/test_file.txt'
+    assert folder.get_abs_path('test_file.txt') == os.path.abspath('/tmp/test_file.txt')
+
+
+def test_folder_limit_prefix_collision(tmp_path):
+    """Test that folder_limit properly rejects paths that share a string prefix but are not subfolders (#7195)."""
+    subfolder = tmp_path / 'folder'
+    subfolder.mkdir()
+    sibling = tmp_path / 'folder_sibling'
+    sibling.mkdir()
+
+    with pytest.raises(ValueError, match='is not within the folder_limit'):
+        Folder(sibling, folder_limit=subfolder)
+
+
+def test_folder_get_abs_path_traversal_rejection(tmp_path):
+    """Test that get_abs_path rejects path traversal attempts escaping the folder (#7195)."""
+    subfolder = tmp_path / 'folder'
+    subfolder.mkdir()
+    sibling = tmp_path / 'folder_sibling'
+    sibling.mkdir()
+
+    folder = Folder(subfolder)
+
+    # Path that shares a string prefix with the folder name
+    with pytest.raises(ValueError, match="didn't specify a valid filename"):
+        folder.get_abs_path('../folder_sibling/file.txt')
+
+    # General parent directory traversal
+    with pytest.raises(ValueError, match="didn't specify a valid filename"):
+        folder.get_abs_path('../escaped.txt')
+
+    # Valid subpath should succeed
+    expected = (subfolder / 'nested' / 'file.txt').resolve()
+    assert pathlib.Path(folder.get_abs_path('nested/file.txt')).resolve() == expected
 
 
 def test_create_file_from_filelike(tmpdir):

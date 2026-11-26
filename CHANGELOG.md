@@ -23,7 +23,7 @@ Processes with container inputs bypass cache lookup, and processes with containe
 
 `DataDict` keys do not follow process port naming rules. Storing a `DataDict` with a key longer than 255 characters or containing a NUL character raises a storage error on every backend. Existing stored keys remain readable, and `Dict` is unchanged.
 
-Calculations returning containers record direct `CREATE` links to the root and every newly owned descendant. `Data.creator` reads the node's own link. Return a new container and clone any existing nodes you want to include; references to stored nodes are not allowed in calculation output containers. Only the root is a process output port.
+Calculations accepting containers record `INPUT_CALC` links from all descendants and references, as well as the root. Calculations returning containers record direct `CREATE` links to the root and every newly owned descendant. `Data.creator` reads the node's own link. Return a new container and clone any existing nodes you want to include; references to stored nodes are not allowed in calculation output containers. Only the roots appear as process ports.
 
 The unreleased `Container.layout` property has been removed. `DataList` and `DataDict` are identified by their node type and always store one membership row per child.
 

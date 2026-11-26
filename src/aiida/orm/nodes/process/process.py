@@ -54,7 +54,9 @@ class ProcessNodeCaching(NodeCaching):
         """Return whether the process has a container among its stored or pending inputs."""
         from aiida.orm.nodes.data.container import Container
 
-        inputs = self._node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+        inputs = self._node.base.links.get_incoming(
+            link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK), include_container_members=False
+        )
         return any(isinstance(entry.node, Container) for entry in inputs)
 
     @property
@@ -107,7 +109,7 @@ class ProcessNodeCaching(NodeCaching):
                 'inputs': {
                     entry.link_label: entry.node.base.caching.compute_hash()
                     for entry in self._node.base.links.get_incoming(
-                        link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)
+                        link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK), include_container_members=False
                     )
                     if entry.link_label not in self._hash_ignored_inputs
                 }
@@ -292,7 +294,9 @@ class ProcessNode(Sealable, Node):
         :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
         builder = self.process_class.get_builder()
-        inputs = self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested()
+        inputs = self.base.links.get_incoming(
+            link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK), include_container_members=False
+        ).nested()
         self.recursive_merge(inputs, self.get_metadata_inputs() or {})
         builder._update(inputs)
         return builder

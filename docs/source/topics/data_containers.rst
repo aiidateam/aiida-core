@@ -135,7 +135,9 @@ Using containers in processes
 =============================
 
 Process ports link whole containers, not their owned children.
-Passing a whole container as an input links that container; passing an owned child detaches a standalone copy first, and the process records that same copy as its provenance input.
+Passing a whole container as an input links the root to the declared port.
+For calculations, nested containers, owned members, and referenced nodes also get ``INPUT_CALC`` links as dependencies, but do not appear as extra ports in ``node.inputs``.
+Passing an owned child separately detaches a standalone copy first, and the process records that same copy as its provenance input.
 Like any other recorded input, the detached copy cannot be returned unchanged by a calculation; use ``value.clone()`` to create a new output.
 
 .. code-block:: python
@@ -221,7 +223,7 @@ Deletion
 
 By default, deletion follows ownership downwards, in addition to the ordinary provenance traversal rules.
 Membership alone does not select a member's owner or siblings for deletion.
-For calculation outputs, ordinary provenance rules can select the creator and its other outputs, including the root and other members of the container.
+For calculation inputs and outputs, ordinary provenance rules can select calculations that consumed or created the member, and their outputs.
 Use ``--no-contains-forward`` to stop following membership during deletion; members not selected by other rules survive as standalone nodes with the same UUIDs.
 Nested members retain their own children, and referenced nodes are not selected for deletion merely because their container is deleted.
 Preview the deletion, which reports detachment and changes to surviving containers, before confirming:

@@ -59,7 +59,8 @@ Typed reads check ``node_type`` to reject cross-kind access.
 
 Membership rows are containment edges, not provenance.
 Containment always stays in its own tables.
-The only provenance links to owned children are direct ``CREATE`` links from the calculation that created the output subtree; these links do not encode membership.
+Owned children can have direct ``CREATE`` links from the calculation that created them and ``INPUT_CALC`` links to calculations that consume a container containing them.
+These links record provenance, not membership.
 
 Three consequences fall out of this shape.
 First, ownership is exclusive and acyclic: ``child_id`` is unique, so a node can only ever have one owner, and the backend refuses self-ownership plus any edge that would close a cycle through already-stored rows.
@@ -79,6 +80,8 @@ Use ``clone()`` explicitly to create an independent node or subtree.
 There is no persistent record of which source a clone came from.
 
 Process boundaries still enforce separate provenance rules.
+Passing a container to a calculation records the root as a port input and all its descendants and references as dependencies.
+The additional ``INPUT_CALC`` links use the same reserved label scheme as member ``CREATE`` links and are written in the transaction storing the calculation.
 Handing an owned child to a process detaches a standalone copy first, and the process executes with the copy it records as its provenance input.
 Exposing an owned child as a calculation output copies it and attaches ``CREATE`` to the copy.
 Workflows never copy on output: they may return a whole standalone container, but returning an owned child is rejected, since silently duplicating data out of a workflow would hide where nodes came from.

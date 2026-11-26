@@ -95,7 +95,7 @@ class GraphTraversalRules(Enum):
 
 
 # User-supplied link labels cannot start with an underscore.
-CONTAINER_MEMBER_CREATE_PREFIX = '_aiida_container_member_'
+CONTAINER_MEMBER_LINK_PREFIX = '_aiida_container_member_'
 
 
 def validate_link_label(link_label: str) -> None:

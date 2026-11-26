@@ -951,7 +951,7 @@ class CalcJob(Process):
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import Code, Computer, load_code
 
-        inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
+        inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC, include_container_members=False)
 
         if not self.inputs.metadata.dry_run and not self.node.is_stored:
             raise InvalidOperation('calculation node is not stored.')

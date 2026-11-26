@@ -75,7 +75,7 @@ from sqlalchemy.orm import Session
 
 from aiida.common import timezone
 from aiida.common.exceptions import IntegrityError
-from aiida.common.links import CONTAINER_MEMBER_CREATE_PREFIX, LinkType
+from aiida.common.links import CONTAINER_MEMBER_LINK_PREFIX, LinkType
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.storage_backend import MembershipDeletion
 from aiida.storage.utils import _create_smarter_in_clause
@@ -101,6 +101,7 @@ __all__ = (
     'is_container_node_type',
     'is_data_node_type',
     'is_ownable_node_type',
+    'store_container_input_links',
     'store_container_subtree',
     'validate_bulk_node_insert',
     'validate_bulk_node_update',
@@ -617,9 +618,9 @@ def validate_provenance_link_type(value: object) -> None:
 
 
 def validate_link_rows(session, node_model, rows: list[dict]) -> None:
-    """Reject non-provenance links and links touching owned nodes, except member creation links.
+    """Reject non-provenance links and ordinary provenance links touching owned nodes.
 
-    Member creation links use a reserved label and are written by subtree storage or archive import.
+    Member dependencies and creation links use reserved labels; only their member endpoint may be owned.
 
     :raises IntegrityError: on any violation.
     """
@@ -627,8 +628,10 @@ def validate_link_rows(session, node_model, rows: list[dict]) -> None:
     for row in rows:
         link_type = row.get('type')
         validate_provenance_link_type(link_type)
-        endpoints.add(row['input_id'])
-        if link_type != LinkType.CREATE.value or not row.get('label', '').startswith(CONTAINER_MEMBER_CREATE_PREFIX):
+        member_link = row.get('label', '').startswith(CONTAINER_MEMBER_LINK_PREFIX)
+        if not (member_link and link_type == LinkType.INPUT_CALC.value):
+            endpoints.add(row['input_id'])
+        if not (member_link and link_type == LinkType.CREATE.value):
             endpoints.add(row['output_id'])
     for endpoint_id in endpoints:
         assert_no_provenance_link_to_owned(session, node_model, endpoint_id=endpoint_id)
@@ -724,9 +727,9 @@ def attach_membership(
         session.flush()
 
 
-def _member_create_label(owner_uuid: str | UUID, child_uuid: str | UUID) -> str:
+def _member_link_label(owner_uuid: str | UUID, child_uuid: str | UUID) -> str:
     """Use UUIDs to preserve the link label when an archive remaps database IDs."""
-    return f'{CONTAINER_MEMBER_CREATE_PREFIX}{owner_uuid}_{child_uuid}'.replace('-', '')
+    return f'{CONTAINER_MEMBER_LINK_PREFIX}{owner_uuid}_{child_uuid}'.replace('-', '')
 
 
 def _members_to_merge(session, node_model, membership_model, link_model, owner, members: list[dict]) -> list[dict]:
@@ -765,23 +768,26 @@ def _members_to_merge(session, node_model, membership_model, link_model, owner, 
     owned = {spec['child_id'] for spec in pending if not spec.get('reference', False)}
     if owned:
         owned_ids = tuple(owned)
-        links = (
-            session.query(link_model.input_id, link_model.type, link_model.label, node_model.uuid)
-            .join(node_model, node_model.id == link_model.output_id)
-            .filter(
-                or_(
-                    _create_smarter_in_clause(session, link_model.input_id, owned_ids),
-                    _create_smarter_in_clause(session, link_model.output_id, owned_ids),
-                )
+        member_uuids = dict(
+            session.query(node_model.id, node_model.uuid)
+            .filter(_create_smarter_in_clause(session, node_model.id, owned_ids))
+            .all()
+        )
+        links = session.query(link_model.input_id, link_model.output_id, link_model.type, link_model.label).filter(
+            or_(
+                _create_smarter_in_clause(session, link_model.input_id, owned_ids),
+                _create_smarter_in_clause(session, link_model.output_id, owned_ids),
             )
         )
-        for source_id, link_type, label, child_uuid in links:
-            # A partial archive may have imported the child's CREATE link without its owner.
-            if (
-                source_id not in owned
-                and link_type == LinkType.CREATE.value
-                and label == _member_create_label(owner.uuid, child_uuid)
-            ):
+        for source_id, target_id, link_type, label in links:
+            # A partial archive may keep a member's provenance without its owner.
+            member_id = None
+            if link_type == LinkType.CREATE.value and source_id not in owned:
+                member_id = target_id
+            elif link_type == LinkType.INPUT_CALC.value and target_id not in owned:
+                member_id = source_id
+            child_uuid = member_uuids.get(member_id)
+            if child_uuid is not None and label == _member_link_label(owner.uuid, child_uuid):
                 continue
             msg = 'Cannot adopt a node with existing provenance links as a container member.'
             raise IntegrityError(msg)
@@ -904,7 +910,7 @@ def store_container_subtree(
                         'input_id': creator.pk,
                         'output_id': member.entity.pk,
                         'type': LinkType.CREATE.value,
-                        'label': _member_create_label(spec.owner.uuid, member.entity.uuid),
+                        'label': _member_link_label(spec.owner.uuid, member.entity.uuid),
                     }
                     for spec in containers
                     for member in spec.members
@@ -913,8 +919,54 @@ def store_container_subtree(
             )
 
 
+def store_container_input_links(
+    backend: t.Any, *, calculation_id: int, container_ids: set[int], direct_input_ids: set[int]
+) -> None:
+    """Record member dependencies within the transaction storing the calculation's port links.
+
+    Walk membership from each container input, including references. The same member needs only
+    one dependency link, even if its container is passed to several ports. A member already
+    linked through a declared port does not need an extra link.
+    """
+    from sqlalchemy.orm import aliased
+
+    session = backend.get_session()
+    node_model, membership_model = backend._ownership_models()
+    owner = aliased(node_model)
+    frontier = container_ids
+    seen = set(direct_input_ids)
+    rows = []
+
+    while frontier:
+        members = (
+            session.query(owner.uuid, node_model.id, node_model.uuid, node_model.node_type)
+            .select_from(membership_model)
+            .join(owner, owner.id == membership_model.owner_id)
+            .join(node_model, node_model.id == membership_model.child_id)
+            .filter(_create_smarter_in_clause(session, membership_model.owner_id, tuple(frontier)))
+        )
+        frontier = set()
+        for owner_uuid, member_id, member_uuid, member_type in members:
+            if member_id in seen:
+                continue
+            seen.add(member_id)
+            rows.append(
+                {
+                    'input_id': member_id,
+                    'output_id': calculation_id,
+                    'type': LinkType.INPUT_CALC.value,
+                    'label': _member_link_label(owner_uuid, member_uuid),
+                }
+            )
+            if is_container_node_type(member_type):
+                frontier.add(member_id)
+
+    if rows:
+        backend.bulk_insert(EntityTypes.LINK, rows)
+
+
 def assert_no_provenance_link_to_owned(session, node_model, *, endpoint_id: int, role: str = 'endpoint') -> None:
-    """Reject links touching an owned node outside the member creation path.
+    """Reject links touching an owned node outside the member provenance paths.
 
     :param session: the active SQLAlchemy session.
     :param endpoint_id: pk of the link endpoint to check.
@@ -925,6 +977,6 @@ def assert_no_provenance_link_to_owned(session, node_model, *, endpoint_id: int,
     if row is not None and getattr(row, 'owner_id') is not None:
         msg = (
             f'Rejected provenance link to owned {role} node {endpoint_id} '
-            f'(owned by {getattr(row, "owner_id")}). Only container member CREATE links can target owned nodes.'
+            f'(owned by {getattr(row, "owner_id")}). Use container member provenance links instead.'
         )
         raise IntegrityError(msg)

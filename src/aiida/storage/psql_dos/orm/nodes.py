@@ -10,6 +10,7 @@
 
 import typing as t
 from collections.abc import Iterable
+from contextlib import nullcontext
 from datetime import datetime
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,6 +18,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.common.links import LinkType
 from aiida.orm.implementation import BackendNode, BackendNodeCollection
 from aiida.orm.implementation.containers import BackendContainer
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
@@ -209,7 +211,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         ownership_contract.validate_provenance_link_type(link_type)
         session = self.backend.get_session()
 
-        # Member creation links are written with the subtree, never as individual links.
+        # Member provenance links are written in bulk together with the ordinary process links.
         ownership_contract.assert_no_provenance_link_to_owned(
             session, self.MODEL_CLASS, endpoint_id=source.pk, role='source'
         )
@@ -242,21 +244,33 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         if clean:
             self.clean_values()
 
-        session.add(self.model)
+        calculation_inputs = {source.pk: source for source, kind, _ in links or () if kind is LinkType.INPUT_CALC}
+        container_ids = {pk for pk, source in calculation_inputs.items() if _is_container_node_type(source.node_type)}
 
-        if links:
-            for link_triple in links:
+        with self.backend.transaction() if container_ids else nullcontext():
+            session.add(self.model)
+            for link_triple in links or ():
                 self._add_link(*link_triple)
 
-        if not session.in_nested_transaction():
-            try:
-                session.commit()
-            except SQLAlchemyError:
-                session.rollback()
-                raise
-        else:
-            # Make sure the new addition is flushed to, e.g., populate automatic primary keys.
-            session.flush()
+            if container_ids:
+                from aiida.storage.ownership import store_container_input_links
+
+                store_container_input_links(
+                    self.backend,
+                    calculation_id=self.pk,
+                    container_ids=container_ids,
+                    direct_input_ids=set(calculation_inputs),
+                )
+
+            if not session.in_nested_transaction():
+                try:
+                    session.commit()
+                except SQLAlchemyError:
+                    session.rollback()
+                    raise
+            else:
+                # Make sure the new addition is flushed to, e.g., populate automatic primary keys.
+                session.flush()
 
         return self
 

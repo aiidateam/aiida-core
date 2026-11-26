@@ -153,6 +153,28 @@ def test_create_links_for_nested_members():
     assert set(calculation.outputs) == {'result'}
 
 
+def test_input_calc_links_for_nested_members():
+    """Nested containers, owned leaves, and references are dependencies, not separate ports."""
+    from aiida.common.links import LinkType
+    from aiida.engine import calcfunction
+
+    @calcfunction
+    def consume(first, second):
+        return Int(first[0][0].value + second[1].value)
+
+    referenced = Int(2).store()
+    container = DataList([DataList([Int(1)]), referenced])
+    result, calculation = consume.run_get_node(container, container)
+
+    assert result.value == 3
+    assert set(calculation.inputs) == {'first', 'second'}
+    assert calculation.inputs.first.uuid == calculation.inputs.second.uuid == container.uuid
+    inputs = calculation.base.links.get_incoming(link_type=LinkType.INPUT_CALC).all_nodes()
+    assert sorted(node.uuid for node in inputs) == sorted(
+        [container.uuid, container.uuid, container[0].uuid, container[0][0].uuid, referenced.uuid]
+    )
+
+
 def test_calcfunction_owned_child_output(aiida_profile_clean):
     """Returning an owned container child records a standalone copy; the caller handle stays usable."""
     from aiida.engine import calcfunction, run_get_node

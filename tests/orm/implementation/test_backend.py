@@ -271,18 +271,20 @@ def test_backup_implemented(backend, monkeypatch, tmp_path):
 @pytest.mark.parametrize(
     'storage_backend',
     [
+        pytest.param('core.sqlite_dos', id='sqlite'),
         pytest.param('core.psql_dos', id='postgresql', marks=pytest.mark.requires_psql),
+        pytest.param('core.sqlite_temp', id='sqlite_temp'),
     ],
 )
 def test_transaction_rolls_back_root_commit_failure(
-    storage_backend, aiida_config, aiida_profile_factory, config_psql_dos, manager
+    storage_backend, aiida_config, aiida_profile_factory, config_sqlite_dos, config_psql_dos, manager
 ):
     """A failed root commit leaves no pending changes for a later successful transaction to commit."""
     from sqlalchemy import event
     from sqlalchemy.exc import OperationalError
     from sqlalchemy.orm import Session
 
-    configs = {'core.psql_dos': config_psql_dos}
+    configs = {'core.sqlite_dos': config_sqlite_dos, 'core.psql_dos': config_psql_dos, 'core.sqlite_temp': dict}
     with aiida_profile_factory(
         aiida_config, storage_backend=storage_backend, storage_config=configs[storage_backend]()
     ):
@@ -312,3 +314,45 @@ def test_transaction_rolls_back_root_commit_failure(
             node.base.extras.set('recovered', True)
         assert node.base.extras.get('marker') == 'old'
         assert node.base.extras.get('recovered') is True
+
+
+@pytest.mark.parametrize('storage_backend', ['core.sqlite_dos', 'core.sqlite_temp'])
+def test_transaction_body_failure_releases_new_sqlite_root(
+    storage_backend, aiida_config, aiida_profile_factory, config_sqlite_dos, manager, monkeypatch, tmp_path
+):
+    """A physical root begun after an ordinary read must not strand the SQLite writer lock."""
+    import sqlite3
+
+    from aiida.storage.sqlite_temp import backend as temp_backend
+
+    filepath = tmp_path / 'temporary.sqlite'
+    create_engine = temp_backend.create_sqla_engine
+
+    def file_engine(path, **kwargs):
+        # Each SQLiteTemp initialization needs its own database, but also an independent lock observer.
+        nonlocal filepath
+        assert path == ':memory:'
+        filepath = tmp_path / f'{uuid.uuid4().hex}.sqlite'
+        return create_engine(path=filepath, **kwargs)
+
+    monkeypatch.setattr(temp_backend, 'create_sqla_engine', file_engine)
+    config = config_sqlite_dos() if storage_backend == 'core.sqlite_dos' else {}
+    with aiida_profile_factory(aiida_config, storage_backend=storage_backend, storage_config=config):
+        storage = manager.get_profile_storage()
+        if storage_backend == 'core.sqlite_dos':
+            filepath = storage.filepath_database
+        node = orm.Int(1).store()
+        assert node.label == ''
+        session = storage.get_session()
+        assert session.in_transaction()
+        assert not session.connection().connection.driver_connection.in_transaction
+        try:
+            with pytest.raises(RuntimeError, match='body failed'):
+                with storage.transaction():
+                    node.label = 'failed'
+                    raise RuntimeError('body failed')
+            with sqlite3.connect(filepath, timeout=0) as writer:
+                writer.execute('UPDATE db_dbnode SET label = ? WHERE id = ?', ('independent', node.pk))
+            assert node.label == 'independent'
+        finally:
+            session.rollback()

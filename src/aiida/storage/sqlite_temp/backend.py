@@ -35,7 +35,7 @@ from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.repository.backend.sandbox import SandboxRepositoryBackend
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head
-from aiida.storage.sqlite_zip.utils import create_sqla_engine
+from aiida.storage.sqlite_zip.utils import create_sqla_engine, sqlite_transaction
 
 if t.TYPE_CHECKING:
     from aiida.repository.backend.abstract import InfoDictType
@@ -221,7 +221,7 @@ class SqliteTempBackend(StorageBackend):
         entering. Transactions can be nested.
         """
         session = self.get_session()
-        if session.in_transaction():
+        with sqlite_transaction(session=session):
             with session.begin_nested():
                 yield session
             try:
@@ -229,10 +229,6 @@ class SqliteTempBackend(StorageBackend):
             except SQLAlchemyError:
                 session.rollback()
                 raise
-        else:
-            with session.begin():
-                with session.begin_nested():
-                    yield session
 
     def _clear(self) -> None:
         raise NotImplementedError

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import pathlib
 import typing as t
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
@@ -21,9 +23,10 @@ from alembic.config import Config
 from disk_objectstore import Container, backup_utils
 from pydantic import field_validator
 from sqlalchemy import insert, inspect, select
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common import exceptions
+from aiida.common.lang import override
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
@@ -36,7 +39,7 @@ from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.backend import validate_sqlite_version
-from aiida.storage.sqlite_zip.utils import create_sqla_engine
+from aiida.storage.sqlite_zip.utils import create_sqla_engine, sqlite_transaction
 
 if t.TYPE_CHECKING:
     from disk_objectstore import Container
@@ -264,6 +267,14 @@ class SqliteDosStorage(PsqlDosBackend):
         """
         engine = create_sqla_engine(self.filepath_database)
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
+
+    @contextmanager
+    @override
+    def transaction(self) -> Iterator[Session]:
+        """Start a physical SQLite transaction before the base implementation creates savepoints."""
+        with sqlite_transaction(session=self.get_session()):
+            with super().transaction() as transaction:
+                yield transaction
 
     def delete(self) -> None:  # type: ignore[override]
         """Delete the storage and all the data."""

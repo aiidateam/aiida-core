@@ -88,6 +88,16 @@ class TestBackend:
         with pytest.raises(exceptions.NotExistent):
             orm.User.collection.get(email='user_store_fail@email.com')
 
+    def test_add_link_in_transaction(self):
+        """Test that a link added inside a failed transaction is rolled back."""
+        source = orm.WorkflowNode().store()
+        target = orm.Data().store()
+        with pytest.raises(RuntimeError):
+            with self.backend.transaction():
+                target.base.links.add_incoming(source, link_type=LinkType.RETURN, link_label='result')
+                raise RuntimeError
+        assert target.base.links.get_incoming().all() == []
+
     def test_bulk_insert(self):
         """Test that bulk insert works."""
         rows = [{'email': uuid.uuid4().hex}, {'email': uuid.uuid4().hex}]

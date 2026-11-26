@@ -26,7 +26,7 @@ from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.common.datastructures import FileCopyOperation
 from aiida.common.processes import ProcessState
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
-from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
+from aiida.engine.processes.calcjobs.calcjob import validate_calc_job, validate_monitors, validate_stash_options
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.utils import instantiate_process
@@ -1216,6 +1216,98 @@ def test_validate_stash_options(stash_options, expected):
         assert validate_stash_options(stash_options, None) is expected
     else:
         assert expected in validate_stash_options(stash_options, None)
+
+
+def test_validate_calc_job_no_code():
+    """Test that `validate_calc_job` fails when neither `code` nor `remote_folder` is specified."""
+    result = validate_calc_job({}, ArithmeticAddCalculation.spec().inputs)
+    assert result == 'neither `code` nor `remote_folder` was specified.'
+
+
+def test_validate_calc_job_no_code_with_metadata_computer(aiida_localhost):
+    """Test that `validate_calc_job` fails when `code` is omitted even if `metadata.computer` is given."""
+    inputs = {'metadata': {'computer': aiida_localhost}}
+    result = validate_calc_job(inputs, ArithmeticAddCalculation.spec().inputs)
+    assert result == 'neither `code` nor `remote_folder` was specified.'
+
+
+def test_validate_calc_job_with_remote_folder(tmp_path, aiida_localhost):
+    """Test that `validate_calc_job` succeeds without `code` when `remote_folder` is specified."""
+    remote_folder = orm.RemoteData(remote_path=str(tmp_path), computer=aiida_localhost)
+    result = validate_calc_job({'remote_folder': remote_folder}, ArithmeticAddCalculation.spec().inputs)
+    assert result is None
+
+
+def test_validate_calc_job_with_code(aiida_code_installed):
+    """Test that `validate_calc_job` succeeds when a valid installed `code` is specified."""
+    code = aiida_code_installed(filepath_executable='bash')
+    inputs = {
+        'code': code,
+        'metadata': {'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
+    }
+    result = validate_calc_job(inputs, ArithmeticAddCalculation.spec().inputs)
+    assert result is None
+
+
+def test_validate_calc_job_unstored_computer():
+    """Test that `validate_calc_job` fails when the code's computer is not stored."""
+    computer = orm.Computer('unstored_comp', 'localhost', 'desc', 'core.local', 'core.direct')
+    code = orm.InstalledCode(computer=computer, filepath_executable='/bin/bash')
+    result = validate_calc_job({'code': code}, ArithmeticAddCalculation.spec().inputs)
+    assert f'the Computer<{computer}> is not stored' in result
+
+
+def test_validate_calc_job_computer_mismatch(aiida_code_installed):
+    """Test that `validate_calc_job` fails when `metadata.computer` does not match `code.computer`."""
+    code = aiida_code_installed(filepath_executable='bash')
+    other_computer = orm.Computer('other_comp', 'localhost', 'desc', 'core.local', 'core.direct').store()
+    inputs = {
+        'code': code,
+        'metadata': {
+            'computer': other_computer,
+            'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}},
+        },
+    }
+    result = validate_calc_job(inputs, ArithmeticAddCalculation.spec().inputs)
+    assert 'is different from Computer' in result
+
+
+def test_validate_calc_job_stash_calculation(aiida_localhost):
+    """Test that `validate_calc_job` allows omitting `code` for `StashCalculation` when `metadata.computer` is set."""
+    stash_calculation_cls = CalculationFactory('core.stash')
+    inputs = {
+        'metadata': {
+            'computer': aiida_localhost,
+            'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}},
+        }
+    }
+    result = validate_calc_job(inputs, stash_calculation_cls.spec().inputs)
+    assert result is None
+
+    result_no_comp = validate_calc_job({}, stash_calculation_cls.spec().inputs)
+    assert 'no computer has been specified' in result_no_comp
+
+
+def test_validate_calc_job_transfer_calculation(aiida_localhost):
+    """Test that `validate_calc_job` handles calculations without `code` port (like `TransferCalculation`)."""
+    transfer_calculation_cls = CalculationFactory('core.transfer')
+    inputs = {
+        'metadata': {
+            'computer': aiida_localhost,
+            'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}},
+        }
+    }
+    result = validate_calc_job(inputs, transfer_calculation_cls.spec().inputs)
+    assert result is None
+
+    result_no_comp = validate_calc_job({}, transfer_calculation_cls.spec().inputs)
+    assert 'no computer has been specified' in result_no_comp
+
+
+def test_validate_calc_job_run_without_code():
+    """Test that running a CalcJob without `code` raises ValueError from validation rather than AttributeError."""
+    with pytest.raises(ValueError, match=r'neither `code` nor `remote_folder` was specified.'):
+        launch.run(ArithmeticAddCalculation, x=orm.Int(1), y=orm.Int(2))
 
 
 def test_validate_monitors_valid():

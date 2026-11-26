@@ -22,6 +22,7 @@ from pathlib import Path
 from tempfile import mkdtemp
 
 from sqlalchemy import column, insert, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
@@ -223,7 +224,11 @@ class SqliteTempBackend(StorageBackend):
         if session.in_transaction():
             with session.begin_nested():
                 yield session
-            session.commit()
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+                raise
         else:
             with session.begin():
                 with session.begin_nested():

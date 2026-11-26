@@ -19,6 +19,7 @@ from contextlib import contextmanager, nullcontext
 
 from disk_objectstore import Container, backup_utils
 from sqlalchemy import column, insert, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common import exceptions
@@ -302,7 +303,11 @@ class PsqlDosBackend(StorageBackend):
             with session.begin_nested() as savepoint:
                 yield session
                 savepoint.commit()
-            session.commit()
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+                raise
         else:
             with session.begin():
                 with session.begin_nested() as savepoint:

@@ -266,3 +266,49 @@ def test_backup_implemented(backend, monkeypatch, tmp_path):
     backend.backup(str(filepath_backup))
     assert (filepath_backup / 'config.json').is_file()
     assert (filepath_backup / 'backup.file').is_file()
+
+
+@pytest.mark.parametrize(
+    'storage_backend',
+    [
+        pytest.param('core.psql_dos', id='postgresql', marks=pytest.mark.requires_psql),
+    ],
+)
+def test_transaction_rolls_back_root_commit_failure(
+    storage_backend, aiida_config, aiida_profile_factory, config_psql_dos, manager
+):
+    """A failed root commit leaves no pending changes for a later successful transaction to commit."""
+    from sqlalchemy import event
+    from sqlalchemy.exc import OperationalError
+    from sqlalchemy.orm import Session
+
+    configs = {'core.psql_dos': config_psql_dos}
+    with aiida_profile_factory(
+        aiida_config, storage_backend=storage_backend, storage_config=configs[storage_backend]()
+    ):
+        storage = manager.get_profile_storage()
+        node = orm.Int(1).store()
+        node.base.extras.set('marker', 'old')
+        assert node.base.extras.get('marker') == 'old'
+        session = storage.get_session()
+        assert session.in_transaction()
+        failed = []
+
+        def fail_root_commit(session: Session) -> None:
+            if not session.in_nested_transaction() and not failed:
+                failed.append(True)
+                raise OperationalError('COMMIT', {}, RuntimeError('root commit failed'))
+
+        event.listen(session, 'before_commit', fail_root_commit)
+        try:
+            with pytest.raises(OperationalError, match='root commit failed'):
+                with storage.transaction():
+                    node.base.extras.set('marker', 'new')
+        finally:
+            event.remove(session, 'before_commit', fail_root_commit)
+        assert failed == [True]
+        assert node.base.extras.get('marker') == 'old'
+        with storage.transaction():
+            node.base.extras.set('recovered', True)
+        assert node.base.extras.get('marker') == 'old'
+        assert node.base.extras.get('recovered') is True

@@ -22,6 +22,7 @@ from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import ColumnElement, null
 
 from aiida.common.lang import type_check
+from aiida.orm.entities import EntityTypes
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users, utils
 from aiida.storage.psql_dos.orm.querybuilder.main import (
     BinaryExpression,
@@ -113,6 +114,7 @@ class SqliteCommentCollection(comments.SqlaCommentCollection):
 class SqliteGroup(SqliteEntityOverride, groups.SqlaGroup):
     MODEL_CLASS = models.DbGroup
     USER_CLASS = SqliteUser
+    GROUP_NODE_CLASS = models.MAP_ENTITY_TYPE_TO_MODEL[EntityTypes.GROUP_NODE]
 
 
 class SqliteGroupCollection(groups.SqlaGroupCollection):
@@ -177,7 +179,8 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
     @property
     def table_groups_nodes(self):
-        return models.DbGroupNodes.__table__  # type: ignore[attr-defined]
+        model = models.MAP_ENTITY_TYPE_TO_MODEL[EntityTypes.GROUP_NODE]
+        return model.__table__  # type: ignore[attr-defined]
 
     @staticmethod
     def _get_projectable_entity(

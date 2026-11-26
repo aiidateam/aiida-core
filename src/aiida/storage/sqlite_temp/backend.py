@@ -291,29 +291,9 @@ class SqliteTempBackend(StorageBackend):
         """
         from sqlalchemy import inspect as sqla_inspect
 
-        from aiida.storage.sqlite_zip.models import (
-            DbAuthInfo,
-            DbComment,
-            DbComputer,
-            DbGroup,
-            DbGroupNodes,
-            DbLink,
-            DbLog,
-            DbNode,
-            DbUser,
-        )
+        from aiida.storage.sqlite_zip.models import MAP_ENTITY_TYPE_TO_MODEL
 
-        model = {
-            EntityTypes.AUTHINFO: DbAuthInfo,
-            EntityTypes.COMMENT: DbComment,
-            EntityTypes.COMPUTER: DbComputer,
-            EntityTypes.GROUP: DbGroup,
-            EntityTypes.LOG: DbLog,
-            EntityTypes.NODE: DbNode,
-            EntityTypes.USER: DbUser,
-            EntityTypes.LINK: DbLink,
-            EntityTypes.GROUP_NODE: DbGroupNodes,
-        }[entity_type]
+        model = MAP_ENTITY_TYPE_TO_MODEL[entity_type]
         mapper = sqla_inspect(model).mapper  # type: ignore[union-attr]
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys

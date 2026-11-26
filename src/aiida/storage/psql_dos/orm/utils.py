@@ -91,10 +91,14 @@ class ModelWrapper:
         :param key: the name of the model field
         :param value: the value to set
         """
-        setattr(self._model, key, value)
-        if self.is_saved() and self._is_mutable_model_field(key):
-            fields = {key}
-            self._flush(fields=fields)
+        if not self.is_saved() or not self._is_mutable_model_field(key):
+            setattr(self._model, key, value)
+            return
+
+        with self._write() as session:
+            setattr(self._model, key, value)
+            flag_modified(self._model, key)
+            session.add(self._model)
 
     def is_saved(self):
         """Return whether the wrapped model instance is saved in the database.
@@ -115,22 +119,27 @@ class ModelWrapper:
 
         :raises `aiida.common.IntegrityError`: if a database integrity error is raised during the save.
         """
+        with self._write() as session:
+            session.add(self._model)
+
+    @contextlib.contextmanager
+    def _write(self) -> t.Iterator[Session]:
+        """Isolate a write from the caller's transaction, or commit a standalone write."""
+        session = self.session
+        in_transaction = self._in_transaction()
         try:
-            self.session.add(self._model)
-            if not self._in_transaction():
-                self.session.commit()
+            if in_transaction:
+                # begin_nested() flushes existing changes before creating the savepoint.
+                # Add or modify the model only after entering it.
+                with session.begin_nested():
+                    yield session
             else:
-                with self.session.begin_nested():
-                    self.session.flush()
+                yield session
+                session.commit()
         except IntegrityError as exception:
-            if self._in_transaction():
-                # Only this savepoint was rolled back. Expunge a failed new instance so it does not poison
-                # later flushes; failed updates of persistent instances keep their restored state.
-                if inspect(self._model).pending:
-                    self.session.expunge(self._model)
-            else:
-                self.session.rollback()
-            raise exceptions.IntegrityError(str(exception))
+            if not in_transaction:
+                session.rollback()
+            raise exceptions.IntegrityError(str(exception)) from exception
 
     def _is_mutable_model_field(self, field):
         """Return whether the field is a mutable field of the model.
@@ -157,10 +166,10 @@ class ModelWrapper:
         :param fields: the model fields whose current value to flush to the database
         """
         if self.is_saved():
-            for field in fields:
-                flag_modified(self._model, field)
-
-            self.save()
+            with self._write() as session:
+                for field in fields:
+                    flag_modified(self._model, field)
+                session.add(self._model)
 
     def _ensure_model_uptodate(self, fields=None):
         """Refresh all fields of the wrapped model instance by fetching the current state of the database instance.

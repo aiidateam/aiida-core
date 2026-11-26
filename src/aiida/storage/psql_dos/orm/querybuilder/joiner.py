@@ -14,7 +14,7 @@ import weakref
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from sqlalchemy import and_, join, or_, select
+from sqlalchemy import and_, join, null, select, union_all
 from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.orm import Query, aliased
 from sqlalchemy.orm.util import AliasedClass
@@ -415,27 +415,9 @@ class SqlaJoiner:
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_incoming')
 
-        aliased_edge = aliased(self._entities.Link)
-        aliased_member = aliased(self._entities.Membership)
-
-        def new_query(q):
-            if provenance_only:
-                return q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin).join(
-                    entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin
-                )
-            query = q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=True).join(
-                aliased_member, aliased_member.owner_id == joined_entity.id, isouter=True
-            )
-            return query.join(
-                entity_to_join,
-                or_(
-                    aliased_edge.output_id == entity_to_join.id,
-                    aliased_member.child_id == entity_to_join.id,
-                ),
-                isouter=isouterjoin,
-            )
-
-        return JoinReturn(new_query, aliased_edge)
+        return self._join_node_edges(
+            joined_entity, entity_to_join, outgoing=True, isouterjoin=isouterjoin, provenance_only=provenance_only
+        )
 
     def _join_node_inputs(self, joined_entity, entity_to_join, isouterjoin: bool, *, provenance_only=False, **_kw):
         """Join nodes to their incoming neighbours (``with_outgoing``).
@@ -452,24 +434,37 @@ class SqlaJoiner:
         filters use ``with_owner``.
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_outgoing')
-        aliased_edge = aliased(self._entities.Link)
-        aliased_member = aliased(self._entities.Membership)
+        return self._join_node_edges(
+            joined_entity, entity_to_join, outgoing=False, isouterjoin=isouterjoin, provenance_only=provenance_only
+        )
 
-        def new_query(q):
-            if provenance_only:
-                return q.join(aliased_edge, aliased_edge.output_id == joined_entity.id, isouter=isouterjoin).join(
-                    entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin
-                )
-            query = q.join(aliased_edge, aliased_edge.output_id == joined_entity.id, isouter=True).join(
-                aliased_member, aliased_member.child_id == joined_entity.id, isouter=True
-            )
-            return query.join(
-                entity_to_join,
-                or_(
-                    aliased_edge.input_id == entity_to_join.id,
-                    aliased_member.owner_id == entity_to_join.id,
+    def _join_node_edges(
+        self, joined_entity, entity_to_join, *, outgoing: bool, isouterjoin: bool, provenance_only: bool
+    ) -> JoinReturn:
+        """Join through one row per edge, exposing link fields only for provenance edges."""
+        link = self._entities.Link
+        membership = self._entities.Membership
+        if provenance_only:
+            aliased_edge = aliased(link)
+            source, target = aliased_edge.input_id, aliased_edge.output_id
+        else:
+            edges = union_all(
+                select(link, link.input_id.label('source_id'), link.output_id.label('target_id')),
+                select(
+                    *(null().label(column.key) for column in link.__table__.columns),
+                    membership.owner_id.label('source_id'),
+                    membership.child_id.label('target_id'),
                 ),
-                isouter=isouterjoin,
+            ).subquery()
+            aliased_edge = aliased(link, edges)
+            source, target = edges.c.source_id, edges.c.target_id
+
+        if not outgoing:
+            source, target = target, source
+
+        def new_query(query: Query) -> Query:
+            return query.join(aliased_edge, source == joined_entity.id, isouter=isouterjoin).join(
+                entity_to_join, target == entity_to_join.id, isouter=isouterjoin
             )
 
         return JoinReturn(new_query, aliased_edge)

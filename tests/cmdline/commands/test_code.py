@@ -699,6 +699,19 @@ def test_code_test(run_cli_command):
     assert 'all tests succeeded.' in result.output
 
 
+def test_code_test_no_deprecation_warning(run_cli_command, tmp_path):
+    """Test that ``verdi code test`` does not invoke set_code_builder or emit deprecation warnings (#6947)."""
+    code_param = next(p for p in cmd_code.code_test.params if p.name == 'code')
+    assert code_param.callback is None
+
+    (tmp_path / 'bash').touch()
+    code = PortableCode(filepath_files=tmp_path, filepath_executable='bash').store()
+
+    result = run_cli_command(cmd_code.code_test, [str(code.pk)])
+    assert 'all tests succeeded.' in result.output
+    assert 'AiidaDeprecationWarning' not in result.output
+
+
 @pytest.fixture
 def command_options(request, aiida_localhost, tmp_path, bash_path):
     """Return tuple of list of options and entry point."""

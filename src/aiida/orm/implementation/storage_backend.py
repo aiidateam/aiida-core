@@ -308,7 +308,8 @@ class StorageBackend(abc.ABC):
         uncommitted elsewhere are retained unless `only_sealed` is `False`.
 
         :param only_sealed: Collect sealed owners only. `False` additionally collects files with no visible
-            owner, and requires exclusive profile access with no concurrent transactions.
+            owner and deletes where the filesystem cannot lock. It requires exclusive profile access with no
+            concurrent transactions or backups.
         :param dry_run: Report eligible files without deleting them.
         :returns: Deleted paths, or eligible paths for `dry_run`. Transactions defer deletion;
             removal failures are logged and retained for a later attempt.
@@ -342,7 +343,7 @@ class StorageBackend(abc.ABC):
         if dry_run:
             return orphaned
 
-        return self.checkpoint_store.discard_files(paths=orphaned)
+        return self.checkpoint_store.discard_orphans(paths=orphaned, force=not only_sealed)
 
     @abc.abstractmethod
     def set_global_variable(
@@ -502,7 +503,8 @@ class StorageBackend(abc.ABC):
         backup_manager = self._validate_or_init_backup_folder(dest, keep)
 
         try:
-            self._backup(dest, keep)
+            with self.checkpoint_store.retain_files():
+                self._backup(dest, keep)
         except NotImplementedError:
             success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
 

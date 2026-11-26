@@ -117,15 +117,16 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
                     'example with `QueryBuilder.all()`.'
                 )
                 raise PersistenceError(msg)
-            node = load_node(pid)
-            checkpoint = node.checkpoint
-            if checkpoint is None:
-                msg = f'Process<{pid}> does not have a saved checkpoint'
-                raise PersistenceError(msg)
-            if not checkpoint.startswith(_PICKLE_PREFIX):
-                msg = f'Process<{pid}> has an unsupported checkpoint format.'
-                raise PersistenceError(msg)
-            data = store.read(node_uuid=node.uuid, digest=checkpoint.removeprefix(_PICKLE_PREFIX))
+            with store.retain_files():
+                node = load_node(pid)
+                checkpoint = node.checkpoint
+                if checkpoint is None:
+                    msg = f'Process<{pid}> does not have a saved checkpoint'
+                    raise PersistenceError(msg)
+                if not checkpoint.startswith(_PICKLE_PREFIX):
+                    msg = f'Process<{pid}> has an unsupported checkpoint format.'
+                    raise PersistenceError(msg)
+                data = store.read(node_uuid=node.uuid, digest=checkpoint.removeprefix(_PICKLE_PREFIX))
 
             return _checkpoint_pickle.loads_unsafe(data)
         except PersistenceError:

@@ -6,8 +6,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Checkpoint file transaction cleanup regressions."""
+"""Checkpoint file retention and lock failure regressions."""
 
+import errno
+import sys
 from pathlib import Path
 
 import pytest
@@ -15,28 +17,126 @@ import pytest
 from aiida.orm.implementation.storage_backend import StorageBackend
 
 
-@pytest.mark.parametrize('outcome', ['commit', 'rollback'])
+def test_retention_propagates_body_oserror(backend: StorageBackend, caplog: pytest.LogCaptureFixture) -> None:
+    """An `OSError` from the protected operation retains its identity and traceback."""
+    failure: OSError = OSError('checkpoint read failed')
+
+    with pytest.raises(OSError) as raised:
+        with backend.checkpoint_store.retain_files():
+            raise failure
+
+    assert raised.value is failure
+    assert 'could not lock checkpoint files' not in caplog.text
+
+
+def test_retention_falls_back_on_lock_failure(
+    backend: StorageBackend, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A lock acquisition error permits one protected operation."""
+    import fcntl
+
+    def fail_lock(_descriptor: int, _operation: int) -> None:
+        msg: str = 'lock unavailable'
+        raise OSError(msg)
+
+    monkeypatch.setattr(fcntl, 'flock', fail_lock)
+    calls: list[str] = []
+    with backend.checkpoint_store.retain_files():
+        calls.append('loaded')
+
+    assert calls == ['loaded']
+    assert 'lock unavailable' in caplog.text
+
+
+def test_retention_releases_lock_after_body_failure(backend: StorageBackend, tmp_path: Path) -> None:
+    """A failed reader releases its lock so deferred cleanup can proceed."""
+    obsolete: Path = tmp_path / 'obsolete.pkl'
+    _ = obsolete.write_bytes(b'checkpoint')
+    with pytest.raises(ValueError, match='decode failed'):
+        with backend.checkpoint_store.retain_files():
+            assert backend.checkpoint_store.discard_files(paths=[obsolete]) == []
+            msg: str = 'decode failed'
+            raise ValueError(msg)
+
+    assert backend.checkpoint_store.discard_files(paths=[obsolete]) == [obsolete]
+    assert not obsolete.exists()
+
+
+@pytest.fixture(
+    params=[pytest.param('missing-fcntl', id='missing-fcntl'), pytest.param('flock-error', id='flock-error')]
+)
+def unlockable(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make file locking unavailable, as on Windows or on a filesystem without `flock` support."""
+    if request.param == 'missing-fcntl':
+        monkeypatch.setitem(sys.modules, 'fcntl', None)
+        return
+
+    import fcntl
+
+    def fail_lock(_descriptor: int, _operation: int) -> None:
+        raise OSError(errno.ENOLCK, 'No locks available')
+
+    monkeypatch.setattr(fcntl, 'flock', fail_lock)
+
+
+@pytest.mark.usefixtures('unlockable')
+def test_discarding_without_locking_leaves_files_to_maintenance(backend: StorageBackend, tmp_path: Path) -> None:
+    """Without file locking, saves and terminations keep obsolete files for maintenance."""
+    obsolete: Path = tmp_path / 'obsolete.pkl'
+    _ = obsolete.write_bytes(b'checkpoint')
+
+    assert backend.checkpoint_store.discard_files(paths=[obsolete]) == []
+    assert obsolete.exists()
+
+
+@pytest.mark.usefixtures('unlockable')
+def test_orphan_collection_retains_without_locking(backend: StorageBackend, tmp_path: Path) -> None:
+    """Without file locking, orphan collection keeps files unless forced with exclusive access."""
+    orphan: Path = tmp_path / 'orphan.pkl'
+    _ = orphan.write_bytes(b'checkpoint')
+
+    assert backend.checkpoint_store.discard_orphans(paths=[orphan]) == []
+    assert orphan.exists()
+    assert backend.checkpoint_store.discard_orphans(paths=[orphan], force=True) == [orphan]
+    assert not orphan.exists()
+
+
+def test_orphan_collection_waits_for_a_reader(backend: StorageBackend, tmp_path: Path) -> None:
+    """A held reader lock defers orphan collection to a later maintenance run."""
+    orphan: Path = tmp_path / 'orphan.pkl'
+    _ = orphan.write_bytes(b'checkpoint')
+
+    with backend.checkpoint_store.retain_files():
+        assert backend.checkpoint_store.discard_orphans(paths=[orphan]) == []
+
+    assert orphan.exists()
+
+
+@pytest.mark.parametrize('outcome', ['commit', 'rollback', 'retained'])
 def test_transaction_defers_discard_until_commit(backend: StorageBackend, tmp_path: Path, outcome: str) -> None:
-    """Separate store lookups share exact-path cleanup, conditional on commit."""
+    """Separate store lookups share exact-path cleanup, conditional on commit and reader locks."""
+    from contextlib import nullcontext
+
     obsolete: Path = tmp_path / 'obsolete.pkl'
     unrelated: Path = tmp_path / 'unrelated.pkl'
     _ = obsolete.write_bytes(b'old checkpoint')
     _ = unrelated.write_bytes(b'uncommitted checkpoint from another writer')
 
-    try:
-        with backend.checkpoint_store.transaction():
-            assert backend.in_transaction
-            assert backend.checkpoint_store.discard_files(paths=[obsolete]) == []
-            assert obsolete.exists()
-            if outcome == 'rollback':
-                msg: str = 'rollback'
-                raise RuntimeError(msg)
-    except RuntimeError:
-        assert outcome == 'rollback'
-    assert obsolete.exists() is (outcome != 'commit')
+    with backend.checkpoint_store.retain_files() if outcome == 'retained' else nullcontext():
+        try:
+            with backend.checkpoint_store.transaction():
+                assert backend.in_transaction
+                assert backend.checkpoint_store.discard_files(paths=[obsolete]) == []
+                assert obsolete.exists()
+                if outcome == 'rollback':
+                    msg: str = 'rollback'
+                    raise RuntimeError(msg)
+        except RuntimeError:
+            assert outcome == 'rollback'
+        assert obsolete.exists() is (outcome != 'commit')
     assert unrelated.exists()
 
-    # A failed transaction must not leak its queue into another save.
+    # A failed or lock-blocked transaction must not leak its queue into another save.
     with backend.checkpoint_store.transaction():
         pass
     assert obsolete.exists() is (outcome != 'commit')

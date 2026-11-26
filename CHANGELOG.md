@@ -101,7 +101,7 @@ Backups must include this directory; storage plugins provide its location throug
 
 `verdi node delete` also deletes the checkpoint files of the nodes it deletes.
 `verdi storage maintain` deletes checkpoint files of sealed nodes.
-`verdi storage maintain --full` also deletes files whose nodes were deleted.
+`verdi storage maintain --full` also deletes files that node deletion left, for example while a backup held the lock.
 
 ### Fixes
 

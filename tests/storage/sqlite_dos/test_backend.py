@@ -41,23 +41,41 @@ def test_backup(aiida_config, aiida_profile_factory, tmp_path, manager):
         assert (dirpath_backup / FILENAME_CONTAINER).exists()
 
 
-def test_backup_includes_checkpoint_classes(aiida_config, aiida_profile_factory, tmp_path, manager):
-    """The class-file directory is copied with the rest of the backup."""
+def test_backup_retains_checkpoint_from_database_snapshot(
+    aiida_config, aiida_profile_factory, tmp_path, manager, monkeypatch
+):
+    """A checkpoint replaced after the database copy is still available in the backup."""
+    from aiida import orm
+    from aiida.orm.implementation.checkpoint_store import CheckpointBytes
+
     with aiida_profile_factory(aiida_config, storage_backend='core.sqlite_dos'):
         storage = manager.get_profile_storage()
+        store = storage.checkpoint_store
+        node = orm.WorkChainNode().store()
+        previous = CheckpointBytes(content=b'previous checkpoint')
+        current = CheckpointBytes(content=b'current checkpoint')
         directory = storage.get_checkpoint_directory()
-        directory.mkdir(parents=True, exist_ok=True)
-        source = directory / 'class.pkl'
-        source.write_bytes(b'class bytes')
-        copied = []
+        assert directory.name == 'checkpoints'
+        store.write(node_uuid=node.uuid, data=previous)
+        node.set_checkpoint(f'checkpoint-pickle-v1:{previous.digest}')
+        staged = directory / '.staged'
+        staged.write_bytes(b'incomplete')
+        copy = storage._backup_checkpoints
 
-        class CopyManager:
-            def call_rsync(self, src, dest, **kwargs):
-                assert source.read_bytes() == b'class bytes'
-                copied.append(pathlib.Path(src))
+        def replace_before_copy(**kwargs):
+            store.write(node_uuid=node.uuid, data=current)
+            node.set_checkpoint(f'checkpoint-pickle-v1:{current.digest}')
+            store.discard_one(node_uuid=node.uuid, digest=previous.digest)
+            copy(**kwargs)
 
-        storage._backup_storage(CopyManager(), tmp_path)
-        assert copied == [storage.filepath_container, storage.filepath_database, directory]
+        monkeypatch.setattr(storage, '_backup_checkpoints', replace_before_copy)
+        storage.backup(str(tmp_path))
+
+        backed_up = tmp_path / 'last-backup' / directory.name
+        assert (backed_up / f'{node.uuid}-{previous.digest}.pkl').read_bytes() == previous.content
+        assert not (backed_up / staged.name).exists()
+        store.discard_one(node_uuid=node.uuid, digest=previous.digest)
+        assert not (directory / f'{node.uuid}-{previous.digest}.pkl').exists()
 
 
 def test_backup_skips_staged_checkpoint_files(aiida_config, aiida_profile_factory, tmp_path, manager):

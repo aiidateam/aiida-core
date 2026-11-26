@@ -917,6 +917,29 @@ def test_maintenance_keeps_live_checkpoint(persister: AiidaCheckpointPersister, 
     assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
 
 
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_maintenance_drops_the_file_of_a_deleted_node(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """Live maintenance retains deleted owners' checkpoint files; full maintenance collects them."""
+    from aiida.tools import delete_nodes
+
+    live = make_process(carried=True)
+    persister.save_checkpoint(live)
+    filename = f'{live.node.uuid}-{checkpoint_digest(live.node)}.pkl'
+    storage = get_manager().get_profile_storage()
+
+    # A reader or backup holding the lock leaves the file to maintenance.
+    with storage.checkpoint_store.retain_files():
+        delete_nodes([live.node.pk], dry_run=False)
+    assert filename in checkpoint_files(), 'premise: node deletion left the file'
+
+    storage.maintain(full=False)
+    assert filename in checkpoint_files()
+    storage.maintain(full=True)
+    assert filename not in checkpoint_files()
+
+
 def test_maintenance_drops_the_file_of_a_sealed_node(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
 ):
@@ -928,6 +951,28 @@ def test_maintenance_drops_the_file_of_a_sealed_node(
     live.node.seal()
 
     get_manager().get_profile_storage().maintain(full=False)
+
+    assert filename not in checkpoint_files()
+
+
+def test_live_maintenance_defers_without_file_locking(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process], monkeypatch: pytest.MonkeyPatch
+):
+    """Live maintenance defers collection where the platform provides no file locking."""
+    live = make_process(carried=True)
+    persister.save_checkpoint(live)
+    filename = f'{live.node.uuid}-{checkpoint_digest(live.node)}.pkl'
+    live.node.seal()
+    monkeypatch.setitem(sys.modules, 'fcntl', None)
+
+    # `maintain(full=False)` runs this step and also `tqdm`, which crashes without `fcntl` on `tqdm==4.45`.
+    storage = get_manager().get_profile_storage()
+    storage.delete_orphaned_checkpoint_files(only_sealed=True)
+
+    assert filename in checkpoint_files()
+
+    # Exclusive profile access, as in full maintenance, still collects without locking.
+    storage.delete_orphaned_checkpoint_files(only_sealed=False)
 
     assert filename not in checkpoint_files()
 

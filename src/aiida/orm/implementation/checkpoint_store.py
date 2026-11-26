@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Storage for immutable checkpoint files, with rollback-safe cleanup."""
+"""Storage for immutable checkpoint files, with rollback- and backup-safe cleanup."""
 
 import dataclasses
 import functools
@@ -15,7 +15,7 @@ import os
 import re
 import typing as t
 from collections.abc import Iterable, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from contextvars import ContextVar
 from pathlib import Path
 from uuid import uuid4
@@ -139,10 +139,60 @@ class CheckpointStore:
         """Delete this node's finished and staged files after checkpoint deletion commits."""
         self.discard_files(paths=[path for path, _ in self.iter_files(node_uuid=node_uuid)])
 
-    def discard_files(self, *, paths: Iterable[Path]) -> list[Path]:
-        """Delete `paths`, retaining files that cannot be removed.
+    @contextmanager
+    def retain_files(self) -> Iterator[None]:
+        """Prevent deletion while reading a checkpoint or copying a storage snapshot."""
+        try:
+            import fcntl
 
-        :returns: Deleted paths; transactions defer deletion.
+            path = self._lock_path()
+        except (ImportError, NotImplementedError):
+            yield
+            return
+
+        with ExitStack() as stack:
+            try:
+                lock: t.IO[bytes] = stack.enter_context(path.open('ab'))
+                fcntl.flock(lock, fcntl.LOCK_SH)
+            except OSError as exception:
+                from aiida.storage.log import STORAGE_LOGGER
+
+                STORAGE_LOGGER.warning('could not lock checkpoint files, proceeding unlocked: %s', exception)
+            yield
+
+    def _lock_path(self) -> Path:
+        return self.storage.get_checkpoint_directory().with_name('.checkpoint-files.lock')
+
+    @contextmanager
+    def _exclusive_lock(self) -> Iterator[bool]:
+        """Hold the deletion lock, yielding `False` where the platform or filesystem cannot lock.
+
+        :raises BlockingIOError: If a reader or backup holds the lock.
+        """
+        try:
+            import fcntl
+        except ImportError:
+            yield False
+            return
+
+        with ExitStack() as stack:
+            locked: bool = True
+            try:
+                lock: t.IO[bytes] = stack.enter_context(self._lock_path().open('ab'))
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise
+            except OSError as exception:
+                from aiida.storage.log import STORAGE_LOGGER
+
+                STORAGE_LOGGER.warning('could not lock checkpoint files for cleanup: %s', exception)
+                locked = False
+            yield locked
+
+    def discard_files(self, *, paths: Iterable[Path]) -> list[Path]:
+        """Delete obsolete files unless a transaction, reader or backup may need them.
+
+        Without file locking, the files remain for :meth:`discard_orphans`.
         """
         pending: list[Path] = list(paths)
         deferred: set[Path] | None = self._deferred_discards.get()
@@ -151,7 +201,33 @@ class CheckpointStore:
             return []
         if not pending or self.storage.in_transaction:
             return []
-        return [path for path in pending if _discard_file(path=path)]
+
+        try:
+            with self._exclusive_lock() as locked:
+                return [path for path in pending if _discard_file(path=path)] if locked else []
+        except BlockingIOError:
+            # A reader or backup may need the previous file. Leave it for later cleanup.
+            return []
+
+    def discard_orphans(self, *, paths: Iterable[Path], force: bool = False) -> list[Path]:
+        """Delete orphaned files unless a transaction, reader or backup may need them.
+
+        Without file locking, the files remain unless `force` is set. Only force with exclusive
+        profile access, where no backup can run concurrently, as in full maintenance.
+
+        :param force: Delete even where the platform or filesystem cannot lock.
+        """
+        pending: list[Path] = list(paths)
+        if not pending or self.storage.in_transaction:
+            return []
+
+        try:
+            with self._exclusive_lock() as locked:
+                if not locked and not force:
+                    return []
+                return [path for path in pending if _discard_file(path=path)]
+        except BlockingIOError:
+            return []
 
     def iter_files(self, *, node_uuid: str | None = None) -> Iterator[tuple[Path, str]]:
         """Yield finished and staged checkpoint files with their owner UUIDs.

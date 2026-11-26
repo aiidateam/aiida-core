@@ -363,7 +363,9 @@ class WorkChain(Process):
             raise ValueError(msg)
 
         if awaitable.outputs:
-            value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}
+            value = {
+                entry.link_label: entry.node for entry in node.base.links.get_outgoing(include_container_members=False)
+            }
         else:
             value = node  # type: ignore[assignment]
 

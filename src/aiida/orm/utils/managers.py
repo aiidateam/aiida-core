@@ -53,7 +53,7 @@ class NodeLinksManager:
         if incoming:
             links = self._node.base.links.get_incoming(link_type=self._link_type)
         else:
-            links = self._node.base.links.get_outgoing(link_type=self._link_type)
+            links = self._node.base.links.get_outgoing(link_type=self._link_type, include_container_members=False)
 
         return AttributeDict(links.nested())
 

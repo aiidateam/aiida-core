@@ -730,7 +730,9 @@ class Process(ProcessBase):
                         self.out(label, entry.node)
                     # This is needed for CalcJob. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
-                    for entry in self.node.base.links.get_outgoing(link_type=LinkType.CREATE):
+                    for entry in self.node.base.links.get_outgoing(
+                        link_type=LinkType.CREATE, include_container_members=False
+                    ):
                         label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
                         self.out(label, entry.node)
             except exceptions.ModificationNotAllowed:
@@ -776,7 +778,7 @@ class Process(ProcessBase):
             for path, output in self._flatten_outputs(self.output_ports, self.outputs)
         }
         outputs_stored = self.node.base.links.get_outgoing(
-            link_type=(LinkType.CREATE, LinkType.RETURN)
+            link_type=(LinkType.CREATE, LinkType.RETURN), include_container_members=False
         ).all_link_labels()
         outputs_new = set(outputs_flat) - set(outputs_stored)
 
@@ -1147,7 +1149,9 @@ class Process(ProcessBase):
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
         link_types = (LinkType.CREATE, LinkType.RETURN)
-        process_outputs_dict = node.base.links.get_outgoing(link_type=link_types).nested()
+        process_outputs_dict = node.base.links.get_outgoing(
+            link_type=link_types, include_container_members=False
+        ).nested()
 
         for port_name in process_outputs_dict:
             top_namespace = port_name.split(namespace_separator)[0]

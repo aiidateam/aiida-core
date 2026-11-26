@@ -58,7 +58,7 @@ def _missing_declared_outputs(declared: NamespaceShape, node: Node) -> list[str]
 
     The process spec leaves these outputs dynamic, so the process itself never enforces them.
     """
-    produced = set(node.base.links.get_outgoing().all_link_labels())
+    produced = set(node.base.links.get_outgoing(include_container_members=False).all_link_labels())
     return [name for name, _ in declared.fields if name not in produced]
 
 
@@ -69,7 +69,9 @@ def _mistyped_declared_outputs(declared: NamespaceShape, node: Node) -> list[str
     """
     produced: dict[str, Node] = {
         entry.link_label: entry.node
-        for entry in node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN)).all()
+        for entry in node.base.links.get_outgoing(
+            link_type=(LinkType.CREATE, LinkType.RETURN), include_container_members=False
+        ).all()
     }
     messages: list[str] = []
     for name, shape in declared.fields:

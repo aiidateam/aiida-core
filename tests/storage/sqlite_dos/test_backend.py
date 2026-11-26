@@ -1,6 +1,7 @@
 """Tests for :mod:`aiida.storage.sqlite_dos.backend`."""
 
 import pathlib
+import uuid
 from unittest.mock import MagicMock
 
 import pytest
@@ -57,6 +58,24 @@ def test_backup_includes_checkpoint_classes(aiida_config, aiida_profile_factory,
 
         storage._backup_storage(CopyManager(), tmp_path)
         assert copied == [storage.filepath_container, storage.filepath_database, directory]
+
+
+def test_backup_skips_staged_checkpoint_files(aiida_config, aiida_profile_factory, tmp_path, manager):
+    """Staged files of unfinished checkpoint writes stay out of the backup."""
+    with aiida_profile_factory(aiida_config, storage_backend='core.sqlite_dos'):
+        storage = manager.get_profile_storage()
+        directory = storage.get_checkpoint_classes_dirpath()
+        directory.mkdir(parents=True, exist_ok=True)
+        owner = uuid.uuid4()
+        digest = '0' * 64
+        published = directory / f'{owner}-{digest}.pkl'
+        published.write_bytes(b'published')
+        (directory / f'.{owner}-{uuid.uuid4().hex}').write_bytes(b'incomplete')
+
+        storage.backup(str(tmp_path))
+
+        backed_up = tmp_path / 'last-backup' / directory.name
+        assert sorted(path.name for path in backed_up.iterdir()) == [published.name]
 
 
 def test_initialise_version_check(tmp_path, monkeypatch):

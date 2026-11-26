@@ -669,14 +669,16 @@ class PsqlDosBackend(StorageBackend):
         path: pathlib.Path,
         prev_backup: pathlib.Path | None = None,
     ) -> None:
-        """Back up class files required to restore checkpoints carrying serialized classes."""
+        """Back up published class files, skipping files staged by unfinished writes."""
         checkpoints: pathlib.Path = self.get_checkpoint_classes_dirpath()
 
         if not checkpoints.exists():
             return
 
         STORAGE_LOGGER.report('Backing up checkpoint class files')
-        manager.call_rsync(src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True)
+        manager.call_rsync(
+            src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True, extra_args=['--exclude=.*']
+        )
 
     def _backup(
         self,

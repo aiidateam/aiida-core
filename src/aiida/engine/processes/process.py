@@ -18,7 +18,9 @@ import inspect
 import logging
 import traceback
 import typing as t
-from collections.abc import Iterable, Iterator, Mapping, MutableMapping
+from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
+from contextlib import nullcontext
+from functools import partial
 from types import TracebackType
 from uuid import UUID
 
@@ -35,6 +37,7 @@ from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.processes import ProcessState
 from aiida.engine.processes import exceptions as process_exceptions
 from aiida.engine.processes import persistence as process_persistence
+from aiida.engine.processes import state_machine
 from aiida.engine.processes import states as process_states
 from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
@@ -48,7 +51,6 @@ from aiida.engine.processes.utils import prune_mapping
 from aiida.engine.utils import InterruptableFuture
 from aiida.orm.implementation.utils import clean_value
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
-from aiida.orm.utils import serialize
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
@@ -67,6 +69,13 @@ def _with_runtime_values(port: InputPort | PortNamespace | None, original: t.Any
             {key: _with_runtime_values(port.get(key), original[key], runtime[key]) for key in original}
         )
     return runtime
+
+
+def _copy_input_containers(value: t.Any) -> t.Any:
+    """Recursively copy nested mappings without cloning the values they hold."""
+    if isinstance(value, Mapping):
+        return {key: _copy_input_containers(subvalue) for key, subvalue in value.items()}
+    return value
 
 
 @process_persistence.auto_persist('_parent_pid', '_enable_persistence')
@@ -275,9 +284,13 @@ class Process(ProcessBase):
             return AttributeDict()
 
     def _save_checkpoint(self) -> None:
-        """Save the current state in a chechpoint if persistence is enabled and the process state is not terminal
+        """Save a checkpoint of the nonterminal state if persistence is enabled.
 
-        If the persistence call excepts with a PersistenceError, it will be caught and a warning will be logged.
+        A missing persister is logged. A failed save after the `CREATED` state is logged and the node
+        keeps its previous checkpoint, so the transition still commits.
+
+        :raises ~aiida.engine.processes.exceptions.PersistenceError: If the first checkpoint, saved in
+            the `CREATED` state, fails. The daemon loads a submitted process from that checkpoint.
         """
         if self._enable_persistence and not self._state.is_terminal():
             if self.runner.persister is None:
@@ -289,6 +302,8 @@ class Process(ProcessBase):
             try:
                 self.runner.persister.save_checkpoint(self)
             except process_exceptions.PersistenceError:
+                if self._state.LABEL is ProcessState.CREATED:
+                    raise
                 self.logger.exception(
                     'Exception trying to save checkpoint, this means you will '
                     'not be able to restart in case of a crash until the next successful checkpoint.'
@@ -308,7 +323,7 @@ class Process(ProcessBase):
             assert self.node.is_stored
 
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
-        out_state['provenance_inputs'] = serialize.serialize(self._flat_inputs())
+        out_state['provenance_inputs'] = self._flat_inputs()
 
     def get_provenance_inputs_iterator(self) -> Iterator[tuple[str, InputPort | PortNamespace]]:
         """Get provenance input iterator.
@@ -342,7 +357,7 @@ class Process(ProcessBase):
         assert isinstance(runtime, AttributesFrozendict)
         self._parsed_inputs = runtime
         if 'provenance_inputs' in saved_state:
-            self._provenance_inputs = serialize.deserialize_unsafe(saved_state['provenance_inputs'])
+            self._provenance_inputs = dict(saved_state['provenance_inputs'])
         else:
             # Checkpoints predating provenance inputs carry only converted values: keep the
             # original nodes from the raw inputs so provenance links still point at them.
@@ -506,12 +521,61 @@ class Process(ProcessBase):
     def on_create(self) -> None:
         """Called when a Process is created."""
         super().on_create()
+        self._check_transition_transaction()
         # If parent PID hasn't been supplied try to get it from the stack
         if self._parent_pid is None and Process.current():
             current = Process.current()
             if isinstance(current, Process):
                 self._parent_pid = current.pid  # type: ignore[assignment]
         self._pid = self._create_and_setup_db_record()
+
+    def _check_transition_transaction(self) -> None:
+        """Require ownership of the commit before a persisted transition can notify listeners."""
+        from aiida.manage import get_manager
+
+        if self._enable_persistence and self.metadata.store_provenance:
+            backend = self._node.backend if self._node is not None else get_manager().get_profile_storage()
+            if backend.in_transaction:
+                msg = (
+                    'Cannot launch or advance a persisted process inside an open storage transaction, such as a '
+                    '`QueryBuilder.iterall()` or `iterdict()` loop. Collect the query results first, for example '
+                    'with `QueryBuilder.all()`.'
+                )
+                raise exceptions.InvalidOperation(msg)
+
+    @override
+    def transition_to(self, new_state: state_machine.State | None, **kwargs: t.Any) -> None:
+        """Reject persisted transitions inside caller-owned transactions before state callbacks run.
+
+        :raises ~aiida.common.exceptions.InvalidOperation: If persistence is enabled and a transaction is active.
+        """
+        if new_state is not None and new_state.LABEL is not ProcessState.EXCEPTED and self._node is not None:
+            self._check_transition_transaction()
+        super().transition_to(new_state, **kwargs)
+
+    @override
+    def transition_failed(
+        self, initial_state: Hashable, final_state: Hashable, exception: Exception, trace: TracebackType
+    ) -> None:
+        """Finalize a stored node before the base class reraises a failed CREATED entry.
+
+        `on_create` stores the node before the `CREATED` checkpoint commits, so a checkpoint failure
+        would otherwise leave a stored, unsealed, checkpoint-less node. Each finalization write is
+        best-effort and the original error is always reraised.
+        """
+        node: orm.ProcessNode | None = self._node
+        if final_state == ProcessState.CREATED and node is not None and node.is_stored:
+            formatted: str = ''.join(traceback.format_exception(type(exception), exception, trace)).rstrip()
+            for finalize in (
+                partial(node.set_process_state, ProcessState.EXCEPTED),
+                partial(node.set_exception, formatted),
+                node.seal,
+            ):
+                try:
+                    finalize()
+                except Exception:  # Best-effort: a finalization failure must not mask the original error.
+                    self.logger.exception('Failed to finalize process node<%s> after failed creation.', node.pk)
+        super().transition_failed(initial_state, final_state, exception, trace)
 
     @override
     def on_entered(self, from_state: process_states.State | None) -> None:
@@ -526,25 +590,41 @@ class Process(ProcessBase):
             super().on_entered(from_state)
             return
 
-        # We need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for
-        # example if the process implementation attaches an invalid output through ``Process.out``, and so we call the
-        # ``ProcessNode.set_process_state`` in the finally-clause. This way the state gets properly set on the node even
-        # if the process is transitioning to the terminal excepted state.
-        try:
+        with self.node.backend.checkpoint_store.transaction() if self._enable_persistence else nullcontext():
             self.update_outputs()
-        except ValueError:
-            raise
-        finally:
             self.node.set_process_state(self._state.LABEL)  # type: ignore[arg-type]
-
-        self._save_checkpoint()
-        set_process_state_change_timestamp(self.node)
+            if isinstance(self._state, process_states.Finished):
+                self._write_exit_code(self._state)
+            self._save_checkpoint()
+            set_process_state_change_timestamp(self.node)
 
         # The updating of outputs and state has to be performed before the super is called because the super will
         # broadcast state changes and parent processes may start running again before the state change is completed. It
         # is possible that they will read the old process state and outputs that they check may not yet have been
         # attached.
         super().on_entered(from_state)
+
+    def _write_exit_code(self, finished: process_states.Finished) -> None:
+        """Write the exit status and message of the entered `FINISHED` state to the node.
+
+        :param finished: The entered `FINISHED` state.
+        :raises ValueError: If the state result is neither `None`, an integer nor an `ExitCode`.
+        """
+        result = finished.result
+        if result is None:
+            if not finished.successful:
+                result = self.exit_codes.ERROR_MISSING_OUTPUT
+            else:
+                result = ExitCode()
+
+        if isinstance(result, int):
+            self.node.set_exit_status(result)
+        elif isinstance(result, ExitCode):
+            self.node.set_exit_status(result.status)
+            self.node.set_exit_message(result.message)
+        else:
+            msg = f'the result should be an integer, ExitCode or None, got {type(result)} {result} {self.pid}'
+            raise ValueError(msg)
 
     @override
     def on_terminated(self) -> None:
@@ -574,31 +654,6 @@ class Process(ProcessBase):
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override
-    def on_finish(self, result: int | ExitCode | None, successful: bool) -> None:
-        """Set the finish status on the process node.
-
-        :param result: result of the process
-        :param successful: whether execution was successful
-
-        """
-        super().on_finish(result, successful)
-
-        if result is None:
-            if not successful:
-                result = self.exit_codes.ERROR_MISSING_OUTPUT
-            else:
-                result = ExitCode()
-
-        if isinstance(result, int):
-            self.node.set_exit_status(result)
-        elif isinstance(result, ExitCode):
-            self.node.set_exit_status(result.status)
-            self.node.set_exit_message(result.message)
-        else:
-            msg = f'the result should be an integer, ExitCode or None, got {type(result)} {result} {self.pid}'
-            raise ValueError(msg)
-
-    @override
     def on_paused(self, msg: str | None = None) -> None:
         """The Process was paused so set the paused attribute on the process node
 
@@ -606,7 +661,13 @@ class Process(ProcessBase):
 
         """
         super().on_paused(msg)
-        self._save_checkpoint()
+        try:
+            self._save_checkpoint()
+        except process_exceptions.PersistenceError:
+            self.logger.exception(
+                'Exception trying to save checkpoint, this means you will '
+                'not be able to restart in case of a crash until the next successful checkpoint.'
+            )
         self.node.pause()
 
     @override
@@ -744,22 +805,28 @@ class Process(ProcessBase):
         return UUID(self.node.uuid)
 
     @override
-    def _encode_input_args(self, inputs: dict[str, t.Any]) -> str:
-        """Encode input arguments such that they may be saved in a CheckpointPayload
+    def _encode_input_args(self, inputs: t.Any) -> t.Any:
+        """Return a copy of the nested input containers.
+
+        The checkpoint pickler stores nodes by reference, so copying the containers keeps the payload
+        independent of the live process without cloning the stored nodes.
 
         :param inputs: A mapping of the inputs as passed to the process
-        :return: The encoded (serialized) inputs
+        :return: A copy of the nested containers
         """
-        return serialize.serialize(inputs)
+        return _copy_input_containers(inputs)
 
     @override
-    def _decode_input_args(self, encoded: str) -> dict[str, t.Any]:
-        """Decode saved input arguments as they came from the saved instance state CheckpointPayload
+    def _decode_input_args(self, encoded: t.Any) -> t.Any:
+        """Return a copy of the nested restored containers.
 
-        :param encoded: encoded (serialized) inputs
-        :return: The decoded input args
+        The decoded process must not alias the retained payload, so emitting an output after one decode
+        does not leak into a later decode of the same payload.
+
+        :param encoded: The inputs from the checkpoint payload
+        :return: A copy of the nested containers
         """
-        return serialize.deserialize_unsafe(encoded)
+        return _copy_input_containers(encoded)
 
     def update_outputs(self) -> None:
         """Attach new outputs to the node since the last call.

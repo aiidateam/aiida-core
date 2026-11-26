@@ -892,16 +892,17 @@ def test_raw_graph_launch_uses_fixed_boundary_contract() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_checkpoint_preserves_boundary_node_and_runtime_values() -> None:
-    from aiida.engine.processes.persistence import CheckpointPayload
+    from aiida.engine.persistence import AiidaCheckpointPersister
 
     original = Int(2)
     process = GraphProcess(inputs=call_programs.chain.get_launch_inputs(x=original, y=3))
     restored = None
     try:
         assert process.inputs.graph_inputs.x == 2
-        checkpoint = CheckpointPayload.from_object(process)
+        persister = AiidaCheckpointPersister()
+        persister.save_checkpoint(process)
         process.close()
-        restored = checkpoint.decode()
+        restored = persister.load_checkpoint(process.pid).decode()
         assert isinstance(restored, GraphProcess)
         assert restored.inputs.graph_inputs.x == 2
         assert restored._run_state.given['x'].uuid == original.uuid

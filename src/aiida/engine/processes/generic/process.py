@@ -880,11 +880,10 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
                 finished_state = state_cls(self, result=result, successful=False)
                 raise StateEntryFailed(finished_state)
 
-        self.future().set_result(self.outputs)
-
     @super_check
     def on_finished(self) -> None:
         """Entered the FINISHED state."""
+        self.future().set_result(self.outputs)
         self._fire_event(ProcessListener.on_process_finished, self.future().result())
 
     @super_check

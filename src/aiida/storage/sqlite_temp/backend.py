@@ -22,6 +22,7 @@ from pathlib import Path
 from tempfile import mkdtemp
 
 from sqlalchemy import column, insert, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
@@ -34,7 +35,7 @@ from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.repository.backend.sandbox import SandboxRepositoryBackend
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head
-from aiida.storage.sqlite_zip.utils import create_sqla_engine
+from aiida.storage.sqlite_zip.utils import create_sqla_engine, sqlite_transaction
 
 if t.TYPE_CHECKING:
     from aiida.repository.backend.abstract import InfoDictType
@@ -198,10 +199,10 @@ class SqliteTempBackend(StorageBackend):
             self._session.commit()
         return self._session
 
-    def get_checkpoint_classes_dirpath(self) -> Path:
+    def get_checkpoint_directory(self) -> Path:
         if self._closed or self._resources.root is None:
             raise ClosedStorage(str(self))
-        return Path(self._resources.root.abspath) / self._CHECKPOINT_CLASSES_DIRNAME
+        return Path(self._resources.root.abspath) / self._CHECKPOINT_DIRNAME
 
     def get_repository(self) -> SandboxShaRepositoryBackend:
         if self._closed or not self._repo:
@@ -220,14 +221,14 @@ class SqliteTempBackend(StorageBackend):
         entering. Transactions can be nested.
         """
         session = self.get_session()
-        if session.in_transaction():
+        with sqlite_transaction(session=session):
             with session.begin_nested():
                 yield session
-            session.commit()
-        else:
-            with session.begin():
-                with session.begin_nested():
-                    yield session
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+                raise
 
     def _clear(self) -> None:
         raise NotImplementedError

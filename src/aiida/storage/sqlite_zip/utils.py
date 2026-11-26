@@ -9,12 +9,16 @@
 """Utilities for this backend."""
 
 import json
+import sqlite3
 import typing as t
 import zipfile
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
+from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import AiidaException, CorruptStorage, UnreachableStorage
 
@@ -87,6 +91,34 @@ def create_sqla_engine(path: str | Path, *, enforce_foreign_keys: bool = True, *
         event.listen(engine, 'connect', sqlite_enforce_foreign_keys)
     event.listen(engine, 'connect', register_json_contains)
     return engine
+
+
+@contextmanager
+def sqlite_transaction(*, session: Session) -> Generator[None, None, None]:
+    """Own the physical SQLite root needed for savepoint safety, without committing it.
+
+    sqlite3's legacy transaction control does not BEGIN on reads. Without an explicit BEGIN,
+    releasing the first savepoint commits its writes before SQLAlchemy's root commits.
+    Roll back an uncommitted root started here on exit, leaving pre-existing physical roots alone.
+    Call only at explicit write-backend transaction boundaries; ordinary reads keep the lazy `sqlite3` behavior.
+
+    :param session: A SQLAlchemy session using the synchronous sqlite3 driver.
+    :raises TypeError: If the connection does not use sqlite3.
+    """
+    connection = session.connection()
+    driver: object = connection.connection.driver_connection
+    if not isinstance(driver, sqlite3.Connection):
+        msg = 'Expected a synchronous sqlite3 connection.'
+        raise TypeError(msg)
+    owns_root: bool = not driver.in_transaction
+    root = session.get_transaction()
+    try:
+        if owns_root:
+            _ = connection.exec_driver_sql('BEGIN')
+        yield
+    finally:
+        if owns_root and session.get_transaction() is root:
+            session.rollback()
 
 
 def extract_metadata(path: str | Path, *, search_limit: int | None = 10) -> dict[str, t.Any]:

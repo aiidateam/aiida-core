@@ -495,6 +495,9 @@ The panels below provide instructions for storage backends provided by ``aiida-c
 To determine what storage backend a profile uses, call ``verdi profile show``.
 To test if the restoration worked, run ``verdi -p <profile-name> status`` to verify that AiiDA can successfully connect to the data storage.
 
+Processes that were running during the backup continue from the last checkpoint recorded in the backed-up database.
+Steps they completed after that checkpoint run again, so effects outside AiiDA, such as job submissions to a scheduler, can repeat.
+
 .. tab-set::
 
     .. tab-item:: psql_dos
@@ -515,18 +518,19 @@ To test if the restoration worked, run ``verdi -p <profile-name> status`` to ver
         **File repository**
 
         To restore the file repository, simply copy the directory that was backed up to the location indicated in AiiDA `config.json` (or the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command).
+        Set ``<repository_path>`` to the local filesystem path represented by that URI, decoding any percent-escaped characters (for example, ``file:///srv/profile`` becomes ``/srv/profile``).
         Like the backing up process, we recommend using ``rsync`` for this:
 
         .. code-block:: console
 
-            rsync -arvz /path/to/backup/container <storage.config.repository_uri>
+            rsync -arvz /path/to/backup/container "<repository_path>/"
 
-        A backup taken while processes were running also holds a ``checkpoint_classes`` directory beside ``container``, which carries the class of any process whose class the daemon cannot import.
+        A backup taken while processes were running can also hold a ``checkpoints`` directory beside ``container``, containing the files needed to resume those processes.
         Restore it the same way, or those processes cannot be continued:
 
         .. code-block:: console
 
-            rsync -arvz /path/to/backup/checkpoint_classes <storage.config.repository_uri>
+            rsync -arvz /path/to/backup/checkpoints "<repository_path>/"
 
 
 .. _how-to:installation:multi-user:

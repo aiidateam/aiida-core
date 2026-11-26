@@ -88,6 +88,16 @@ class TestBackend:
         with pytest.raises(exceptions.NotExistent):
             orm.User.collection.get(email='user_store_fail@email.com')
 
+    def test_add_link_in_transaction(self):
+        """Test that a link added inside a failed transaction is rolled back."""
+        source = orm.WorkflowNode().store()
+        target = orm.Data().store()
+        with pytest.raises(RuntimeError):
+            with self.backend.transaction():
+                target.base.links.add_incoming(source, link_type=LinkType.RETURN, link_label='result')
+                raise RuntimeError
+        assert target.base.links.get_incoming().all() == []
+
     def test_bulk_insert(self):
         """Test that bulk insert works."""
         rows = [{'email': uuid.uuid4().hex}, {'email': uuid.uuid4().hex}]
@@ -266,3 +276,147 @@ def test_backup_implemented(backend, monkeypatch, tmp_path):
     backend.backup(str(filepath_backup))
     assert (filepath_backup / 'config.json').is_file()
     assert (filepath_backup / 'backup.file').is_file()
+
+
+@pytest.mark.parametrize(
+    'storage_backend',
+    [
+        pytest.param('core.sqlite_dos', id='sqlite'),
+        pytest.param('core.psql_dos', id='postgresql', marks=pytest.mark.requires_psql),
+    ],
+)
+def test_backup_collects_checkpoints_of_processes_sealed_during_backup(
+    storage_backend,
+    aiida_config,
+    aiida_profile_factory,
+    config_sqlite_dos,
+    config_psql_dos,
+    manager,
+    tmp_path,
+    monkeypatch,
+):
+    """Backup retains a finishing process's checkpoint in the snapshot and collects its source file afterward."""
+    from aiida.orm.implementation.checkpoint_store import CheckpointBytes
+
+    config = config_sqlite_dos() if storage_backend == 'core.sqlite_dos' else config_psql_dos()
+    with aiida_profile_factory(aiida_config, storage_backend=storage_backend, storage_config=config):
+        storage = manager.get_profile_storage()
+        store = storage.checkpoint_store
+        finished = orm.WorkChainNode().store()
+        live = orm.WorkChainNode().store()
+        data = CheckpointBytes(content=b'checkpoint')
+        for node in (finished, live):
+            store.write(node_uuid=node.uuid, data=data)
+            node.set_checkpoint(f'checkpoint-pickle-v1:{data.digest}')
+        orphan_uuid: str = str(uuid.uuid4())
+        store.write(node_uuid=orphan_uuid, data=data)
+        directory: pathlib.Path = storage.get_checkpoint_directory()
+        finished_path: pathlib.Path = directory / f'{finished.uuid}-{data.digest}.pkl'
+        live_path: pathlib.Path = directory / f'{live.uuid}-{data.digest}.pkl'
+        orphan_path: pathlib.Path = directory / f'{orphan_uuid}-{data.digest}.pkl'
+        copy = storage._backup_checkpoints
+
+        def finish_before_copy(**kwargs):
+            finished.delete_checkpoint()
+            store.discard_all(node_uuid=finished.uuid)
+            finished.seal()
+            assert finished_path.is_file(), 'Backup must retain the checkpoint referenced by its database snapshot.'
+            copy(**kwargs)
+
+        monkeypatch.setattr(storage, '_backup_checkpoints', finish_before_copy)
+        storage.backup(str(tmp_path))
+
+        assert (tmp_path / 'last-backup' / directory.name / finished_path.name).read_bytes() == data.content
+        assert not finished_path.exists()
+        assert live_path.read_bytes() == data.content
+        assert orphan_path.read_bytes() == data.content
+
+
+@pytest.mark.parametrize(
+    'storage_backend',
+    [
+        pytest.param('core.sqlite_dos', id='sqlite'),
+        pytest.param('core.psql_dos', id='postgresql', marks=pytest.mark.requires_psql),
+        pytest.param('core.sqlite_temp', id='sqlite_temp'),
+    ],
+)
+def test_transaction_rolls_back_root_commit_failure(
+    storage_backend, aiida_config, aiida_profile_factory, config_sqlite_dos, config_psql_dos, manager
+):
+    """A failed root commit leaves no pending changes for a later successful transaction to commit."""
+    from sqlalchemy import event
+    from sqlalchemy.exc import OperationalError
+    from sqlalchemy.orm import Session
+
+    configs = {'core.sqlite_dos': config_sqlite_dos, 'core.psql_dos': config_psql_dos, 'core.sqlite_temp': dict}
+    with aiida_profile_factory(
+        aiida_config, storage_backend=storage_backend, storage_config=configs[storage_backend]()
+    ):
+        storage = manager.get_profile_storage()
+        node = orm.Int(1).store()
+        node.base.extras.set('marker', 'old')
+        assert node.base.extras.get('marker') == 'old'
+        session = storage.get_session()
+        assert session.in_transaction()
+        failed = []
+
+        def fail_root_commit(session: Session) -> None:
+            if not session.in_nested_transaction() and not failed:
+                failed.append(True)
+                raise OperationalError('COMMIT', {}, RuntimeError('root commit failed'))
+
+        event.listen(session, 'before_commit', fail_root_commit)
+        try:
+            with pytest.raises(OperationalError, match='root commit failed'):
+                with storage.transaction():
+                    node.base.extras.set('marker', 'new')
+        finally:
+            event.remove(session, 'before_commit', fail_root_commit)
+        assert failed == [True]
+        assert node.base.extras.get('marker') == 'old'
+        with storage.transaction():
+            node.base.extras.set('recovered', True)
+        assert node.base.extras.get('marker') == 'old'
+        assert node.base.extras.get('recovered') is True
+
+
+@pytest.mark.parametrize('storage_backend', ['core.sqlite_dos', 'core.sqlite_temp'])
+def test_transaction_body_failure_releases_new_sqlite_root(
+    storage_backend, aiida_config, aiida_profile_factory, config_sqlite_dos, manager, monkeypatch, tmp_path
+):
+    """A physical root begun after an ordinary read must not strand the SQLite writer lock."""
+    import sqlite3
+
+    from aiida.storage.sqlite_temp import backend as temp_backend
+
+    filepath = tmp_path / 'temporary.sqlite'
+    create_engine = temp_backend.create_sqla_engine
+
+    def file_engine(path, **kwargs):
+        # Each SQLiteTemp initialization needs its own database, but also an independent lock observer.
+        nonlocal filepath
+        assert path == ':memory:'
+        filepath = tmp_path / f'{uuid.uuid4().hex}.sqlite'
+        return create_engine(path=filepath, **kwargs)
+
+    monkeypatch.setattr(temp_backend, 'create_sqla_engine', file_engine)
+    config = config_sqlite_dos() if storage_backend == 'core.sqlite_dos' else {}
+    with aiida_profile_factory(aiida_config, storage_backend=storage_backend, storage_config=config):
+        storage = manager.get_profile_storage()
+        if storage_backend == 'core.sqlite_dos':
+            filepath = storage.filepath_database
+        node = orm.Int(1).store()
+        assert node.label == ''
+        session = storage.get_session()
+        assert session.in_transaction()
+        assert not session.connection().connection.driver_connection.in_transaction
+        try:
+            with pytest.raises(RuntimeError, match='body failed'):
+                with storage.transaction():
+                    node.label = 'failed'
+                    raise RuntimeError('body failed')
+            with sqlite3.connect(filepath, timeout=0) as writer:
+                writer.execute('UPDATE db_dbnode SET label = ? WHERE id = ?', ('independent', node.pk))
+            assert node.label == 'independent'
+        finally:
+            session.rollback()

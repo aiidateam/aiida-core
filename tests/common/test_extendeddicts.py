@@ -10,8 +10,15 @@
 
 import copy
 import json
+import os
 import pickle
+import subprocess
+import sys
+import textwrap
 import unittest
+from pathlib import Path
+
+import pytest
 
 from aiida.common import exceptions, extendeddicts
 
@@ -350,3 +357,106 @@ class TestDFAD(unittest.TestCase):
         # alpha must be a positive integer
         with self.assertRaises(exceptions.ValidationError):
             dictionary.validate()
+
+
+@pytest.mark.parametrize(
+    'mapping_type',
+    [pytest.param('Frozendict', id='mapping'), pytest.param('AttributesFrozendict', id='attribute-mapping')],
+)
+def test_pickle_recomputes_hash_across_interpreters(tmp_path: Path, mapping_type: str) -> None:
+    """Restored mapping and set keys remain reachable with a different `PYTHONHASHSEED`."""
+    script: Path = tmp_path / 'round_trip.py'
+    payload: Path = tmp_path / 'state.pkl'
+    _ = script.write_text(
+        textwrap.dedent(
+            """\
+            import pickle
+            import sys
+            from pathlib import Path
+            from aiida.common import extendeddicts
+
+            key = getattr(extendeddicts, sys.argv[1])({'key': 'value'})
+            path = Path(sys.argv[2])
+            if sys.argv[3] == 'write':
+                path.write_bytes(pickle.dumps({'mapping': {key: 'saved'}, 'set': {key}}))
+            else:
+                restored = pickle.loads(path.read_bytes())
+                assert restored['mapping'][key] == 'saved'
+                assert key in restored['set']
+            """
+        )
+    )
+    for seed, action in [(1, 'write'), (2, 'read')]:
+        result: subprocess.CompletedProcess[str] = subprocess.run(
+            [sys.executable, str(script), mapping_type, str(payload), action],
+            env={**os.environ, 'PYTHONHASHSEED': str(seed)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+
+
+class SlottedFrozendict(extendeddicts.Frozendict):
+    """A `Frozendict` subclass that stores an extra attribute in `__slots__`."""
+
+    __slots__ = ('label',)
+
+    def __init__(self, label: str, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.label = label
+
+
+class StringSlottedFrozendict(SlottedFrozendict):
+    """A subclass with a string-form slot declaration."""
+
+    __slots__ = 'extra_label'  # noqa: PLC0205
+
+
+class PrivateSlottedFrozendict(SlottedFrozendict):
+    """A subclass with a name-mangled slot."""
+
+    __slots__ = ('__extra_label',)
+
+
+class CollidingAttributesFrozendict(extendeddicts.AttributesFrozendict):
+    """A slotted subclass whose slot shares a name with a mapping key."""
+
+    __slots__ = ('label',)
+
+
+def test_pickle_skips_unset_slot_colliding_with_key() -> None:
+    """An unset slot sharing a mapping key stays unset after a pickle round trip."""
+    from types import MemberDescriptorType
+
+    original = CollidingAttributesFrozendict({'label': 'mapping-value'})
+    descriptor = CollidingAttributesFrozendict.__dict__['label']
+    assert isinstance(descriptor, MemberDescriptorType)
+    with pytest.raises(AttributeError):
+        descriptor.__get__(original)
+
+    restored = pickle.loads(pickle.dumps(original))
+    assert restored['label'] == 'mapping-value'
+    assert restored.label == 'mapping-value'
+    with pytest.raises(AttributeError):
+        descriptor.__get__(restored)
+
+
+@pytest.mark.parametrize(
+    ('mapping_type', 'slot'),
+    [
+        pytest.param(SlottedFrozendict, 'label', id='tuple'),
+        pytest.param(StringSlottedFrozendict, 'extra_label', id='string'),
+        pytest.param(PrivateSlottedFrozendict, '_PrivateSlottedFrozendict__extra_label', id='private'),
+    ],
+)
+def test_pickle_round_trips_slotted_subclass(mapping_type: type[SlottedFrozendict], slot: str) -> None:
+    """Pickle and deepcopy preserve inherited slots and subclass slots while resetting `_hash`."""
+    original: SlottedFrozendict = mapping_type('tag', {'key': 'value'})
+    setattr(original, slot, 'tag')
+    _ = hash(original)
+    for result in (pickle.loads(pickle.dumps(original)), copy.deepcopy(original)):
+        assert result.label == 'tag'
+        assert getattr(result, slot) == 'tag'
+        assert result['key'] == 'value'
+        assert result._hash is None

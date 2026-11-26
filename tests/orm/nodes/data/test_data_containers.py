@@ -216,6 +216,21 @@ def test_heterogeneous_list_round_trip():
         other.store()
 
 
+def test_calculation_cannot_pack_existing_input():
+    """A calculation cannot claim a stored input as a newly created container member."""
+    from aiida.common.exceptions import ValidationError
+    from aiida.engine import calcfunction
+
+    @calcfunction
+    def pack(existing):
+        return DataList([DataList([existing])])
+
+    existing = Int(1).store()
+    with pytest.raises(ValidationError, match='references to stored nodes'):
+        pack(existing)
+    assert existing.creator is None
+
+
 def test_heterogeneous_nested_dict_round_trip():
     """A mapping can contain leaf data and both kinds of nested container."""
     container = DataDict(

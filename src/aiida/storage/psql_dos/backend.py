@@ -498,7 +498,7 @@ class PsqlDosBackend(StorageBackend):
         ownership_contract.validate_bulk_node_insert(rows)
 
     def _validate_bulk_link_insert(self, rows: list[dict]) -> None:
-        """Reject low-level provenance links touching owned nodes."""
+        """Validate bulk provenance links against container ownership rules."""
         from aiida.storage import ownership as ownership_contract
 
         node_model, _ = self._ownership_models()

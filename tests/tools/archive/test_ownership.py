@@ -87,6 +87,26 @@ def test_ownership_round_trip(tmp_path, aiida_profile_clean, selection):
         assert {node.uuid for node in imported_group.nodes} == original_group_uuids
 
 
+def test_import_preserves_create_links_to_owned_members(tmp_path, aiida_profile_clean):
+    """Archiving a created container preserves direct provenance without adding output ports."""
+
+    @calcfunction
+    def produce():
+        return orm.DataList([orm.DataList([orm.Int(1)])])
+
+    root, calculation = produce.run_get_node()
+    root_uuid, creator_uuid = root.uuid, calculation.uuid
+    path = create_archive([root], filename=tmp_path / 'created-container.aiida')
+
+    aiida_profile_clean.reset_storage()
+    import_archive(path, create_group=False)
+
+    imported = orm.load_node(root_uuid)
+    for node in (imported, imported[0], imported[0][0]):
+        assert node.creator.uuid == creator_uuid
+    assert set(orm.load_node(creator_uuid).outputs) == {'result'}
+
+
 @pytest.mark.parametrize('selection', ['leaf', 'group', 'nested', 'root-and-leaf', 'root-and-group', 'nested-and-leaf'])
 def test_export_projects_ownership(tmp_path, aiida_profile_clean, selection):
     """Export follows membership to ancestors but does not pull in unselected descendants."""

@@ -69,12 +69,14 @@ from __future__ import annotations
 
 import typing as t
 from dataclasses import dataclass, field
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from aiida.common import timezone
 from aiida.common.exceptions import IntegrityError
-from aiida.common.links import LinkType
+from aiida.common.links import CONTAINER_MEMBER_CREATE_PREFIX, LinkType
+from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.storage_backend import MembershipDeletion
 from aiida.storage.utils import _create_smarter_in_clause
 
@@ -615,20 +617,19 @@ def validate_provenance_link_type(value: object) -> None:
 
 
 def validate_link_rows(session, node_model, rows: list[dict]) -> None:
-    """Reject low-level provenance link rows touching owned nodes or carrying non-provenance types.
+    """Reject non-provenance links and links touching owned nodes, except member creation links.
 
-    Direct provenance links to owned children are rejected; automatic copying belongs at the process
-    input/calculation-output boundary (deferred integration). Non-provenance (containment) link types
-    such as ``contains`` must never be inserted in ``db_dblink``; containment edges live in the
-    dedicated membership table.
+    Member creation links use a reserved label and are written by subtree storage or archive import.
 
     :raises IntegrityError: on any violation.
     """
     endpoints: set[int] = set()
     for row in rows:
-        validate_provenance_link_type(row.get('type'))
+        link_type = row.get('type')
+        validate_provenance_link_type(link_type)
         endpoints.add(row['input_id'])
-        endpoints.add(row['output_id'])
+        if link_type != LinkType.CREATE.value or not row.get('label', '').startswith(CONTAINER_MEMBER_CREATE_PREFIX):
+            endpoints.add(row['output_id'])
     for endpoint_id in endpoints:
         assert_no_provenance_link_to_owned(session, node_model, endpoint_id=endpoint_id)
 
@@ -683,7 +684,7 @@ def attach_membership(
                 raise IntegrityError(msg)
             resolved_kind = inferred
         if merge_with_link_model is not None:
-            members = _members_to_merge(session, node_model, membership_model, merge_with_link_model, owner_id, members)
+            members = _members_to_merge(session, node_model, membership_model, merge_with_link_model, owner, members)
             if not members:
                 return
         validate_ownership_graph(
@@ -723,12 +724,16 @@ def attach_membership(
         session.flush()
 
 
-def _members_to_merge(
-    session, node_model, membership_model, link_model, owner_id: int, members: list[dict]
-) -> list[dict]:
-    """Reuse matching edges and reject changes to existing membership or adoption of linked nodes."""
+def _member_create_label(owner_uuid: str | UUID, child_uuid: str | UUID) -> str:
+    """Use UUIDs to preserve the link label when an archive remaps database IDs."""
+    return f'{CONTAINER_MEMBER_CREATE_PREFIX}{owner_uuid}_{child_uuid}'.replace('-', '')
+
+
+def _members_to_merge(session, node_model, membership_model, link_model, owner, members: list[dict]) -> list[dict]:
+    """Reuse matching edges and reject changes to existing membership or adoption of unrelated linked nodes."""
     from sqlalchemy import or_
 
+    owner_id = owner.id
     rows = (
         session.query(membership_model, node_model.owner_id, node_model.node_type)
         .join(node_model, node_model.id == membership_model.child_id)
@@ -757,21 +762,29 @@ def _members_to_merge(
             raise IntegrityError(msg)
         pending.append(spec)
 
-    owned = [spec['child_id'] for spec in pending if not spec.get('reference', False)]
-    if (
-        owned
-        and session.query(link_model.id)
-        .filter(
-            or_(
-                _create_smarter_in_clause(session, link_model.input_id, owned),
-                _create_smarter_in_clause(session, link_model.output_id, owned),
+    owned = {spec['child_id'] for spec in pending if not spec.get('reference', False)}
+    if owned:
+        owned_ids = tuple(owned)
+        links = (
+            session.query(link_model.input_id, link_model.type, link_model.label, node_model.uuid)
+            .join(node_model, node_model.id == link_model.output_id)
+            .filter(
+                or_(
+                    _create_smarter_in_clause(session, link_model.input_id, owned_ids),
+                    _create_smarter_in_clause(session, link_model.output_id, owned_ids),
+                )
             )
         )
-        .first()
-        is not None
-    ):
-        msg = 'Cannot adopt a node with existing provenance links as a container member.'
-        raise IntegrityError(msg)
+        for source_id, link_type, label, child_uuid in links:
+            # A partial archive may have imported the child's CREATE link without its owner.
+            if (
+                source_id not in owned
+                and link_type == LinkType.CREATE.value
+                and label == _member_create_label(owner.uuid, child_uuid)
+            ):
+                continue
+            msg = 'Cannot adopt a node with existing provenance links as a container member.'
+            raise IntegrityError(msg)
     return pending
 
 
@@ -836,9 +849,9 @@ def store_container_subtree(
     Stores every node row (``entities`` in post-order, children before their
     owner, ownership root last) and then freezes every container edge in
     ``containers`` (nested containers first) inside a single backend
-    transaction that joins an enclosing transaction when present. Only the
-    ownership root receives ``root_links`` (opaque link triples in the format
-    accepted by the backend entity store methods; forwarded without inspection).
+    transaction that joins an enclosing transaction when present. The
+    ownership root receives ``root_links``; if it was created by a calculation,
+    the same calculation creates every freshly stored descendant.
     Repository content must already be prepared by the caller (repo-first).
 
     Leaf data rows go through :meth:`BackendNode.store
@@ -855,12 +868,13 @@ def store_container_subtree(
     :param backend: the storage backend (owns the transaction).
     :param entities: backend entities in post-order (root last), non-empty.
     :param containers: per-container membership specs, nested containers first.
-    :param root_links: incoming links applied to the ownership root only.
+    :param root_links: incoming links for the ownership root, including its creator if applicable.
     """
     if not entities:
         msg = 'Cannot store an empty container subtree: at least the ownership root is required.'
         raise IntegrityError(msg)
     root = entities[-1]
+    creator = next((link.node for link in root_links or () if link.link_type is LinkType.CREATE), None)
     with backend.transaction():
         for entity in entities:
             links = root_links if entity is root else None
@@ -882,13 +896,25 @@ def store_container_subtree(
             ]
             backend.create_container_membership(spec.owner.pk, members, kind=spec.kind)
 
+        if creator is not None and len(entities) > 1:
+            backend.bulk_insert(
+                EntityTypes.LINK,
+                [
+                    {
+                        'input_id': creator.pk,
+                        'output_id': member.entity.pk,
+                        'type': LinkType.CREATE.value,
+                        'label': _member_create_label(spec.owner.uuid, member.entity.uuid),
+                    }
+                    for spec in containers
+                    for member in spec.members
+                    if not member.reference
+                ],
+            )
+
 
 def assert_no_provenance_link_to_owned(session, node_model, *, endpoint_id: int, role: str = 'endpoint') -> None:
-    """Reject low-level provenance links touching an owned node.
-
-    Direct provenance links to owned children are rejected; automatic
-    copying belongs at the process input/calculation-output boundary
-    (deferred integration). Either link endpoint being owned raises.
+    """Reject links touching an owned node outside the member creation path.
 
     :param session: the active SQLAlchemy session.
     :param endpoint_id: pk of the link endpoint to check.
@@ -899,6 +925,6 @@ def assert_no_provenance_link_to_owned(session, node_model, *, endpoint_id: int,
     if row is not None and getattr(row, 'owner_id') is not None:
         msg = (
             f'Rejected provenance link to owned {role} node {endpoint_id} '
-            f'(owned by {getattr(row, "owner_id")}). Owned children cannot appear in provenance links.'
+            f'(owned by {getattr(row, "owner_id")}). Only container member CREATE links can target owned nodes.'
         )
         raise IntegrityError(msg)

@@ -729,18 +729,16 @@ class TestContentHashingCacheReuse:
         assert DataList._cachable is False
         assert DataDict._cachable is False
 
-    def test_process_cache_does_not_reuse_edited_container_output(self):
-        """Deleting a member must not change the result of a future calculation."""
+    def test_process_cache_does_not_reuse_container_output(self):
+        """A calculation that produced a container is not a cache source."""
         from aiida.manage.caching import enable_caching
-        from aiida.tools import delete_nodes
 
         with enable_caching():
             original = _create_list_for_cache_test()
-            delete_nodes([original[0].pk], dry_run=False)
-            assert [child.value for child in original] == [2]
             result, calc = _create_list_for_cache_test.run_get_node()
 
         assert calc.base.caching.get_cache_source() is None
+        assert result.uuid != original.uuid
         assert [child.value for child in result] == [1, 2]
 
     def test_process_cache_does_not_equate_dict_input_orders(self):

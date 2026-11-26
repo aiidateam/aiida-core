@@ -58,7 +58,8 @@ The node's ``node_type`` identifies a list or dict, even when the container is e
 Typed reads check ``node_type`` to reject cross-kind access.
 
 Membership rows are containment edges, not provenance.
-Duplicating them as ``CREATE`` or ``INPUT`` links would claim a computation happened that never did, so containment stays in its own tables and provenance links never point at owned children directly.
+Containment always stays in its own tables.
+The only provenance links to owned children are direct ``CREATE`` links from the calculation that created the output subtree; these links do not encode membership.
 
 Three consequences fall out of this shape.
 First, ownership is exclusive and acyclic: ``child_id`` is unique, so a node can only ever have one owner, and the backend refuses self-ownership plus any edge that would close a cycle through already-stored rows.
@@ -99,7 +100,9 @@ The ORM then writes every repository file first (repo-first), then hands narrow 
 That call writes all node rows in post-order (children before owner, root last), then all membership edges with the container's layout, in a single backend transaction that joins any enclosing transaction.
 Leaf rows go through ``BackendNode.store``; container rows go through ``BackendContainer.store_container``.
 Calling the ordinary ``store`` method on a backend container raises ``IntegrityError``.
-Only the ownership root receives the incoming provenance links.
+The ownership root receives the process output link.
+If the root is a calculation output, subtree storage also writes a ``CREATE`` link for each newly owned descendant in the same transaction.
+These links use reserved labels based on the immediate owner's and member's UUIDs so they survive archive ID remapping without introducing ports.
 If anything fails, no partially stored ownership graph is left behind: the retained Python objects are restored from snapshots to unstored, editable, retryable state, with their content and ordering intact.
 When the store joined an enclosing transaction, recovery is eager: the store registers a backend rollback hook that restores the retained subtree at rollback time, safe to observe from a retained leaf child first and correct across nested savepoints, since only the failed scope fires while outer scopes keep theirs.
 Backends without hook support keep the lazy fallback: the root re-verifies its row on the next status check outside an active transaction and recovers the subtree the same way.

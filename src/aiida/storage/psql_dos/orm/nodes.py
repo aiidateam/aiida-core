@@ -209,9 +209,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         ownership_contract.validate_provenance_link_type(link_type)
         session = self.backend.get_session()
 
-        # Membership rows are containment edges, not provenance: direct low-level provenance links to owned
-        # children are rejected at the backend contract level (automatic copying belongs at the deferred
-        # process-boundary integration).
+        # Member creation links are written with the subtree, never as individual links.
         ownership_contract.assert_no_provenance_link_to_owned(
             session, self.MODEL_CLASS, endpoint_id=source.pk, role='source'
         )

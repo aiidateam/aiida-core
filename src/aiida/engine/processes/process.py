@@ -787,11 +787,10 @@ class Process(ProcessBase):
                 continue
 
             if isinstance(self.node, orm.CalculationNode):
-                # Exposing an owned child creates an independent standalone
-                # copy (recursive for nested containers) and attaches CREATE
-                # to that copy; the exposed output is the object recorded in
-                # provenance. Ordinary CREATE validation applies.
                 exposed = self._detach_owned_output(output)
+                if isinstance(exposed, orm.Container) and exposed.is_stored:
+                    msg = 'calculations must return a new container; clone a stored container before returning it'
+                    raise exceptions.ValidationError(msg)
                 exposed.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
                 exposed.store()
                 if exposed is not output:

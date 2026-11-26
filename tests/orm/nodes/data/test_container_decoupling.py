@@ -142,15 +142,13 @@ def test_nested_failure_rolls_back_and_retries():
 
 @pytest.mark.requires_broker
 def test_process_container_io_retains_root_provenance():
-    """Process container inputs/outputs link at the container root with values preserved."""
+    """Container port links use the root, and newly created members also have provenance."""
     from aiida.engine import calcfunction
 
     @calcfunction
     def wrap_in_list(value):
-        """Wrap one value in a new container (returned as the process output)."""
-        result = DataList()
-        result.append(value)
-        return result
+        """Wrap a new copy of the input in a container."""
+        return DataList([value.clone()])
 
     @calcfunction
     def copy_input(value):
@@ -160,7 +158,7 @@ def test_process_container_io_retains_root_provenance():
     source = Int(7)
     result, calc_node = wrap_in_list.run_get_node(source)
 
-    # The output is a stored container linked at the root; provenance is CREATE, values preserved.
+    # The output port points to the root; its member also records creation.
     assert isinstance(result, DataList)
     assert isinstance(result, Data)
     assert result.is_stored
@@ -168,6 +166,7 @@ def test_process_container_io_retains_root_provenance():
     incoming = result.base.links.get_incoming(link_type=LinkType.CREATE).all()
     assert len(incoming) == 1
     assert incoming[0].node.uuid == calc_node.uuid
+    assert result[0].creator == calc_node
     assert calc_node.is_stored
 
     # Owned children passed as inputs are detached to standalone copies (new identity, same content).

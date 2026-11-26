@@ -122,12 +122,35 @@ def test_calcfunction_container_output(aiida_profile_clean):
     assert results.is_stored
 
     # This mirrors ``ProcessLauncher`` for finished processes: outputs are collected as data nodes.
-    outputs = {entry.link_label: entry.node for entry in node.base.links.get_outgoing(node_class=Data)}
+    outputs = {
+        entry.link_label: entry.node
+        for entry in node.base.links.get_outgoing(node_class=Data, include_container_members=False)
+    }
     assert set(outputs) == {'result'}
     assert isinstance(outputs['result'], DataList)
     assert outputs['result'].uuid == results.uuid
     # The stored container plus its two owned children are all data-node rows.
     assert QueryBuilder().append(Data).count() == 3
+
+
+def test_create_links_for_nested_members():
+    """Every newly created member has its own CREATE link, but only the root is an output port."""
+    from aiida.common.links import LinkType
+    from aiida.engine import calcfunction, run_get_node
+    from aiida.orm import load_node
+
+    @calcfunction
+    def make_summary():
+        return DataDict({'numbers': DataList([Int(1)])})
+
+    summary, calculation = run_get_node(make_summary)
+    numbers = summary['numbers']
+    leaf = load_node(numbers[0].pk)
+
+    for node in (summary, numbers, leaf):
+        assert node.base.links.get_incoming(link_type=LinkType.CREATE).one().node == calculation
+        assert node.creator == calculation
+    assert set(calculation.outputs) == {'result'}
 
 
 def test_calcfunction_owned_child_output(aiida_profile_clean):
@@ -152,3 +175,4 @@ def test_calcfunction_owned_child_output(aiida_profile_clean):
     # The recorded node is exactly what the process output link points to.
     assert recorded.uuid == node.base.links.get_outgoing().get_node_by_label('result').uuid
     assert results.uuid == recorded.uuid
+    assert results.creator == node

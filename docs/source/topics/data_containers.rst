@@ -134,7 +134,7 @@ Extras stay mutable after storage; everything else about the subtree is frozen.
 Using containers in processes
 =============================
 
-Processes link whole containers, never owned children directly.
+Process ports link whole containers, not their owned children.
 Passing a whole container as an input links that container; passing an owned child detaches a standalone copy first, and the process records that same copy as its provenance input.
 Like any other recorded input, the detached copy cannot be returned unchanged by a calculation; use ``value.clone()`` to create a new output.
 
@@ -148,7 +148,11 @@ Like any other recorded input, the detached copy cannot be returned unchanged by
 
 The ``return container[0]`` here exposes an owned child as a calculation output.
 The engine records a standalone copy as the output, with a ``CREATE`` link from the calculation, and the caller receives that recorded copy.
-Workflows never copy on output: a workfunction may return a whole standalone container, but returning an owned child raises ``InvalidOperation`` instead of silently duplicating data.
+When a calculation outputs a new container, each newly owned descendant also gets a direct ``CREATE`` link, but only the root appears as a process output port.
+A calculation cannot return a stored container or a new container that references stored nodes.
+Use ``clone()`` to make an independent output.
+
+Workflows never copy on output: a workfunction may return a stored standalone container, but returning an owned child raises ``InvalidOperation`` instead of silently duplicating data.
 Return the container itself in that case.
 Port validation accepts containers alongside data (``valid_type`` accepts ``Data``) but does not check element types; validate those inside the process if they matter.
 
@@ -180,7 +184,7 @@ Following ownership in graph walks
 
 :py:func:`~aiida.tools.graph.graph_traversers.traverse_graph` follows membership only when you pass ``LinkType.CONTAINS`` in ``links_forward`` or ``links_backward``.
 Forward follows container to member, and backward follows member to owner.
-For example, given a ``summary`` dict returned by a calculation, find the creator from its ``'total'`` member:
+For example, given a ``summary`` dict returned by a calculation, traverse from its ``'total'`` member to both its owner and its creator:
 
 .. code-block:: python
 
@@ -195,6 +199,8 @@ For example, given a ``summary`` dict returned by a calculation, find the creato
 
 The result contains actual provenance links in ``links`` and ownership edges in ``memberships``.
 A ``CONTAINS`` edge is stored as a membership row, not a provenance link.
+The ``creator`` property reads a node's direct incoming ``CREATE`` link; membership alone does not establish creation.
+This identifies the calculation that created a member, but it does not recover the source of an explicitly cloned node.
 You can also pass ``LinkType.CONTAINS`` in the ``link_types`` argument of :py:class:`~aiida.tools.visualization.Graph` to draw membership edges separately.
 
 .. _topics:data_containers:groups:
@@ -214,9 +220,9 @@ Deletion
 ========
 
 By default, deletion follows ownership downwards, in addition to the ordinary provenance traversal rules.
-Deleting a member does not select its owner or siblings; it removes the member from the surviving container.
-This changes what a past process that used that container would now see.
-Use ``--no-contains-forward`` to delete a container but keep its surviving members as standalone nodes with the same UUIDs.
+Membership alone does not select a member's owner or siblings for deletion.
+For calculation outputs, ordinary provenance rules can select the creator and its other outputs, including the root and other members of the container.
+Use ``--no-contains-forward`` to stop following membership during deletion; members not selected by other rules survive as standalone nodes with the same UUIDs.
 Nested members retain their own children, and referenced nodes are not selected for deletion merely because their container is deleted.
 Preview the deletion, which reports detachment and changes to surviving containers, before confirming:
 

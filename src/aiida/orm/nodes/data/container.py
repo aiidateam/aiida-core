@@ -62,6 +62,7 @@ from collections.abc import Iterator, Mapping
 
 from aiida.common import exceptions
 from aiida.common.lang import override
+from aiida.common.links import LinkType
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.nodes.node import Node
@@ -766,6 +767,13 @@ class Container(Data):
             node._validate_storability()
             node._validate()
         specs = self._container_store_specs(subtree)
+        root_links = self.base.links.incoming_cache
+        if any(link.link_type is LinkType.CREATE for link in root_links) and any(
+            member.reference for spec in specs for member in spec.members
+        ):
+            msg = 'calculation output containers cannot contain references to stored nodes; clone those nodes instead'
+            raise exceptions.ValidationError(msg)
+
         snapshot = self._snapshot_subtree(subtree)
         joined_outer = self.backend.in_transaction
         store_subtree = getattr(self.backend, 'store_container_subtree', None)
@@ -776,15 +784,8 @@ class Container(Data):
             for node in subtree:
                 node.base.repository._store()
             # Atomic relational freeze: node rows, owner references and membership rows
-            # are validated and written in one storage transaction joining the enclosing
-            # transaction when present. Only the ownership root carries
-            # incoming provenance links.
-            store_subtree(
-                [node.backend_entity for node in subtree],
-                specs,
-                root_links=self.base.links.incoming_cache,
-                clean=True,
-            )
+            # and creation links must commit or roll back together.
+            store_subtree([node.backend_entity for node in subtree], specs, root_links=root_links, clean=True)
         except Exception:
             self._recover_subtree(subtree, snapshot)
             raise

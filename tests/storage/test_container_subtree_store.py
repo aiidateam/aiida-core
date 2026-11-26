@@ -21,7 +21,7 @@ container objects.
 import pytest
 
 from aiida.common.exceptions import NotExistent
-from aiida.orm import DataList, Int, load_node
+from aiida.orm import CalcFunctionNode, DataList, Int, load_node
 from aiida.storage import ownership as ownership_contract
 
 pytestmark = pytest.mark.usefixtures('aiida_profile_clean')
@@ -84,8 +84,7 @@ def test_store_nested_subtree_success(backend):
     from aiida.common.links import LinkType
     from aiida.orm.utils.links import LinkTriple
 
-    link_source = _leaf(0)
-    link_source.store()
+    link_source = CalcFunctionNode().store()
     root_links = [LinkTriple(link_source, LinkType.CREATE, 'output')]
     seen_store = {}
     seen_store_container = {}
@@ -125,7 +124,9 @@ def test_store_nested_subtree_success(backend):
     reloaded = load_node(outer.pk)
     assert isinstance(reloaded, DataList)
     assert [[child.value for child in nested] for nested in reloaded] == [[1, 2], [3]]
-    assert [triple.node.uuid for triple in reloaded.base.links.get_incoming().all()] == [link_source.uuid]
+    assert reloaded.creator == link_source
+    assert reloaded[0].creator == link_source
+    assert reloaded[0][0].creator == link_source
 
 
 def test_store_subtree_node_failure_rolls_back(backend):

@@ -14,7 +14,7 @@ Processes with container inputs bypass cache lookup, and processes with containe
 
 ### Breaking changes
 
-`delete_nodes()` and `verdi node delete` follow owned members downward by default. Deleting a member no longer selects its owner or siblings, but removes the membership edge from a surviving container. Pass `contains_forward=False` (CLI `--no-contains-forward`) to detach surviving members instead of following ownership downward.
+`delete_nodes()` and `verdi node delete` follow owned members downward by default. Membership alone does not select a member's owner or siblings for deletion; ordinary provenance rules still apply. Pass `contains_forward=False` (CLI `--no-contains-forward`) to detach surviving members instead of following ownership downward.
 `create_archive()` and `verdi archive create` now always include the ancestor containers of selected members. Set `contains_forward=True` (CLI `--contains-forward`) to also follow membership from containers to their members. Import merges UUIDs and keeps stored ownership edges that are absent from the archive; conflicting explicit ownership is rejected.
 
 `aiida.orm.Container` now derives from `aiida.orm.Data`. Replace `aiida.orm.DataNode` with `aiida.orm.Data` in type checks, process ports, and queries. Queries for `Data` include containers; stored node type strings are unchanged.
@@ -22,6 +22,8 @@ Processes with container inputs bypass cache lookup, and processes with containe
 `DataList` and `DataDict` retain inserted nodes instead of cloning them. Ownership is claimed at `store()`, which rejects multiple memberships and already-owned nodes without committing a partial subtree. Use `node.clone()` to insert an independent copy explicitly. A `DataList` can still link to stored standalone leaf data without owning it.
 
 `DataDict` keys do not follow process port naming rules. Storing a `DataDict` with a key longer than 255 characters or containing a NUL character raises a storage error on every backend. Existing stored keys remain readable, and `Dict` is unchanged.
+
+Calculations returning containers record direct `CREATE` links to the root and every newly owned descendant. `Data.creator` reads the node's own link. Return a new container and clone any existing nodes you want to include; references to stored nodes are not allowed in calculation output containers. Only the root is a process output port.
 
 The unreleased `Container.layout` property has been removed. `DataList` and `DataDict` are identified by their node type and always store one membership row per child.
 

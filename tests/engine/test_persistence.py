@@ -331,7 +331,7 @@ def make_process(aiida_profile: Profile):
 
 def dirpath() -> pathlib.Path:
     """Return the loaded profile's checkpoint class directory."""
-    return get_manager().get_profile_storage().get_checkpoint_classes_dirpath()
+    return get_manager().get_profile_storage().get_checkpoint_directory()
 
 
 def checkpoint_classes() -> set[str]:
@@ -464,7 +464,7 @@ def test_loading_class_bytes_checks_the_digest(
 @pytest.mark.usefixtures('aiida_profile')
 def test_class_file_write_syncs_parent_directory(monkeypatch):
     """The profile directory is synchronized before a new class directory can be referenced."""
-    from aiida.orm.implementation.checkpoint_store import CheckpointClassStore, ProcessClassBytes
+    from aiida.orm.implementation.checkpoint_store import CheckpointBytes, CheckpointStore
 
     synced: list[tuple[int, int]] = []
     fsync = os.fsync
@@ -475,11 +475,11 @@ def test_class_file_write_syncs_parent_directory(monkeypatch):
         fsync(descriptor)
 
     monkeypatch.setattr(target=os, name='fsync', value=record)
-    files = CheckpointClassStore(storage=get_manager().get_profile_storage())
+    files = CheckpointStore(storage=get_manager().get_profile_storage())
     node_uuid: str = str(uuid4())
-    content = ProcessClassBytes(content=b'class bytes')
+    content = CheckpointBytes(content=b'class bytes')
     try:
-        files.write(node_uuid=node_uuid, class_bytes=content)
+        files.write(node_uuid=node_uuid, data=content)
         for directory in (dirpath().parent, dirpath()):
             info = directory.stat()
             assert (info.st_dev, info.st_ino) in synced
@@ -634,7 +634,7 @@ def test_temporary_class_files_are_outside_repository_objects(aiida_config_tmp, 
         assert isinstance(storage, SqliteTempBackend)
         repository = storage.get_repository()
         before = set(repository.list_objects())
-        directory = storage.get_checkpoint_classes_dirpath()
+        directory = storage.get_checkpoint_directory()
         directory.mkdir(parents=True, exist_ok=True)
         (directory / 'class.pkl').write_bytes(b'class bytes')
         assert set(repository.list_objects()) == before
@@ -720,7 +720,7 @@ def test_maintenance_preserves_an_uncommitted_owner(
                 orm.QueryBuilder(backend=collector).append(orm.ProcessNode, filters={'uuid': live.node.uuid}).count()
             )
             assert owners == 0
-            dropped = collector.delete_orphaned_checkpoint_class_files()
+            dropped = collector.delete_orphaned_checkpoint_files()
             assert f'{live.node.uuid}-{digest}.pkl' not in [path.name for path in dropped]
         assert f'{live.node.uuid}-{digest}.pkl' in checkpoint_classes()
         assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
@@ -739,8 +739,8 @@ def test_maintenance_defers_uncommitted_sealing(
     with pytest.raises(RuntimeError, match='rollback'):
         with storage.transaction():
             live.node.seal()
-            assert storage.delete_orphaned_checkpoint_class_files() == []
-            assert storage.delete_orphaned_checkpoint_class_files(dry_run=True) == []
+            assert storage.delete_orphaned_checkpoint_files() == []
+            assert storage.delete_orphaned_checkpoint_files(dry_run=True) == []
             msg = 'rollback'
             raise RuntimeError(msg)
     assert not orm.load_node(live.pid).is_sealed
@@ -752,7 +752,7 @@ def _populate_mixed_directory(
     storage: StorageBackend,
 ) -> tuple[list[pathlib.Path], tuple[pathlib.Path, pathlib.Path]]:
     """Write foreign and orphaned class files, returning both groups."""
-    directory = storage.get_checkpoint_classes_dirpath()
+    directory = storage.get_checkpoint_directory()
     directory.mkdir(parents=True, exist_ok=True)
     owner = str(uuid4())
     foreign = [directory / f'{owner}-notes.txt', directory / f'{owner}-{"a" * 32}']
@@ -771,7 +771,7 @@ def test_live_collection_ignores_incomplete_formats():
     storage = get_manager().get_profile_storage()
     _, (finished, staged) = _populate_mixed_directory(storage)
 
-    dropped = storage.delete_orphaned_checkpoint_class_files()
+    dropped = storage.delete_orphaned_checkpoint_files()
 
     assert finished not in dropped and staged not in dropped
 
@@ -785,7 +785,7 @@ def test_exclusive_collection_takes_complete_formats():
     _, (finished, staged) = _populate_mixed_directory(storage)
 
     with ProfileAccessManager(storage.profile).lock():
-        collected = set(storage.delete_orphaned_checkpoint_class_files(only_sealed=False))
+        collected = set(storage.delete_orphaned_checkpoint_files(only_sealed=False))
 
     assert {finished, staged} <= collected
 
@@ -798,9 +798,9 @@ def test_collection_preserves_foreign_files():
     storage = get_manager().get_profile_storage()
     foreign, _ = _populate_mixed_directory(storage)
 
-    storage.delete_orphaned_checkpoint_class_files()
+    storage.delete_orphaned_checkpoint_files()
     with ProfileAccessManager(storage.profile).lock():
-        storage.delete_orphaned_checkpoint_class_files(only_sealed=False)
+        storage.delete_orphaned_checkpoint_files(only_sealed=False)
 
     assert all(path.read_bytes() == b'foreign content' for path in foreign)
 
@@ -885,7 +885,7 @@ def test_collection_dry_run_reports_eligible_files(
     before = checkpoint_classes()
 
     storage = get_manager().get_profile_storage()
-    would_drop = storage.delete_orphaned_checkpoint_class_files(dry_run=True)
+    would_drop = storage.delete_orphaned_checkpoint_files(dry_run=True)
 
     assert [path.name for path in would_drop] == sorted(name for name in before if name.startswith(live.node.uuid))
     assert checkpoint_classes() == before
@@ -908,7 +908,7 @@ def test_maintenance_survives_a_file_it_cannot_delete(
     monkeypatch.setattr(target=pathlib.Path, name='unlink', value=refuse)
     storage = get_manager().get_profile_storage()
 
-    assert storage.delete_orphaned_checkpoint_class_files() == [], 'a file that stayed is not reported as dropped'
+    assert storage.delete_orphaned_checkpoint_files() == [], 'a file that stayed is not reported as dropped'
 
     monkeypatch.undo()
 
@@ -973,9 +973,7 @@ def test_deleting_the_checkpoint_on_a_storage_without_class_byte_files(
         msg = 'keeps no checkpoint class files'
         raise NotImplementedError(msg)
 
-    monkeypatch.setattr(
-        type(get_manager().get_profile_storage()), name='get_checkpoint_classes_dirpath', value=keeps_none
-    )
+    monkeypatch.setattr(type(get_manager().get_profile_storage()), name='get_checkpoint_directory', value=keeps_none)
 
     persister.delete_checkpoint(live.pid)
 

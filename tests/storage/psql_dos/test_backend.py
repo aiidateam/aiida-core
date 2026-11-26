@@ -200,7 +200,7 @@ def test_backup(tmp_path):
 def test_backup_includes_checkpoint_classes(tmp_path):
     """The class-file directory is copied with the rest of the backup."""
     storage_backend = get_manager().get_profile_storage()
-    directory = storage_backend.get_checkpoint_classes_dirpath()
+    directory = storage_backend.get_checkpoint_directory()
     directory.mkdir(parents=True, exist_ok=True)
     (directory / 'class.pkl').write_bytes(b'class bytes')
 

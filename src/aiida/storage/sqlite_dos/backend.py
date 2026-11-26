@@ -290,8 +290,8 @@ class SqliteDosStorage(PsqlDosBackend):
 
         return DiskObjectStoreRepositoryBackend(container=self.get_container())
 
-    def get_checkpoint_classes_dirpath(self) -> Path:
-        return self.filepath_root / self._CHECKPOINT_CLASSES_DIRNAME
+    def get_checkpoint_directory(self) -> Path:
+        return self.filepath_root / self._CHECKPOINT_DIRNAME
 
     @classmethod
     def version_profile(cls, profile: Profile) -> str | None:
@@ -389,4 +389,4 @@ class SqliteDosStorage(PsqlDosBackend):
         LOGGER.report('Backing up sqlite database')
         manager.call_rsync(self.filepath_database, path, link_dest=prev_backup, dest_trailing_slash=True)
 
-        self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)
+        self._backup_checkpoints(manager=manager, path=path, prev_backup=prev_backup)

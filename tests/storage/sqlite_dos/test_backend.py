@@ -45,7 +45,7 @@ def test_backup_includes_checkpoint_classes(aiida_config, aiida_profile_factory,
     """The class-file directory is copied with the rest of the backup."""
     with aiida_profile_factory(aiida_config, storage_backend='core.sqlite_dos'):
         storage = manager.get_profile_storage()
-        directory = storage.get_checkpoint_classes_dirpath()
+        directory = storage.get_checkpoint_directory()
         directory.mkdir(parents=True, exist_ok=True)
         source = directory / 'class.pkl'
         source.write_bytes(b'class bytes')
@@ -64,7 +64,7 @@ def test_backup_skips_staged_checkpoint_files(aiida_config, aiida_profile_factor
     """Staged files of unfinished checkpoint writes stay out of the backup."""
     with aiida_profile_factory(aiida_config, storage_backend='core.sqlite_dos'):
         storage = manager.get_profile_storage()
-        directory = storage.get_checkpoint_classes_dirpath()
+        directory = storage.get_checkpoint_directory()
         directory.mkdir(parents=True, exist_ok=True)
         owner = uuid.uuid4()
         digest = '0' * 64

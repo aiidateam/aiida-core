@@ -257,8 +257,8 @@ class PsqlDosBackend(StorageBackend):
         container = Container(get_filepath_container(self.profile))
         return DiskObjectStoreRepositoryBackend(container=container)
 
-    def get_checkpoint_classes_dirpath(self) -> pathlib.Path:
-        return get_filepath_container(profile=self.profile).parent / self._CHECKPOINT_CLASSES_DIRNAME
+    def get_checkpoint_directory(self) -> pathlib.Path:
+        return get_filepath_container(profile=self.profile).parent / self._CHECKPOINT_DIRNAME
 
     @property
     def authinfos(self) -> authinfos.SqlaAuthInfoCollection:
@@ -541,9 +541,9 @@ class PsqlDosBackend(StorageBackend):
 
             # Not part of the repository, so the sweep above cannot see them: a checkpoint is a node attribute and
             # the class it carries is a file beside the container, which nothing references once its node is gone.
-            orphaned = self.delete_orphaned_checkpoint_class_files(only_sealed=not full, dry_run=dry_run)
+            orphaned = self.delete_orphaned_checkpoint_files(only_sealed=not full, dry_run=dry_run)
             action: str = 'Would delete' if dry_run else 'Deleting'
-            STORAGE_LOGGER.info(f'{action} {len(orphaned)} orphaned process class files ...')
+            STORAGE_LOGGER.info(f'{action} {len(orphaned)} orphaned checkpoint files ...')
 
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
@@ -661,21 +661,21 @@ class PsqlDosBackend(StorageBackend):
         )
 
         # step 5: back up the checkpoint class files
-        self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)
+        self._backup_checkpoints(manager=manager, path=path, prev_backup=prev_backup)
 
-    def _backup_checkpoint_classes(
+    def _backup_checkpoints(
         self,
         manager: backup_utils.BackupManager,
         path: pathlib.Path,
         prev_backup: pathlib.Path | None = None,
     ) -> None:
         """Back up published class files, skipping files staged by unfinished writes."""
-        checkpoints: pathlib.Path = self.get_checkpoint_classes_dirpath()
+        checkpoints: pathlib.Path = self.get_checkpoint_directory()
 
         if not checkpoints.exists():
             return
 
-        STORAGE_LOGGER.report('Backing up checkpoint class files')
+        STORAGE_LOGGER.report('Backing up checkpoint files')
         manager.call_rsync(
             src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True, extra_args=['--exclude=.*']
         )

@@ -199,10 +199,10 @@ class SqliteTempBackend(StorageBackend):
             self._session.commit()
         return self._session
 
-    def get_checkpoint_classes_dirpath(self) -> Path:
+    def get_checkpoint_directory(self) -> Path:
         if self._closed or self._resources.root is None:
             raise ClosedStorage(str(self))
-        return Path(self._resources.root.abspath) / self._CHECKPOINT_CLASSES_DIRNAME
+        return Path(self._resources.root.abspath) / self._CHECKPOINT_DIRNAME
 
     def get_repository(self) -> SandboxShaRepositoryBackend:
         if self._closed or not self._repo:

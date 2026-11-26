@@ -21,14 +21,14 @@ from uuid import uuid4
 if t.TYPE_CHECKING:
     from aiida.orm.implementation.storage_backend import StorageBackend
 
-_CHECKPOINT_CLASS_FILE_OWNER: t.Final[re.Pattern[str]] = re.compile(
+_CHECKPOINT_FILE_OWNER: t.Final[re.Pattern[str]] = re.compile(
     r'(?P<staged>\.)?(?P<owner>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-'
     r'(?(staged)[0-9a-f]{32}|[0-9a-f]{64}\.pkl)'
 )
 
 
 @dataclasses.dataclass(frozen=True)
-class ProcessClassBytes:
+class CheckpointBytes:
     """Process class bytes with their SHA-256 digest."""
 
     content: bytes
@@ -45,7 +45,7 @@ def _discard_file(*, path: Path) -> bool:
     try:
         path.unlink(missing_ok=True)
     except OSError as exception:
-        STORAGE_LOGGER.warning('could not delete the orphaned process class file `%s`: %s', path, exception)
+        STORAGE_LOGGER.warning('could not delete the orphaned checkpoint file `%s`: %s', path, exception)
         return False
     return True
 
@@ -60,14 +60,14 @@ def _fsync_dir(path: Path) -> None:
 
 
 @dataclasses.dataclass(frozen=True)
-class CheckpointClassStore:
+class CheckpointStore:
     """Class files belonging to one storage backend."""
 
     storage: 'StorageBackend'
 
     def _path_of(self, *, node_uuid: str, digest: str) -> Path:
         """Return the finished class-file path for `node_uuid` and `digest`."""
-        return self.storage.get_checkpoint_classes_dirpath() / f'{node_uuid}-{digest}.pkl'
+        return self.storage.get_checkpoint_directory() / f'{node_uuid}-{digest}.pkl'
 
     def read(self, *, node_uuid: str, digest: str) -> bytes:
         """Return class bytes after validating the reference and content digest."""
@@ -81,16 +81,16 @@ class CheckpointClassStore:
             raise ValueError(msg)
         return content
 
-    def write(self, *, node_uuid: str, class_bytes: ProcessClassBytes) -> None:
-        """Atomically publish `class_bytes` and synchronize the file and both directory levels."""
-        destination: Path = self._path_of(node_uuid=node_uuid, digest=class_bytes.digest)
+    def write(self, *, node_uuid: str, data: CheckpointBytes) -> None:
+        """Durably publish the file before the database can reference it."""
+        destination: Path = self._path_of(node_uuid=node_uuid, digest=data.digest)
         destination.parent.mkdir(parents=True, exist_ok=True)
         _fsync_dir(destination.parent.parent)
         staged: Path = destination.parent / f'.{node_uuid}-{uuid4().hex}'
 
         try:
             with open(staged, 'wb') as handle:
-                handle.write(class_bytes.content)
+                handle.write(data.content)
                 handle.flush()
                 os.fsync(handle.fileno())
 
@@ -128,7 +128,7 @@ class CheckpointClassStore:
         :param node_uuid: Restrict results to this owner.
         """
         try:
-            dirpath: Path = self.storage.get_checkpoint_classes_dirpath()
+            dirpath: Path = self.storage.get_checkpoint_directory()
         except NotImplementedError:
             return
 
@@ -136,7 +136,7 @@ class CheckpointClassStore:
             return
 
         for path in sorted(dirpath.iterdir()):
-            match: re.Match[str] | None = _CHECKPOINT_CLASS_FILE_OWNER.fullmatch(path.name)
+            match: re.Match[str] | None = _CHECKPOINT_FILE_OWNER.fullmatch(path.name)
 
             if match is None or path.is_symlink() or not path.is_file():
                 continue

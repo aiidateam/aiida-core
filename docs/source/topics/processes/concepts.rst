@@ -154,7 +154,7 @@ Subsequently, the process instance is shut down and a 'continuation task' is sen
 This task is simply a small message that just contains an identifier for the process.
 In order to reconstruct the process from a `checkpoint`, the daemon worker has to get the process class back.
 It does so from the name the checkpoint recorded, which resolves where the class has an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or where :ref:`its module path<how-to:faq:process-not-importable-daemon>` is on the ``PYTHONPATH`` of the daemon workers.
-Where neither reaches it, as for a class defined in a notebook cell, the class is pickled with `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and written to a ``checkpoint_classes`` directory beside the ``container`` of the profile's storage. The checkpoint records the SHA-256 digest of those bytes beside the name, and a load falls back to the name when the bytes fail to unpickle.
+Where neither reaches it, as for a class defined in a notebook cell, the class is pickled with `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and written to a ``checkpoints`` directory beside the ``container`` of the profile's storage. The checkpoint records the SHA-256 digest of those bytes beside the name, and a load falls back to the name when the bytes fail to unpickle.
 Helper modules travel by reference: a module the worker cannot import fails when first used, and the error names it.
 The submitting interpreter and daemon workers need compatible AiiDA, Python and `cloudpickle` environments to restore the checkpoint.
 

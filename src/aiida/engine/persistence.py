@@ -20,7 +20,7 @@ from aiida.common.loaders import DefaultObjectLoader as ObjectLoader
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes import persistence as process_persistence
 from aiida.engine.processes.exceptions import PersistenceError
-from aiida.orm.implementation.checkpoint_store import CheckpointClassStore, ProcessClassBytes
+from aiida.orm.implementation.checkpoint_store import CheckpointBytes, CheckpointStore
 from aiida.orm.utils import serialize
 
 if t.TYPE_CHECKING:
@@ -34,21 +34,21 @@ LOGGER = logging.getLogger(__name__)
 _CLASS_BYTES_PREFIX: t.Final[str] = 'sha256:'
 
 
-def _class_store() -> CheckpointClassStore:
+def _class_store() -> CheckpointStore:
     from aiida.manage import get_manager
 
-    return get_manager().get_profile_storage().checkpoint_class_store
+    return get_manager().get_profile_storage().checkpoint_store
 
 
-def _detach_carried_class(*, payload: process_persistence.CheckpointPayload) -> ProcessClassBytes | None:
-    """Replace carried bytes in `payload` with a digest reference and return `ProcessClassBytes`, or `None`."""
+def _detach_carried_class(*, payload: process_persistence.CheckpointPayload) -> CheckpointBytes | None:
+    """Replace carried bytes in `payload` with a digest reference and return `CheckpointBytes`, or `None`."""
     metadata: dict[str, t.Any] = payload.get(process_persistence.META, {})
     content: bytes | None = metadata.get(process_persistence.META__CLASS_BYTES)
 
     if content is None:
         return None
 
-    carried: ProcessClassBytes = ProcessClassBytes(content=content)
+    carried: CheckpointBytes = CheckpointBytes(content=content)
     metadata[process_persistence.META__CLASS_BYTES] = f'{_CLASS_BYTES_PREFIX}{carried.digest}'
 
     return carried
@@ -128,19 +128,19 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
             superseded: str | None = process.node.checkpoint
             stored_payload: process_persistence.CheckpointPayload = process_persistence.CheckpointPayload(payload)
             stored_payload[process_persistence.META] = dict(payload.get(process_persistence.META, {}))
-            carried: ProcessClassBytes | None = _detach_carried_class(payload=stored_payload)
+            carried: CheckpointBytes | None = _detach_carried_class(payload=stored_payload)
             stored: str = serialize.serialize(data=stored_payload)
 
             if stored == superseded:
                 LOGGER.debug('checkpoint of process<%d> is unchanged, so nothing is written', process.pid)
             else:
-                byte_files: CheckpointClassStore = _class_store()
+                byte_files: CheckpointStore = _class_store()
                 current: str | None = None
 
                 if carried is not None:
                     current = carried.digest
                     # The bytes go in first, so the attribute never refers to a file that was not written.
-                    byte_files.write(node_uuid=process.node.uuid, class_bytes=carried)
+                    byte_files.write(node_uuid=process.node.uuid, data=carried)
 
                 process.node.set_checkpoint(checkpoint=stored)
                 superseded_digest: str | None = _carried_digest_in(checkpoint=superseded)

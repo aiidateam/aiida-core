@@ -85,6 +85,29 @@ class TestBackend:
         assert orm.User.collection.get(email=email).pk == user.pk
         assert orm.load_node(uuid=later.uuid).pk == later.pk
 
+    @pytest.mark.parametrize('operation', ('insert', 'update'))
+    def test_integrity_error_caught_inside_transaction(self, operation):
+        """Catching a failed write inside a transaction does not roll back other writes."""
+        email = f'{uuid.uuid4().hex}@example.com'
+        other_email = f'{uuid.uuid4().hex}@example.com'
+
+        with self.backend.transaction():
+            user = orm.User(email).store()
+            other = orm.User(other_email).store()
+
+            with pytest.raises(exceptions.IntegrityError, match=r'(?i)unique'):
+                if operation == 'insert':
+                    orm.User(email).store()
+                else:
+                    other.email = email
+
+            assert other.email == other_email
+            later = orm.Data().store()
+
+        assert orm.User.collection.get(email=email).pk == user.pk
+        assert orm.User.collection.get(email=other_email).pk == other.pk
+        assert orm.load_node(uuid=later.uuid).pk == later.pk
+
     def test_integrity_error_without_transaction_keeps_session_usable(self):
         """A constraint failure outside any explicit transaction does not poison the session."""
         email = f'{uuid.uuid4().hex}@example.com'

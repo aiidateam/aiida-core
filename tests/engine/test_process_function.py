@@ -685,6 +685,17 @@ def test_invalid_outputs():
     assert re.match(r'ValueError: node<.*> already has an incoming LinkType.CREATE link', node.exception)
 
 
+def test_calcfunction_cannot_return_its_input() -> None:
+    """A calculation cannot return the same node it received as input."""
+
+    @calcfunction
+    def identity(value):
+        return value
+
+    with pytest.raises(ValueError, match='would generate a cycle'):
+        identity(orm.Int(1))
+
+
 def test_nested_namespace():
     """Test that dynamic nested namespaces are supported.
 

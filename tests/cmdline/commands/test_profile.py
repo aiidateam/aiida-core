@@ -27,7 +27,7 @@ from aiida.tools.archive.create import create_archive
 
 # NOTE: Most of these tests would work with sqlite_dos,
 # but would require generalizing a bunch of fixtures ('profile_factory' et al) in tests/conftest.py
-pytestmark = pytest.mark.requires_psql
+pytestmark = [pytest.mark.requires_psql, pytest.mark.usefixtures('stable_aiida_version')]
 
 
 @pytest.fixture(scope='module')

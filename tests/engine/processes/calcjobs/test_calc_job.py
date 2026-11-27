@@ -1422,6 +1422,7 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
 
 
 @pytest.mark.requires_broker
+@pytest.mark.usefixtures('stable_aiida_version')
 # Flaky: depends on daemon pick-up and termination timing, retry once the daemon has settled.
 @pytest.mark.flaky(reruns=2, reruns_delay=5, only_rerun='(?i)timed out|failed to reach')
 def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):

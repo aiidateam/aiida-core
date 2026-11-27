@@ -288,7 +288,10 @@ class GlobalOptionsSchema(ProfileOptionsSchema, defer_build=True):
     )
     warnings__development_version: bool = Field(
         True,
-        description='Whether to print a warning when a profile is loaded while a development version is installed.',
+        description=(
+            'Whether to require confirmation for certain operations on development versions. Setting this to false '
+            'acknowledges the development-version compatibility risk for this configuration.'
+        ),
     )
 
 
@@ -349,45 +352,86 @@ class Config:
     KEY_SCHEMA = '$schema'
 
     @classmethod
-    def from_file(cls, filepath):
-        """Instantiate a configuration object from the contents of a given file.
+    def from_file(cls, filepath: str | os.PathLike[str], *, upgrade: bool = False) -> Config:
+        """Instantiate a configuration object from a file, creating it if it does not exist.
 
-        .. note:: if the filepath does not exist an empty file will be created with the current default configuration
-            and will be written to disk. If the filepath does already exist but contains a configuration with an
-            outdated schema, the content will be migrated and then written to disk.
-
-        :param filepath: the absolute path to the configuration file
-        :return: `Config` instance
+        :param filepath: the path to the configuration file
+        :param upgrade: explicitly upgrade an outdated file, preserving a backup of the original
+        :return: the loaded configuration
+        :raises ConfigurationVersionError: if the file cannot be loaded without an upgrade or downgrade
+        :raises ConfirmationRequiredError: if upgrading on a development build without acknowledgement
         """
-        from aiida.cmdline.utils import echo
-        from aiida.manage.configuration.migrations import check_and_migrate_config, config_needs_migrating
+        from aiida.common.development import require_development_version_acknowledgement
+        from aiida.common.exceptions import ConfigurationVersionError
+        from aiida.manage.configuration.migrations import config_needs_migrating, get_current_version, upgrade_config
+
+        filepath = os.fspath(filepath)
+        if upgrade:
+            require_development_version_acknowledgement(filepath=filepath)
 
         try:
             with open(filepath, 'rb') as handle:
-                config = json.load(handle)
+                dictionary = json.load(handle)
         except FileNotFoundError:
-            config = Config(filepath, check_and_migrate_config({}))
-            config.store()
+            return cls(filepath, {}).store()
+
+        if not config_needs_migrating(dictionary, filepath):
+            return cls(filepath, dictionary)
+
+        if not upgrade:
+            msg = (
+                f'The AiiDA configuration file `{filepath}` has outdated schema version '
+                f'{get_current_version(dictionary)}. Run `verdi config upgrade` to upgrade it.'
+            )
+            error = ConfigurationVersionError(msg)
+            error.can_upgrade = True
+            raise error
+
+        return cls(filepath, upgrade_config(dictionary)).store()
+
+    @classmethod
+    def has_development_version_acknowledgement(cls, filepath: str | os.PathLike[str]) -> bool:
+        """Return whether the configuration file contains a saved development-version acknowledgement."""
+        from aiida.common.development import DEVELOPMENT_VERSION_WARNING_OPTION
+
+        dictionary = cls._read_for_development_version_acknowledgement(filepath)
+        return (dictionary.get(cls.KEY_OPTIONS) or {}).get(DEVELOPMENT_VERSION_WARNING_OPTION) is False
+
+    @classmethod
+    def record_development_version_acknowledgement(cls, filepath: str | os.PathLike[str]) -> None:
+        """Save acknowledgement without migrating the file, which itself may require acknowledgement."""
+        from aiida.common.development import DEVELOPMENT_VERSION_WARNING_OPTION
+        from aiida.manage.configuration.migrations import config_needs_migrating
+
+        path = os.fspath(filepath)
+        dictionary = cls._read_for_development_version_acknowledgement(path)
+        exists = os.path.isfile(path)
+        if exists:
+            # Reject an unsupported newer schema, but keep an older schema intact.
+            config_needs_migrating(dictionary, path)
         else:
-            migrated = False
-            current_version = config.get(cls.KEY_VERSION, {}).get(cls.KEY_VERSION_CURRENT, 0)
+            dictionary = cls(path, {}).dictionary
 
-            # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
-            if config_needs_migrating(config, filepath):
-                migrated = True
-                echo.echo_warning(f'current configuration file `{filepath}` is outdated and will be migrated')
-                filepath_backup = cls._backup(filepath)
-                echo.echo_warning(f'original backed up to `{filepath_backup}`')
+        options = dictionary[cls.KEY_OPTIONS] = dictionary.get(cls.KEY_OPTIONS) or {}
+        if options.get(DEVELOPMENT_VERSION_WARNING_OPTION) is False:
+            return
 
-            config = Config(filepath, check_and_migrate_config(config))
+        options[DEVELOPMENT_VERSION_WARNING_OPTION] = False
+        if exists:
+            cls._backup(path)
+        cls._write_file(path, dictionary)
 
-            if migrated:
-                echo.echo_report(
-                    f'configuration file `{filepath}` migrated from v{current_version} to v{config.version}'
-                )
-                config.store()
-
-        return config
+    @staticmethod
+    def _read_for_development_version_acknowledgement(filepath: str | os.PathLike[str]) -> dict:
+        """Read the acknowledgement even when the configuration still needs an upgrade."""
+        try:
+            with open(filepath, 'rb') as handle:
+                return json.load(handle)
+        except FileNotFoundError:
+            return {}
+        except json.JSONDecodeError as exception:
+            msg = f'configuration file {filepath} contains invalid JSON'
+            raise ConfigurationError(msg) from exception
 
     @classmethod
     def _backup(cls, filepath):
@@ -610,6 +654,7 @@ class Config:
             message broker.
         :param broker_config: The configuration necessary to initialise and connect to the broker.
         :returns: The created profile.
+        :raises ConfirmationRequiredError: If creating a profile on a development build without acknowledgement.
         :raises ValueError: If the profile already exists.
         :raises TypeError: If the ``storage_backend`` is not a subclass of
             :class:`aiida.orm.implementation.storage_backend.StorageBackend`.
@@ -617,8 +662,18 @@ class Config:
         :raises StorageMigrationError: If the storage cannot be initialised.
         """
         from aiida.brokers import Broker
+        from aiida.common.development import (
+            DEVELOPMENT_VERSION_WARNING_OPTION,
+            is_development_version,
+            require_development_version_acknowledgement,
+        )
         from aiida.orm.implementation.storage_backend import StorageBackend
         from aiida.plugins.entry_point import load_entry_point
+
+        if is_development_version():
+            require_development_version_acknowledgement(filepath=self.filepath)
+            # The saved acknowledgement may have changed since this object was loaded.
+            self.set_option(DEVELOPMENT_VERSION_WARNING_OPTION, False)
 
         if name in self.profile_names:
             msg = f'The profile `{name}` already exists.'
@@ -949,7 +1004,7 @@ class Config:
 
         # If the filepath of this configuration does not yet exist, simply write it.
         if not os.path.isfile(self.filepath):
-            self._atomic_write()
+            self._write_file(self.filepath, self.dictionary)
             return self
 
         # Otherwise, we write the content to a temporary file and compare its md5 checksum with the current config on
@@ -961,41 +1016,31 @@ class Config:
             if md5_from_filelike(handle) != md5_file(self.filepath):
                 self._backup(self.filepath)
 
-        self._atomic_write()
+        self._write_file(self.filepath, self.dictionary)
 
         return self
 
-    def _atomic_write(self, filepath=None):
-        """Write the config as it is in memory, i.e. the contents of ``self.dictionary``, to disk.
-
-        .. note:: this command will write the config from memory to a temporary file in the same directory as the
-            target file ``filepath``. It will then use ``os.rename`` to move the temporary file to ``filepath`` which
-            will be overwritten if it already exists. The ``os.rename`` is the operation that gives the best guarantee
-            of being atomic within the limitations of the application.
-
-        :param filepath: optional filepath to write the contents to, if not specified, the default filename is used.
-        """
+    @staticmethod
+    def _write_file(filepath: str, dictionary: dict) -> None:
+        """Write a configuration dictionary atomically, without changing its schema."""
         import tempfile
 
         from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE, DEFAULT_UMASK
 
         umask = os.umask(DEFAULT_UMASK)
 
-        if filepath is None:
-            filepath = self.filepath
-
         # Create a temporary file in the same directory as the target filepath, which guarantees that the temporary
         # file is on the same filesystem, which is necessary to be able to use ``os.rename``. Since we are moving the
         # temporary file, we should also tell the tempfile to not be automatically deleted as that will raise.
         with tempfile.NamedTemporaryFile(dir=os.path.dirname(filepath), delete=False, mode='w') as handle:
             try:
-                json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
+                json.dump(dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
             finally:
                 os.umask(umask)
 
             handle.flush()
             handle.close()
-            shutil.move(handle.name, self.filepath)
+            shutil.move(handle.name, filepath)
 
     def filepaths(self, profile: Profile) -> ConfigFilepaths:
         """Return the filepaths used by a profile.

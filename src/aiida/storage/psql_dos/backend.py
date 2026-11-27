@@ -154,6 +154,9 @@ class PsqlDosBackend(StorageBackend):
 
     @classmethod
     def migrate(cls, profile: Profile) -> None:
+        from aiida.common.development import require_development_version_acknowledgement
+
+        require_development_version_acknowledgement()
         with cls.migrator(profile) as migrator:
             migrator.migrate()
 

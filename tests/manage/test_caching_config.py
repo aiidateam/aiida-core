@@ -39,11 +39,13 @@ def configure_caching(config_with_profile_factory):
     return inner
 
 
+@pytest.mark.usefixtures('stable_aiida_version')
 def test_merge_deprecated_yaml(tmp_path):
     """Test that an existing 'cache_config.yml' is correctly merged into the main config.
 
     An AiidaDeprecationWarning should also be raised.
     """
+    from aiida.common.exceptions import ConfigurationVersionError
     from aiida.common.warnings import AiidaDeprecationWarning
     from aiida.manage import configuration, get_manager
     from aiida.manage.configuration import get_config_option, load_profile
@@ -74,9 +76,14 @@ def test_merge_deprecated_yaml(tmp_path):
             }
         }
         tmp_path.joinpath('config.json').write_text(json.dumps(config_dictionary))
-        tmp_path.joinpath('cache_config.yml').write_text(yaml.dump(cache_dictionary))
+        cache_path = tmp_path / 'cache_config.yml'
+        cache_path.write_text(yaml.dump(cache_dictionary))
+        with pytest.raises(ConfigurationVersionError, match='verdi config upgrade'):
+            configuration.load_config()
+        assert cache_path.exists()
+
         with pytest.warns(AiidaDeprecationWarning, match='cache_config.yml'):
-            configuration.CONFIG = configuration.load_config()
+            configuration.load_config(upgrade=True)
         load_profile('default')
 
         assert get_config_option('caching.default_enabled') is True

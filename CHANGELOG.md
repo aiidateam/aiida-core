@@ -4,7 +4,22 @@
 
 ### Breaking changes
 
+`verdi quicksetup` and its Python entry point `aiida.cmdline.commands.cmd_setup.quicksetup` have been removed.
+Use `verdi presto --use-postgres` for automated PostgreSQL setup, `verdi profile setup core.psql_dos` for manual configuration, or `aiida.manage.configuration.create_profile()` to create a profile from Python.
+
 Profile storage migrations for PostgreSQL and SQLite are now upgrade-only: `migrate_down()` raises `NotImplementedError`. SQLite archives also no longer support downgrading from schema revision `main_0003`.
+
+Configuration files are no longer upgraded on load. Run `verdi config upgrade` or call
+`aiida.manage.configuration.load_config(upgrade=True)` to upgrade an older `config.json` or merge a legacy
+`cache_config.yml`. An outdated `config.json` is rejected until explicitly upgraded, and the upgrade keeps a backup.
+
+AiiDA 3.0 development versions require confirmation before `verdi config upgrade`, `verdi presto`, `verdi setup`,
+`verdi profile setup`, `verdi storage migrate`, `verdi archive migrate`, `verdi daemon start`, or `verdi daemon restart`
+proceeds. Accepting the warning sets the existing `warnings.development_version` option to `False` for the whole
+configuration. You can also set it with `verdi config set warnings.development_version False`. The corresponding
+Python APIs raise `aiida.common.ConfirmationRequiredError` while the warning is enabled, without prompting.
+`--non-interactive` and `--force` do not skip the warning. The old warning on profile load and the
+`aiida.manage.manager.Manager.check_version()` method have been removed; the operation-specific checks remain.
 
 `Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
 

@@ -200,6 +200,7 @@ def verdi_presto(
     ZeroMQ broker. To switch to RabbitMQ later, use `verdi profile configure-broker core.rabbitmq`.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
+    from aiida.cmdline.utils.common import confirm_development_version
     from aiida.common import exceptions
     from aiida.manage.configuration import create_profile, load_profile
     from aiida.orm import Computer
@@ -208,6 +209,8 @@ def verdi_presto(
     if profile_name in ctx.obj.config.profile_names:
         msg = f'The profile `{profile_name}` already exists.'
         raise click.BadParameter(msg, param_hint='--profile-name')
+
+    confirm_development_version()
 
     postgres_config_kwargs = {
         'profile_name': profile_name,

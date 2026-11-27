@@ -38,6 +38,8 @@ grep -q '^\[localhost\]:5001 ' "${HOME}/.ssh/known_hosts"
 sed -i "s|PLACEHOLDER_WORK_DIR|${GITHUB_WORKSPACE}|" "${CONFIG}/localhost.yaml"
 sed -i "s|PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER|${CONFIG}/doubler.sh|" "${CONFIG}/doubler.yaml"
 
+# Acknowledge development-version risks before creating the disposable CI profile.
+verdi config set warnings.development_version False
 verdi setup --non-interactive --config "${CONFIG}/profile.yaml"
 
 # set up localhost computer
@@ -55,5 +57,4 @@ verdi computer test slurm-ssh --print-traceback
 
 verdi profile setdefault test_aiida
 verdi config set runner.poll.interval 0
-verdi config set warnings.development_version False
 verdi config set warnings.rabbitmq_version False

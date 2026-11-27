@@ -235,7 +235,8 @@ class SqliteZipBackend(StorageBackend):
 
     @classmethod
     def migrate(cls, profile: Profile) -> t.NoReturn:
-        raise NotImplementedError('use the :func:`aiida.storage.sqlite_zip.migrator.migrate` function directly.')
+        msg = 'Use aiida.tools.archive.abstract.get_format().migrate() to migrate an archive.'
+        raise NotImplementedError(msg)
 
     def __init__(self, profile: Profile):
         from aiida.storage.sqlite_zip.migrator import validate_storage

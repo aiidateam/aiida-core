@@ -8,11 +8,9 @@
 ###########################################################################
 """Provides an API for postgres database maintenance tasks.
 
-This API creates and drops postgres users and databases used by the
-``verdi quicksetup`` commandline tool. It allows convenient access to this
-functionality from within python without knowing details about how postgres is
-installed by default on various systems. If the postgres setup is not the
-default installation, additional information needs to be provided.
+This API creates and drops PostgreSQL users and databases, for example when
+``verdi presto --use-postgres`` sets up a profile. If PostgreSQL uses a
+non-default configuration, provide the connection details explicitly.
 """
 
 import typing as t

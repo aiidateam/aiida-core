@@ -15,6 +15,7 @@ __all__ = (
     'ClosedStorage',
     'ConfigurationError',
     'ConfigurationVersionError',
+    'ConfirmationRequiredError',
     'ContentNotExistent',
     'CorruptStorage',
     'DbContentError',
@@ -182,6 +183,10 @@ class ConfigurationError(AiidaException):
     """Error raised when there is a configuration error in AiiDA."""
 
 
+class ConfirmationRequiredError(ConfigurationError):
+    """An operation requires confirmation that has not been recorded in the configuration."""
+
+
 class ProfileConfigurationError(ConfigurationError):
     """Configuration error raised when a wrong/inexistent profile is requested."""
 
@@ -192,6 +197,8 @@ class MissingConfigurationError(ConfigurationError):
 
 class ConfigurationVersionError(ConfigurationError):
     """Configuration error raised when the configuration file version is not compatible with the current version."""
+
+    can_upgrade: bool = False
 
     # Hotfix see issue #7493
     _can_downgrade: bool = False

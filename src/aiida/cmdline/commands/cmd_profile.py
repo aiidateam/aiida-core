@@ -64,6 +64,7 @@ def command_create_profile(
         warn_deprecation('The `--use-rabbitmq` option is deprecated. Use `--broker` instead.', version=3)
         if not use_rabbitmq:
             broker = 'none'
+    from aiida.cmdline.utils.common import confirm_development_version
     from aiida.common import docs
     from aiida.plugins.entry_point import get_entry_point_from_class
 
@@ -75,6 +76,8 @@ def command_create_profile(
 
     _, storage_entry_point = get_entry_point_from_class(storage_cls.__module__, storage_cls.__name__)
     assert storage_entry_point is not None
+
+    confirm_development_version()
 
     broker_backend = None
     broker_config = None
@@ -171,6 +174,8 @@ def _configure_profile_broker(
     ctx: click.Context, profile: Profile | None, backend: str, non_interactive: bool, force: bool, **kwargs
 ) -> None:
     """Configure a broker for a profile."""
+    from aiida.cmdline.utils.common import confirm_development_version
+
     if profile is None:
         profile = ctx.obj.profile
 
@@ -226,6 +231,7 @@ def _configure_profile_broker(
             )
             if not non_interactive:
                 click.confirm('Do you want to restart the daemon to load the new configuration?', abort=True)
+                confirm_development_version()
                 echo.echo_report('Restarting the daemon...')
                 daemon_client.restart_daemon()
                 echo.echo_success('Daemon restarted successfully.')
@@ -248,6 +254,7 @@ def _configure_profile_broker(
             )
             if not non_interactive:
                 click.confirm('Do you want to restart the daemon to load the new configuration?', abort=True)
+                confirm_development_version()
                 echo.echo_report('Restarting the daemon...')
                 daemon_client.restart_daemon()
                 echo.echo_success('Daemon restarted successfully.')

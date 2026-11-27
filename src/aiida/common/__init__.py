@@ -36,6 +36,7 @@ __all__ = (
     'CodeRunMode',
     'ConfigurationError',
     'ConfigurationVersionError',
+    'ConfirmationRequiredError',
     'ContentNotExistent',
     'CorruptStorage',
     'DbContentError',

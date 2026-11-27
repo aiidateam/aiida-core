@@ -58,6 +58,8 @@ def aiida_config_factory():
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_config)
         AiiDAConfigDir.set(dirpath_config)
         config = get_config(create=True)
+        config.set_option('warnings.development_version', False)
+        config.store()
 
         try:
             yield config

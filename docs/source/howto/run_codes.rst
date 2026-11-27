@@ -830,7 +830,7 @@ Enable caching for your current profile or globally (for all profiles):
 .. versionchanged:: 1.6.0
 
     Configuring caching via the ``cache_config.yml`` is deprecated as of AiiDA 1.6.0.
-    Existing ``cache_config.yml`` files will be migrated to the central ``config.json`` file automatically.
+    Run ``verdi config upgrade`` to merge an existing ``cache_config.yml`` into the central ``config.json`` file.
 
 
 From this point onwards, when you launch a new calculation, AiiDA will compare its hash (a fixed size string, unique for a calulation's type and inputs, see :ref:`topics:provenance:caching:hashing`) against other calculations already present in your database.

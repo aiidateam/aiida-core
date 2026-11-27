@@ -12,7 +12,6 @@ import json
 import os
 import pathlib
 import uuid
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -167,41 +166,39 @@ def compare_config_in_memory_and_on_disk(config, filepath):
     assert in_memory == on_disk
 
 
-def test_from_file(tmp_path, monkeypatch):
-    """Test the `Config.from_file` class method.
+def test_from_file(tmp_path):
+    """Create new configurations at the current schema and read them back."""
+    filepath = tmp_path / 'config.json'
+    config = Config.from_file(filepath)
+    assert config.version == CURRENT_CONFIG_VERSION
+    compare_config_in_memory_and_on_disk(config, filepath)
+    compare_config_in_memory_and_on_disk(Config.from_file(filepath), filepath)
 
-    Regression test for #3790: make sure configuration is written to disk after it is loaded and migrated.
-    """
-    mock_report = MagicMock()
-    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_report', mock_report)
-    # If the config file does not exist, a completely new file is created with a migrated config
-    filepath_nonexisting = tmp_path / 'config_nonexisting.json'
-    config = Config.from_file(filepath_nonexisting)
 
-    # Make sure that the migrated config is written to disk, by loading it from disk and comparing to the content
-    # of the in memory config object.
-    compare_config_in_memory_and_on_disk(config, filepath_nonexisting)
+def test_from_file_upgrade(tmp_path, monkeypatch):
+    """Only an acknowledged upgrade rewrites an old configuration on a development build."""
+    monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
+    source = pathlib.Path(__file__).parent / 'migrations' / 'test_samples' / 'input' / '0.json'
+    original = source.read_bytes()
+    filepath = tmp_path / 'config.json'
+    filepath.write_bytes(original)
 
-    # Now repeat the test for an existing file. The previous filepath now *does* exist and is migrated
-    filepath_existing = filepath_nonexisting
-    config = Config.from_file(filepath_existing)
+    with pytest.raises(exceptions.ConfigurationVersionError, match='verdi config upgrade'):
+        Config.from_file(filepath)
+    assert filepath.read_bytes() == original
+    assert not list(tmp_path.glob('config.json.*'))
 
-    compare_config_in_memory_and_on_disk(config, filepath_existing)
+    with pytest.raises(exceptions.ConfirmationRequiredError, match='verdi config set warnings'):
+        Config.from_file(filepath, upgrade=True)
+    assert filepath.read_bytes() == original
 
-    # Finally, we test that an existing configuration file with an outdated schema is migrated and written to disk
-    with (tmp_path / 'config.json').open('wb') as handle:
-        # Write content of configuration with old schema to disk
-        filepath = pathlib.Path(__file__).parent.absolute() / 'migrations' / 'test_samples' / 'input' / '0.json'
-        with filepath.open('rb') as source:
-            handle.write(source.read())
-            handle.flush()
-
-        config = Config.from_file(handle.name)
-        compare_config_in_memory_and_on_disk(config, handle.name)
-
-    mock_report.assert_called_once_with(
-        f'configuration file `{handle.name}` migrated from v0 to v{CURRENT_CONFIG_VERSION}'
-    )
+    Config.record_development_version_acknowledgement(filepath)
+    assert json.loads(filepath.read_bytes()).get('CONFIG_VERSION') == json.loads(original).get('CONFIG_VERSION')
+    config = Config.from_file(filepath, upgrade=True)
+    assert config.version == CURRENT_CONFIG_VERSION
+    assert Config.has_development_version_acknowledgement(filepath)
+    compare_config_in_memory_and_on_disk(config, filepath)
+    assert any(backup.read_bytes() == original for backup in tmp_path.glob('config.json.*'))
 
 
 def test_from_file_no_migrate(config_with_profile):
@@ -577,6 +574,7 @@ def test_delete_profile_sqlite_zip(
         assert any(expected_message in msg for msg in all_messages)
 
 
+@pytest.mark.usefixtures('stable_aiida_version')
 def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
     """Test the ``create_profile`` method when it raises."""
     config = config_with_profile
@@ -601,6 +599,7 @@ def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
         config.create_profile(profile_name, 'core.sqlite_temp', {})
 
 
+@pytest.mark.usefixtures('stable_aiida_version')
 def test_create_profile(config_with_profile):
     """Test the ``create_profile`` method."""
     config = config_with_profile

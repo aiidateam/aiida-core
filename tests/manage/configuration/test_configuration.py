@@ -34,59 +34,25 @@ def test_create_profile(isolated_config, tmp_path, entry_point):
     assert profile_name in isolated_config.profile_names
 
 
-def test_check_version_release(monkeypatch, isolated_config):
-    """Test that ``Manager.check_version`` emits nothing for a release version."""
-    from unittest.mock import MagicMock
+def test_create_profile_requires_development_acknowledgement(unacknowledged_config, tmp_path, monkeypatch):
+    """Reject Python profile creation until this setup has been acknowledged."""
+    from aiida.common.exceptions import ConfirmationRequiredError
+    from aiida.manage.configuration.config import Config
 
-    version = '1.0.0'
-    monkeypatch.setattr(aiida, '__version__', version)
+    monkeypatch.setattr(aiida, '__version__', '3.0.0.dev0')
+    kwargs = {
+        'name': 'development-profile',
+        'email': 'test@localhost',
+        'storage_backend': 'core.sqlite_dos',
+        'storage_config': {'filepath': str(tmp_path)},
+    }
+    with pytest.raises(ConfirmationRequiredError, match='verdi config set warnings'):
+        create_profile(unacknowledged_config, **kwargs)
+    assert 'development-profile' not in unacknowledged_config.profile_names
 
-    # Explicitly setting the default in case the test profile has it changed.
-    isolated_config.set_option('warnings.development_version', True)
-
-    manager = get_manager()
-    mock_warning = MagicMock()
-    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_warning', mock_warning)
-    monkeypatch.setattr(manager.logger, 'warning', MagicMock())
-
-    manager.check_version()
-    mock_warning.assert_not_called()
-    manager.logger.warning.assert_not_called()
-
-
-@pytest.mark.parametrize('version', ('1.0.0.dev0', '1.0.0.post0'))
-@pytest.mark.parametrize('suppress_warning', (True, False))
-@pytest.mark.usefixtures('isolated_config')
-def test_check_version_development(monkeypatch, suppress_warning, version, manager):
-    """Test that ``Manager.check_version`` warns for a development or post release version.
-
-    The ``main`` branch carries a ``.dev0`` version and support branches a ``.post0`` version; both should trigger the
-    warning. It can be suppressed by setting the option ``warnings.development_version`` to ``False``.
-    """
-    from unittest.mock import MagicMock
-
-    from aiida.common import log
-
-    monkeypatch.setattr(aiida, '__version__', version)
-
-    manager._profile.set_option('warnings.development_version', not suppress_warning)
-
-    mock_echo_warning = MagicMock()
-    mock_logger_warning = MagicMock()
-    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_warning', mock_echo_warning)
-    monkeypatch.setattr(manager.logger, 'warning', mock_logger_warning)
-
-    monkeypatch.setattr(log, 'CLI_ACTIVE', False)
-    manager.check_version()
-
-    if suppress_warning:
-        mock_echo_warning.assert_not_called()
-        mock_logger_warning.assert_not_called()
-    else:
-        mock_echo_warning.assert_not_called()
-        mock_logger_warning.assert_called_once()
-        first_call_msg = mock_logger_warning.call_args_list[0][0][0]
-        assert f'You are using a development version of AiiDA ({version}).' in first_call_msg
+    Config.record_development_version_acknowledgement(unacknowledged_config.filepath)
+    assert create_profile(unacknowledged_config, **kwargs).name == 'development-profile'
+    assert Config.has_development_version_acknowledgement(unacknowledged_config.filepath)
 
 
 @pytest.mark.parametrize('raise_in_context', [False, True])

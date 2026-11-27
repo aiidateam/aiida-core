@@ -151,7 +151,8 @@ Below is a list with all available subcommands.
 
     Commands:
       caching    List caching-enabled process types for the current profile.
-      downgrade  Print a configuration, downgraded to a specific version.
+      upgrade    Upgrade the configuration file to the current schema.
+      downgrade  Downgrade the configuration file to the specified schema version.
       get        Get the value of an AiiDA option for the current profile.
       list       List AiiDA options for the current profile.
       set        Set an AiiDA option.
@@ -443,64 +444,6 @@ Below is a list with all available subcommands.
                           profile set-default` instead.)
       setup               Set up a new profile.
       show                Show details for a profile.
-
-
-.. _reference:command-line:verdi-quicksetup:
-
-``verdi quicksetup``
---------------------
-
-.. code:: console
-
-    Usage:  [OPTIONS]
-
-      Setup a new profile in a fully automated fashion. (DEPRECATED: This command is
-      deprecated. For a fully automated alternative, use `verdi presto --use-postgres`
-      instead. For full control, use `verdi profile setup core.psql_dos`.)
-
-    Options:
-      -n, --non-interactive / -I, --interactive
-                                      In non-interactive mode, the CLI never prompts for
-                                      options but simply uses default values for options that
-                                      define one. In interactive mode, the CLI will prompt for
-                                      each interactive option.   [default: (--interactive)]
-      --profile PROFILE               The name of the new profile.  [required]
-      --email EMAIL                   Email address associated with the data you generate. The
-                                      email address is exported along with the data, when
-                                      sharing it.  [required]
-      --first-name NONEMPTYSTRING     First name of the user.  [required]
-      --last-name NONEMPTYSTRING      Last name of the user.  [required]
-      --institution NONEMPTYSTRING    Institution of the user.  [required]
-      --db-engine [postgresql_psycopg|postgresql_psycopg2]
-                                      Engine to use to connect to the database. (deprecated)
-      --db-backend [core.psql_dos]    Database backend to use.  [required]
-      --db-host HOSTNAME              Database server host. Leave empty for "peer"
-                                      authentication.  [required]
-      --db-port INTEGER               Database server port.  [required]
-      --db-name NONEMPTYSTRING        Name of the database to create.
-      --db-username NONEMPTYSTRING    Name of the database user to create.
-      --db-password TEXT              Password of the database user.
-      --su-db-name TEXT               Name of the template database to connect to as the
-                                      database superuser.
-      --su-db-username TEXT           User name of the database super user.
-      --su-db-password TEXT           Password to connect as the database superuser.
-      --broker-protocol [amqp|amqps]  Protocol to use for the message broker.  [default: amqp]
-      --broker-username NONEMPTYSTRING
-                                      Username to use for authentication with the message
-                                      broker.  [default: guest]
-      --broker-password NONEMPTYSTRING
-                                      Password to use for authentication with the message
-                                      broker.  [default: guest]
-      --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1]
-      --broker-port INTEGER           Port for the message broker.  [default: 5672]
-      --broker-virtual-host TEXT      Name of the virtual host for the message broker without
-                                      leading forward slash.  [default: ""]
-      --repository DIRECTORY          Absolute path to the file repository.
-      --test-profile                  Designate the profile to be used for running the test
-                                      suite only.
-      --config FILEORURL              Load option values from configuration file in yaml
-                                      format (local path or URL).
-      --help                          Show this message and exit.
 
 
 .. _reference:command-line:verdi-restapi:

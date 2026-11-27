@@ -11,7 +11,7 @@
 import pytest
 
 from aiida import orm
-from aiida.common.exceptions import StorageMigrationError
+from aiida.common.exceptions import ConfirmationRequiredError, StorageMigrationError
 from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
 
@@ -92,6 +92,23 @@ def test_full_migration(tmp_path, core_archive, archive_name):
         node = reader.get(orm.Node, uuid='3b429fd4-601c-4473-add5-7cbb76cf38cb')
         content = node.base.repository.get_object_content('_aiidasubmit.sh').encode('utf8')
         assert content.startswith(b'#!/bin/bash')
+
+
+def test_migrate_requires_acknowledgement(core_archive, tmp_path, unacknowledged_config, monkeypatch):
+    """Reject direct archive migration until this setup has been acknowledged."""
+    from aiida.manage.configuration.config import Config
+
+    monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
+    source = get_archive_file('export_0.4_simple.aiida', **core_archive)
+    target = tmp_path / 'migrated.aiida'
+    archive_format = ArchiveFormatSqlZip()
+    with pytest.raises(ConfirmationRequiredError, match='verdi config set warnings'):
+        archive_format.migrate(source, target, archive_format.latest_version)
+    assert not target.exists()
+
+    Config.record_development_version_acknowledgement(unacknowledged_config.filepath)
+    archive_format.migrate(source, target, archive_format.latest_version)
+    assert archive_format.read_version(target) == archive_format.latest_version
 
 
 def test_partial_migrations(core_archive, tmp_path):

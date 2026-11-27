@@ -15,15 +15,28 @@ import textwrap
 from pathlib import Path
 
 import click
+from typing_extensions import override
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.groups import VerdiCommandGroup
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 from aiida.manage.configuration import MIGRATIONS, downgrade_config, get_config_path
 from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
 
 
-@verdi.group('config')
+class _ConfigCommandGroup(VerdiCommandGroup):
+    """Keep the schema upgrade and downgrade commands together in help output."""
+
+    @override
+    def list_commands(self, ctx: click.Context) -> list[str]:
+        commands = super().list_commands(ctx)
+        commands.remove('upgrade')
+        commands.insert(commands.index('downgrade'), 'upgrade')
+        return commands
+
+
+@verdi.group('config', cls=_ConfigCommandGroup)
 def verdi_config():
     """Manage the AiiDA configuration."""
 
@@ -238,10 +251,27 @@ def verdi_config_caching(disabled):
                 echo.echo(identifier)
 
 
+@verdi_config.command('upgrade')
+def verdi_config_upgrade() -> None:
+    """Upgrade the configuration file to the current schema."""
+    from aiida.cmdline.utils.common import confirm_development_version
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.manage.configuration import load_config
+
+    confirm_development_version()
+
+    try:
+        config = load_config(upgrade=True)
+    except ConfigurationError as exception:
+        echo.echo_critical(str(exception))
+    else:
+        echo.echo_success(f'Configuration is up to date (schema v{config.version}).')
+
+
 @verdi_config.command('downgrade')
 @click.argument('version', type=click.Choice(sorted({str(m.down_revision) for m in MIGRATIONS})))
 def verdi_config_downgrade(version):
-    """Print a configuration, downgraded to a specific version."""
+    """Downgrade the configuration file to the specified schema version."""
     path = Path(get_config_path())
     echo.echo_report(f'Downgrading configuration to v{version}: {path}')
     config = json.loads(path.read_text(encoding='utf8'))

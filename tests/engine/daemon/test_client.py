@@ -108,6 +108,7 @@ def test_get_status_timeout(stopped_daemon_client):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('stable_aiida_version')
 class TestDaemonEnvInfo:
     """Tests for the daemon env info methods."""
 
@@ -393,6 +394,26 @@ class TestDaemonEnvInfo:
             ),
         ):
             assert stopped_daemon_client.restart_daemon() == {'status': 'ok'}
+
+
+@pytest.mark.parametrize('method', ['start_daemon', 'restart_daemon'])
+@pytest.mark.usefixtures('unacknowledged_config')
+def test_daemon_operation_rejects_missing_confirmation(daemon_client, method, monkeypatch, capsys):
+    """The Python API rejects missing acknowledgement without prompting or contacting Circus."""
+    from aiida.common.exceptions import ConfirmationRequiredError
+
+    monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
+    with (
+        patch.object(DaemonClient, '_clean_potentially_stale_pid_file') as prepare_start,
+        patch.object(DaemonClient, 'call_client') as call_client,
+    ):
+        with pytest.raises(ConfirmationRequiredError, match='verdi config set warnings'):
+            getattr(daemon_client, method)()
+
+        prepare_start.assert_not_called()
+        call_client.assert_not_called()
+
+    assert capsys.readouterr().err == ''
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

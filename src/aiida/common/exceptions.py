@@ -193,6 +193,8 @@ class MissingConfigurationError(ConfigurationError):
 class ConfigurationVersionError(ConfigurationError):
     """Configuration error raised when the configuration file version is not compatible with the current version."""
 
+    can_upgrade: bool = False
+
     # Hotfix see issue #7493
     _can_downgrade: bool = False
 

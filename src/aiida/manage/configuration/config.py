@@ -349,45 +349,37 @@ class Config:
     KEY_SCHEMA = '$schema'
 
     @classmethod
-    def from_file(cls, filepath):
-        """Instantiate a configuration object from the contents of a given file.
+    def from_file(cls, filepath: str | os.PathLike[str], *, upgrade: bool = False) -> Config:
+        """Instantiate a configuration object from a file, creating it if it does not exist.
 
-        .. note:: if the filepath does not exist an empty file will be created with the current default configuration
-            and will be written to disk. If the filepath does already exist but contains a configuration with an
-            outdated schema, the content will be migrated and then written to disk.
-
-        :param filepath: the absolute path to the configuration file
-        :return: `Config` instance
+        :param filepath: the path to the configuration file
+        :param upgrade: explicitly upgrade an outdated file, preserving a backup of the original
+        :return: the loaded configuration
+        :raises ConfigurationVersionError: if the file cannot be loaded without an upgrade or downgrade
         """
-        from aiida.cmdline.utils import echo
-        from aiida.manage.configuration.migrations import check_and_migrate_config, config_needs_migrating
+        from aiida.common.exceptions import ConfigurationVersionError
+        from aiida.manage.configuration.migrations import config_needs_migrating, get_current_version, upgrade_config
 
+        filepath = os.fspath(filepath)
         try:
             with open(filepath, 'rb') as handle:
-                config = json.load(handle)
+                dictionary = json.load(handle)
         except FileNotFoundError:
-            config = Config(filepath, check_and_migrate_config({}))
-            config.store()
-        else:
-            migrated = False
-            current_version = config.get(cls.KEY_VERSION, {}).get(cls.KEY_VERSION_CURRENT, 0)
+            return cls(filepath, {}).store()
 
-            # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
-            if config_needs_migrating(config, filepath):
-                migrated = True
-                echo.echo_warning(f'current configuration file `{filepath}` is outdated and will be migrated')
-                filepath_backup = cls._backup(filepath)
-                echo.echo_warning(f'original backed up to `{filepath_backup}`')
+        if not config_needs_migrating(dictionary, filepath):
+            return cls(filepath, dictionary)
 
-            config = Config(filepath, check_and_migrate_config(config))
+        if not upgrade:
+            msg = (
+                f'The AiiDA configuration file `{filepath}` has outdated schema version '
+                f'{get_current_version(dictionary)}. Run `verdi config upgrade` to upgrade it.'
+            )
+            error = ConfigurationVersionError(msg)
+            error.can_upgrade = True
+            raise error
 
-            if migrated:
-                echo.echo_report(
-                    f'configuration file `{filepath}` migrated from v{current_version} to v{config.version}'
-                )
-                config.store()
-
-        return config
+        return cls(filepath, upgrade_config(dictionary)).store()
 
     @classmethod
     def _backup(cls, filepath):

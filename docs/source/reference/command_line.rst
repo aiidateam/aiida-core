@@ -151,6 +151,7 @@ Below is a list with all available subcommands.
 
     Commands:
       caching    List caching-enabled process types for the current profile.
+      upgrade    Upgrade the configuration file to the current schema.
       downgrade  Print a configuration, downgraded to a specific version.
       get        Get the value of an AiiDA option for the current profile.
       list       List AiiDA options for the current profile.

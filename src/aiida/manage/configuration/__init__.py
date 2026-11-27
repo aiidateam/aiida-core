@@ -47,6 +47,7 @@ __all__ += (
     'get_config_option',
     'get_config_path',
     'get_profile',
+    'load_config',
     'load_profile',
     'reset_config',
 )
@@ -73,18 +74,18 @@ def get_config_path():
     return os.path.join(AiiDAConfigDir.get(), DEFAULT_CONFIG_FILE_NAME)
 
 
-def load_config(create=False) -> 'Config':
+def load_config(create=False, *, upgrade: bool = False) -> 'Config':
     """Instantiate Config object representing an AiiDA configuration file.
 
     Warning: Contrary to :func:`~aiida.manage.configuration.get_config`, this function is uncached and will always
     create a new Config object. You may want to call :func:`~aiida.manage.configuration.get_config` instead.
 
     :param create: if True, will create the configuration file if it does not already exist
-    :type create: bool
+    :param upgrade: upgrade an outdated configuration file and merge any legacy ``cache_config.yml`` file
 
     :return: the config
-    :rtype: :class:`~aiida.manage.configuration.config.Config`
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
+    :raises aiida.common.ConfigurationVersionError: if the file cannot be loaded without an upgrade or downgrade
     """
     from aiida.common import exceptions
     from aiida.manage.configuration.config import Config
@@ -96,12 +97,14 @@ def load_config(create=False) -> 'Config':
         raise exceptions.MissingConfigurationError(msg)
 
     try:
-        config = Config.from_file(filepath)
+        config = Config.from_file(filepath, upgrade=upgrade)
     except ValueError as exc:
         msg = f'configuration file {filepath} contains invalid JSON'
         raise exceptions.ConfigurationError(msg) from exc
 
-    _merge_deprecated_cache_yaml(config, filepath)
+    if upgrade:
+        _merge_deprecated_cache_yaml(config, filepath)
+        reset_config()
 
     return config
 

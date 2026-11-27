@@ -269,6 +269,37 @@ def test_config_set_caching_enabled(run_cli_command, config_with_profile_factory
         assert "Success: 'caching.enabled_for' set to" in result.output
 
 
+def test_config_help_schema_command_order(run_cli_command):
+    """List upgrade immediately before downgrade in the config help."""
+    result = run_cli_command(cmd_verdi.verdi, ['config', '--help'])
+    lines = result.stdout.splitlines()
+    upgrade = next(index for index, line in enumerate(lines) if line.lstrip().startswith('upgrade '))
+    assert lines[upgrade + 1].lstrip().startswith('downgrade ')
+
+
+def test_config_upgrade(run_cli_command, config_with_profile_factory):
+    """Upgrade an outdated file explicitly without loading a profile."""
+    from aiida.manage import configuration, get_manager
+    from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, downgrade_config
+
+    config = config_with_profile_factory()
+    path = pathlib.Path(config.filepath)
+    original = json.dumps(downgrade_config(config.dictionary, CURRENT_CONFIG_VERSION - 1))
+    path.write_text(original, encoding='utf8')
+    configuration.reset_config()
+    get_manager().unload_profile()
+
+    result = run_cli_command(cmd_verdi.verdi, ['profile', 'list'], raises=True, initialize_ctx_obj=False)
+    assert 'verdi config upgrade' in result.stderr
+    assert path.read_text(encoding='utf8') == original
+
+    result = run_cli_command(cmd_verdi.verdi, ['config', 'upgrade'], initialize_ctx_obj=False)
+    assert f'Configuration is up to date (schema v{CURRENT_CONFIG_VERSION})' in result.output
+    assert configuration.get_config().version == CURRENT_CONFIG_VERSION
+    assert configuration.get_config().profile_names == config.profile_names
+    assert any(backup.read_text(encoding='utf8') == original for backup in path.parent.glob('config.json.*'))
+
+
 def test_config_downgrade(run_cli_command, config_with_profile_factory):
     """Test `verdi config downgrade`"""
     config_with_profile_factory()

@@ -26,7 +26,8 @@ def get_default_profile():
     try:
         config = get_config(create=True)
     except exceptions.ConfigurationVersionError as exception:
-        if exception._can_downgrade:
+        # Config repair commands must be able to run without resolving a profile.
+        if exception.can_upgrade or exception._can_downgrade:
             return None
         echo.echo_critical(str(exception))
     except exceptions.ConfigurationError as exception:

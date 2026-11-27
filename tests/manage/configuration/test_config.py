@@ -12,7 +12,6 @@ import json
 import os
 import pathlib
 import uuid
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -167,41 +166,32 @@ def compare_config_in_memory_and_on_disk(config, filepath):
     assert in_memory == on_disk
 
 
-def test_from_file(tmp_path, monkeypatch):
-    """Test the `Config.from_file` class method.
+def test_from_file(tmp_path):
+    """Create new configurations at the current schema and read them back."""
+    filepath = tmp_path / 'config.json'
+    config = Config.from_file(filepath)
+    assert config.version == CURRENT_CONFIG_VERSION
+    compare_config_in_memory_and_on_disk(config, filepath)
+    compare_config_in_memory_and_on_disk(Config.from_file(filepath), filepath)
 
-    Regression test for #3790: make sure configuration is written to disk after it is loaded and migrated.
-    """
-    mock_report = MagicMock()
-    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_report', mock_report)
-    # If the config file does not exist, a completely new file is created with a migrated config
-    filepath_nonexisting = tmp_path / 'config_nonexisting.json'
-    config = Config.from_file(filepath_nonexisting)
 
-    # Make sure that the migrated config is written to disk, by loading it from disk and comparing to the content
-    # of the in memory config object.
-    compare_config_in_memory_and_on_disk(config, filepath_nonexisting)
+def test_from_file_upgrade(tmp_path):
+    """Only an explicit upgrade rewrites an old configuration and backs it up."""
+    source = pathlib.Path(__file__).parent / 'migrations' / 'test_samples' / 'input' / '0.json'
+    original = source.read_bytes()
+    filepath = tmp_path / 'config.json'
+    filepath.write_bytes(original)
 
-    # Now repeat the test for an existing file. The previous filepath now *does* exist and is migrated
-    filepath_existing = filepath_nonexisting
-    config = Config.from_file(filepath_existing)
+    with pytest.raises(exceptions.ConfigurationVersionError, match='verdi config upgrade'):
+        Config.from_file(filepath)
+    assert filepath.read_bytes() == original
+    assert not list(tmp_path.glob('config.json.*'))
 
-    compare_config_in_memory_and_on_disk(config, filepath_existing)
-
-    # Finally, we test that an existing configuration file with an outdated schema is migrated and written to disk
-    with (tmp_path / 'config.json').open('wb') as handle:
-        # Write content of configuration with old schema to disk
-        filepath = pathlib.Path(__file__).parent.absolute() / 'migrations' / 'test_samples' / 'input' / '0.json'
-        with filepath.open('rb') as source:
-            handle.write(source.read())
-            handle.flush()
-
-        config = Config.from_file(handle.name)
-        compare_config_in_memory_and_on_disk(config, handle.name)
-
-    mock_report.assert_called_once_with(
-        f'configuration file `{handle.name}` migrated from v0 to v{CURRENT_CONFIG_VERSION}'
-    )
+    config = Config.from_file(filepath, upgrade=True)
+    assert config.version == CURRENT_CONFIG_VERSION
+    compare_config_in_memory_and_on_disk(config, filepath)
+    (backup,) = tmp_path.glob('config.json.*')
+    assert backup.read_bytes() == original
 
 
 def test_from_file_no_migrate(config_with_profile):

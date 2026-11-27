@@ -9,6 +9,10 @@ Use `verdi presto --use-postgres` for automated PostgreSQL setup, `verdi profile
 
 Profile storage migrations for PostgreSQL and SQLite are now upgrade-only: `migrate_down()` raises `NotImplementedError`. SQLite archives also no longer support downgrading from schema revision `main_0003`.
 
+Configuration files are no longer upgraded on load. Run `verdi config upgrade` or call
+`aiida.manage.configuration.load_config(upgrade=True)` to upgrade an older `config.json` or merge a legacy
+`cache_config.yml`. An outdated `config.json` is rejected until explicitly upgraded, and the upgrade keeps a backup.
+
 `Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
 
 Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`. They are no longer re-exported from `aiida.schedulers`.

@@ -914,4 +914,5 @@ class TestNodeList:
             expected_projections = [str(nodes[index].pk) for index in expected_nodes]
 
         result = run_cli_command(cmd_node.node_list, ['--project', 'id', '--raw'] + options)
-        assert result.output.strip() == '\n'.join(expected_projections)
+        # Raw output omits headers, but the table still aligns numeric columns.
+        assert [line.strip() for line in result.output.splitlines()] == expected_projections

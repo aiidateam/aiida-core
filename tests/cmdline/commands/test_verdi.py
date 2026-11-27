@@ -14,6 +14,7 @@ import pytest
 import aiida
 from aiida import get_version
 from aiida.cmdline.commands import cmd_verdi
+from aiida.manage.configuration import get_profile
 
 
 @pytest.mark.usefixtures('config_with_profile')
@@ -34,28 +35,27 @@ def test_verdi_with_empty_profile_list(run_cli_command):
 
 
 @pytest.mark.parametrize('arguments', [['--help'], ['profile', '--help']])
-def test_verdi_shows_development_warning(monkeypatch, config_with_profile_factory, run_cli_command, arguments):
-    """Regression test: ``verdi`` help commands show the development-version warning from the global config."""
+def test_verdi_help_does_not_warn_about_development_version(
+    monkeypatch, config_with_profile_factory, run_cli_command, arguments
+):
+    """Showing help does not require acknowledging development-version risks."""
     config = config_with_profile_factory(load=False)
     config.set_option('warnings.development_version', True)
-    monkeypatch.setattr(aiida, '__version__', '1.0.0.dev0')
+    monkeypatch.setattr(aiida, '__version__', '3.0.0.dev0')
 
     result = run_cli_command(cmd_verdi.verdi, arguments, use_subprocess=False, initialize_ctx_obj=False)
 
-    assert 'You are using a development version of AiiDA (1.0.0.dev0).' in result.output
+    assert 'You are using a development version of AiiDA' not in result.output
 
 
-def test_verdi_with_profile_loads_selected_profile(monkeypatch, empty_config, profile_factory, run_cli_command):
+def test_verdi_with_profile_loads_selected_profile(empty_config, profile_factory, run_cli_command):
     """Test ``verdi --profile`` loads the explicitly selected profile."""
     default_profile = profile_factory('default')
     explicit_profile = profile_factory('explicit')
     empty_config.add_profile(default_profile)
     empty_config.add_profile(explicit_profile)
     empty_config.set_default_profile(default_profile.name, overwrite=True)
-    empty_config.set_option('warnings.development_version', False)
-    explicit_profile.set_option('warnings.development_version', True)
     empty_config.store()
-    monkeypatch.setattr(aiida, '__version__', '1.0.0.dev0')
 
     result = run_cli_command(
         cmd_verdi.verdi,
@@ -64,7 +64,7 @@ def test_verdi_with_profile_loads_selected_profile(monkeypatch, empty_config, pr
         initialize_ctx_obj=False,
     )
 
-    assert 'You are using a development version of AiiDA (1.0.0.dev0).' in result.output
+    assert get_profile().name == explicit_profile.name
     assert 'Usage: verdi [OPTIONS] COMMAND [ARGS]...' in result.output
 
 

@@ -289,8 +289,8 @@ class GlobalOptionsSchema(ProfileOptionsSchema, defer_build=True):
     warnings__development_version: bool = Field(
         True,
         description=(
-            'Whether to warn about development versions. Setting this to false also acknowledges '
-            'the development-version compatibility risk for this configuration.'
+            'Whether to require confirmation for certain operations on development versions. Setting this to false '
+            'acknowledges the development-version compatibility risk for this configuration.'
         ),
     )
 

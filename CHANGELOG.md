@@ -18,7 +18,8 @@ AiiDA 3.0 development versions require confirmation before `verdi config upgrade
 proceeds. Accepting the warning sets the existing `warnings.development_version` option to `False` for the whole
 configuration. You can also set it with `verdi config set warnings.development_version False`. The corresponding
 Python APIs raise `aiida.common.ConfirmationRequiredError` while the warning is enabled, without prompting.
-`--non-interactive` and `--force` do not skip the warning.
+`--non-interactive` and `--force` do not skip the warning. The old warning on profile load and the
+`aiida.manage.manager.Manager.check_version()` method have been removed; the operation-specific checks remain.
 
 `Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
 

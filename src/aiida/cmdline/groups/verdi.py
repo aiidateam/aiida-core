@@ -130,7 +130,7 @@ class VerdiCommandGroup(click.Group):
 
         For the top-level command, parse the raw arguments once up front in order to resolve the selected profile and
         load it before Click handles eager options such as ``--help``. This keeps profile-dependent CLI behavior, such
-        as version warnings and logging setup, consistent throughout the rest of command processing.
+        as logging setup, consistent throughout the rest of command processing.
         """
         if ctx.parent is None and not ctx.resilient_parsing:
             from aiida.manage import get_manager

@@ -16,6 +16,21 @@ from aiida import get_profile
 from aiida.cmdline.commands import cmd_storage
 from aiida.common import exceptions
 
+pytestmark = pytest.mark.usefixtures('stable_aiida_version')
+
+
+def test_migrate_storage_requires_acknowledgement(aiida_profile, unacknowledged_config, monkeypatch):
+    """Reject direct storage migration until this setup has been acknowledged."""
+    from aiida.manage.configuration.config import Config
+
+    monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
+    storage = aiida_profile.storage_cls
+    with pytest.raises(exceptions.ConfirmationRequiredError, match='verdi config set warnings'):
+        storage.migrate(aiida_profile)
+
+    Config.record_development_version_acknowledgement(unacknowledged_config.filepath)
+    storage.migrate(aiida_profile)
+
 
 def tests_storage_version(run_cli_command):
     """Test the ``verdi storage version`` command."""

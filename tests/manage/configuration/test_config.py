@@ -175,8 +175,9 @@ def test_from_file(tmp_path):
     compare_config_in_memory_and_on_disk(Config.from_file(filepath), filepath)
 
 
-def test_from_file_upgrade(tmp_path):
-    """Only an explicit upgrade rewrites an old configuration and backs it up."""
+def test_from_file_upgrade(tmp_path, monkeypatch):
+    """Only an acknowledged upgrade rewrites an old configuration on a development build."""
+    monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
     source = pathlib.Path(__file__).parent / 'migrations' / 'test_samples' / 'input' / '0.json'
     original = source.read_bytes()
     filepath = tmp_path / 'config.json'
@@ -187,11 +188,17 @@ def test_from_file_upgrade(tmp_path):
     assert filepath.read_bytes() == original
     assert not list(tmp_path.glob('config.json.*'))
 
+    with pytest.raises(exceptions.ConfirmationRequiredError, match='verdi config set warnings'):
+        Config.from_file(filepath, upgrade=True)
+    assert filepath.read_bytes() == original
+
+    Config.record_development_version_acknowledgement(filepath)
+    assert json.loads(filepath.read_bytes()).get('CONFIG_VERSION') == json.loads(original).get('CONFIG_VERSION')
     config = Config.from_file(filepath, upgrade=True)
     assert config.version == CURRENT_CONFIG_VERSION
+    assert Config.has_development_version_acknowledgement(filepath)
     compare_config_in_memory_and_on_disk(config, filepath)
-    (backup,) = tmp_path.glob('config.json.*')
-    assert backup.read_bytes() == original
+    assert any(backup.read_bytes() == original for backup in tmp_path.glob('config.json.*'))
 
 
 def test_from_file_no_migrate(config_with_profile):
@@ -567,6 +574,7 @@ def test_delete_profile_sqlite_zip(
         assert any(expected_message in msg for msg in all_messages)
 
 
+@pytest.mark.usefixtures('stable_aiida_version')
 def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
     """Test the ``create_profile`` method when it raises."""
     config = config_with_profile
@@ -591,6 +599,7 @@ def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
         config.create_profile(profile_name, 'core.sqlite_temp', {})
 
 
+@pytest.mark.usefixtures('stable_aiida_version')
 def test_create_profile(config_with_profile):
     """Test the ``create_profile`` method."""
     config = config_with_profile

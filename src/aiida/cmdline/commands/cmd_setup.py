@@ -74,6 +74,9 @@ def setup(
     This method assumes that an empty PSQL database has been created and that the database user has been created.
     """
     from aiida import orm
+    from aiida.cmdline.utils.common import confirm_development_version
+
+    confirm_development_version()
 
     # store default user settings so user does not have to re-enter them
     _store_default_user_settings(ctx.obj.config, email, first_name, last_name, institution)

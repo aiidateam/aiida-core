@@ -15,6 +15,7 @@ __all__ = (
     'ClosedStorage',
     'ConfigurationError',
     'ConfigurationVersionError',
+    'ConfirmationRequiredError',
     'ContentNotExistent',
     'CorruptStorage',
     'DbContentError',
@@ -180,6 +181,10 @@ class ValidationError(AiidaException):
 
 class ConfigurationError(AiidaException):
     """Error raised when there is a configuration error in AiiDA."""
+
+
+class ConfirmationRequiredError(ConfigurationError):
+    """An operation requires confirmation that has not been recorded in the configuration."""
 
 
 class ProfileConfigurationError(ConfigurationError):

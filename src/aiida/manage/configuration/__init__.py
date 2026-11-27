@@ -86,6 +86,7 @@ def load_config(create=False, *, upgrade: bool = False) -> 'Config':
     :return: the config
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     :raises aiida.common.ConfigurationVersionError: if the file cannot be loaded without an upgrade or downgrade
+    :raises aiida.common.ConfirmationRequiredError: if upgrading on a development build without acknowledgement
     """
     from aiida.common import exceptions
     from aiida.manage.configuration.config import Config
@@ -273,6 +274,7 @@ def create_profile(
     :param storage_config: The configuration necessary to initialise and connect to the storage backend.
     :param broker_backend: The entry point to the :class:`aiida.brokers.Broker` implementation to use for the broker.
     :param broker_config: The configuration necessary to initialise and connect to the broker.
+    :raises aiida.common.ConfirmationRequiredError: If the development build has not been acknowledged.
     """
     profile: Profile = config.create_profile(
         name=name,

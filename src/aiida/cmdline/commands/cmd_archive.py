@@ -250,6 +250,7 @@ def create(
 )
 def migrate(input_file, output_file, force, in_place, version):
     """Migrate an archive to a more recent schema version."""
+    from aiida.cmdline.utils.common import confirm_development_version
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.archive.abstract import get_format
 
@@ -262,6 +263,8 @@ def migrate(input_file, output_file, force, in_place, version):
         echo.echo_critical(
             'no output file specified. Please add --in-place flag if you would like to migrate in place.'
         )
+
+    confirm_development_version()
 
     if AIIDA_LOGGER.level <= logging.REPORT:  # type: ignore[attr-defined]
         set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
@@ -510,7 +513,10 @@ def _import_archive_and_migrate(
                 echo.echo_report(f'incompatible version detected for {archive}, trying migration')
                 try:
                     new_path = str(temp_folder.get_abs_path('migrated_archive.aiida'))
-                    archive_format.migrate(archive_path, new_path, archive_format.latest_version, compression=0)
+                    from aiida.storage.sqlite_zip.migrator import migrate as migrate_archive
+
+                    # Import only migrates a temporary copy; the original archive is not modified.
+                    migrate_archive(archive_path, new_path, archive_format.latest_version, compression=0)
                     archive_path = new_path
                 except Exception as sub_exception:
                     _echo_exception(f'an exception occurred while migrating the archive {archive}', sub_exception)

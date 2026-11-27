@@ -58,6 +58,9 @@ The main methods of interest for interacting with the daemon are:
 * :meth:`~aiida.engine.daemon.client.DaemonClient.stop_daemon`
 * :meth:`~aiida.engine.daemon.client.DaemonClient.get_status`
 
+On AiiDA 3.0 development builds, acknowledge the compatibility risks once per configuration by accepting the CLI warning or running ``verdi config set warnings.development_version False``.
+While the warning is enabled, ``start_daemon()`` and ``restart_daemon()`` raise :class:`~aiida.common.exceptions.ConfirmationRequiredError` instead of prompting.
+
 These methods will raise a :class:`~aiida.engine.daemon.client.DaemonException` if the daemon fails to start or calls to it fail.
 All methods accept a ``timeout`` argument, which is the number of seconds the client should wait for the daemon process to respond, before raising a :class:`~aiida.engine.daemon.client.DaemonTimeoutException`.
 The default for the ``timeout`` is taken from the ``daemon.timeout`` configuration option and is set when constructing the :class:`~aiida.engine.daemon.client.DaemonClient`.

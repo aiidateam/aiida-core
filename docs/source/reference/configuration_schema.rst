@@ -6,6 +6,8 @@ The AiiDA configuration file is stored in ``<AIIDA_PATH>/config.json``.
 AiiDA does not upgrade the configuration file automatically.
 If the schema is outdated, run ``verdi config upgrade`` to upgrade it to the current schema and keep a backup of the original.
 From Python, call ``aiida.manage.configuration.load_config(upgrade=True)``.
+On AiiDA 3.0 development builds, ``verdi config upgrade`` asks for acknowledgement if ``warnings.development_version`` is enabled and disables the warning when you accept.
+The Python API raises an error instead of prompting.
 
 If a newer AiiDA version rewrites the configuration file to a schema that an older installation cannot read, run ``verdi config downgrade <SCHEMA_VERSION>`` with the newer installation before switching back.
 

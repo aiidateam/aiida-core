@@ -13,6 +13,13 @@ Configuration files are no longer upgraded on load. Run `verdi config upgrade` o
 `aiida.manage.configuration.load_config(upgrade=True)` to upgrade an older `config.json` or merge a legacy
 `cache_config.yml`. An outdated `config.json` is rejected until explicitly upgraded, and the upgrade keeps a backup.
 
+AiiDA 3.0 development versions require confirmation before `verdi config upgrade`, `verdi presto`, `verdi setup`,
+`verdi profile setup`, `verdi storage migrate`, `verdi archive migrate`, `verdi daemon start`, or `verdi daemon restart`
+proceeds. Accepting the warning sets the existing `warnings.development_version` option to `False` for the whole
+configuration. You can also set it with `verdi config set warnings.development_version False`. The corresponding
+Python APIs raise `aiida.common.ConfirmationRequiredError` while the warning is enabled, without prompting.
+`--non-interactive` and `--force` do not skip the warning.
+
 `Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
 
 Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`. They are no longer re-exported from `aiida.schedulers`.

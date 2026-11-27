@@ -61,8 +61,9 @@ class TestVerdiSetup:
         """
         self.cli_runner(cmd_setup.setup, ['--help'])
 
-    def test_setup(self):
-        """Test `verdi setup` (non-interactive)."""
+    def test_setup(self, monkeypatch):
+        """Require confirmation before creating the profile, even with --non-interactive."""
+        monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
         postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
         postgres.determine_setup()
         db_name = 'aiida_test_setup'
@@ -104,8 +105,13 @@ class TestVerdiSetup:
             profile_name,
         ]
 
-        self.cli_runner(cmd_setup.setup, options, use_subprocess=False)
+        prompt = 'Continue with this development version? [y/N]'
+        result = self.cli_runner(cmd_setup.setup, options, user_input='n\n', raises=True)
+        assert prompt in result.stderr
+        assert profile_name not in configuration.get_config().profile_names
 
+        result = self.cli_runner(cmd_setup.setup, options, user_input='y\n')
+        assert prompt in result.stderr
         config = configuration.get_config()
         assert profile_name in config.profile_names
 
@@ -172,7 +178,7 @@ class TestVerdiSetup:
             profile_uuid,
         ]
 
-        self.cli_runner(cmd_setup.setup, options, use_subprocess=False)
+        self.cli_runner(cmd_setup.setup, options, user_input='y\n')
 
         config = configuration.get_config()
         assert profile_name in config.profile_names

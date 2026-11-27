@@ -34,6 +34,27 @@ def test_create_profile(isolated_config, tmp_path, entry_point):
     assert profile_name in isolated_config.profile_names
 
 
+def test_create_profile_requires_development_acknowledgement(unacknowledged_config, tmp_path, monkeypatch):
+    """Reject Python profile creation until this setup has been acknowledged."""
+    from aiida.common.exceptions import ConfirmationRequiredError
+    from aiida.manage.configuration.config import Config
+
+    monkeypatch.setattr(aiida, '__version__', '3.0.0.dev0')
+    kwargs = {
+        'name': 'development-profile',
+        'email': 'test@localhost',
+        'storage_backend': 'core.sqlite_dos',
+        'storage_config': {'filepath': str(tmp_path)},
+    }
+    with pytest.raises(ConfirmationRequiredError, match='verdi config set warnings'):
+        create_profile(unacknowledged_config, **kwargs)
+    assert 'development-profile' not in unacknowledged_config.profile_names
+
+    Config.record_development_version_acknowledgement(unacknowledged_config.filepath)
+    assert create_profile(unacknowledged_config, **kwargs).name == 'development-profile'
+    assert Config.has_development_version_acknowledgement(unacknowledged_config.filepath)
+
+
 def test_check_version_release(monkeypatch, isolated_config):
     """Test that ``Manager.check_version`` emits nothing for a release version."""
     from unittest.mock import MagicMock

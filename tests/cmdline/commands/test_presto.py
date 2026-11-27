@@ -10,6 +10,8 @@ from aiida.manage.configuration import profile_context
 from aiida.manage.configuration.config import Config
 from aiida.orm import Computer
 
+pytestmark = pytest.mark.usefixtures('stable_aiida_version')
+
 
 @pytest.fixture()
 def mock_daemon_client(monkeypatch):

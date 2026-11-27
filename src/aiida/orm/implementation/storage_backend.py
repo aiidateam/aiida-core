@@ -102,6 +102,7 @@ class StorageBackend(abc.ABC):
         If the schema version is already the latest version, this method does nothing. If the storage is uninitialised,
         this method will raise an exception.
 
+        :raises ConfirmationRequiredError: If the development-version acknowledgement has not been saved.
         :raises: :class`~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed.
         :raises: :class:`~aiida.common.exceptions.StorageMigrationError` if the storage is not initialised.
         """

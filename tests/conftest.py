@@ -843,6 +843,20 @@ class CliResult:
 
 
 @pytest.fixture
+def unacknowledged_config(isolated_config):
+    """Use the test profile with a configuration that has not acknowledged the development version."""
+    isolated_config.set_option('warnings.development_version', True)
+    isolated_config.store()
+    return isolated_config
+
+
+@pytest.fixture
+def stable_aiida_version(monkeypatch):
+    """Run tests unrelated to development-version confirmation as a stable release."""
+    monkeypatch.setattr('aiida.__version__', '3.0.0')
+
+
+@pytest.fixture
 def run_cli_command(reset_log_level, aiida_config, aiida_profile):
     """Run a ``click`` command with the given options.
 

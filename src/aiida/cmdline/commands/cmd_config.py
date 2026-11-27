@@ -254,8 +254,11 @@ def verdi_config_caching(disabled):
 @verdi_config.command('upgrade')
 def verdi_config_upgrade() -> None:
     """Upgrade the configuration file to the current schema."""
+    from aiida.cmdline.utils.common import confirm_development_version
     from aiida.common.exceptions import ConfigurationError
     from aiida.manage.configuration import load_config
+
+    confirm_development_version()
 
     try:
         config = load_config(upgrade=True)

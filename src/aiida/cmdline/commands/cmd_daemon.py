@@ -109,6 +109,9 @@ def start(foreground, number, timeout):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
+    from aiida.cmdline.utils.common import confirm_development_version
+
+    confirm_development_version()
     echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
     execute_client_command('start_daemon', number_workers=number, foreground=foreground, timeout=timeout)
 
@@ -291,6 +294,8 @@ def restart(ctx, reset, no_wait, timeout):
 
     Returns exit code 0 if the result is OK, non-zero if there was an error.
     """
+    from aiida.cmdline.utils.common import confirm_development_version
+
     if reset:
         echo.echo_deprecated(
             '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.'
@@ -305,6 +310,7 @@ def restart(ctx, reset, no_wait, timeout):
     # responsible for settting the default value, which causes `None` to be passed and that triggers an exception.
     # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
     number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
+    confirm_development_version()
     ctx.invoke(stop)
     ctx.invoke(start, number=number)
 

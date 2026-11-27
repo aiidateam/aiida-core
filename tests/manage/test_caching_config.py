@@ -39,6 +39,7 @@ def configure_caching(config_with_profile_factory):
     return inner
 
 
+@pytest.mark.usefixtures('stable_aiida_version')
 def test_merge_deprecated_yaml(tmp_path):
     """Test that an existing 'cache_config.yml' is correctly merged into the main config.
 

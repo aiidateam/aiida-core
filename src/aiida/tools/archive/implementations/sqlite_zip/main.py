@@ -77,8 +77,8 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
         force: bool = False,
         compression: int = 6,
     ) -> None:
-        """Migrate an archive to a specific version.
+        """Migrate an archive to a specific version."""
+        from aiida.common.development import require_development_version_acknowledgement
 
-        :param path: archive path
-        """
-        return migrate(inpath, outpath, version, force=force, compression=compression)
+        require_development_version_acknowledgement()
+        migrate(inpath, outpath, version, force=force, compression=compression)

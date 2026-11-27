@@ -35,9 +35,17 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
     return datetime.fromtimestamp(timestamp, timezone.utc).strftime(format_str)
 
 
-def test_daemon_start(run_cli_command, stopped_daemon_client):
-    """Test ``verdi daemon start``."""
-    run_cli_command(cmd_daemon.start)
+def test_daemon_start(run_cli_command, stopped_daemon_client, monkeypatch, unacknowledged_config):
+    """Start the daemon only after confirming the development-version warning."""
+    monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
+    prompt = 'Continue with this development version? [y/N]'
+
+    result = run_cli_command(cmd_daemon.start, raises=True)
+    assert prompt in result.stderr
+    assert not stopped_daemon_client.is_daemon_running
+
+    result = run_cli_command(cmd_daemon.start, user_input='y\n')
+    assert result.stderr.count(prompt) == 1
 
     daemon_response = stopped_daemon_client.get_daemon_info()
 
@@ -54,9 +62,19 @@ def test_daemon_start(run_cli_command, stopped_daemon_client):
 
 @pytest.mark.parametrize('options', ([], ['--reset']))
 @pytest.mark.flaky(reruns=2)
-def test_daemon_restart(run_cli_command, started_daemon_client, options):
-    """Test ``verdi daemon restart`` both with and without ``--reset`` flag."""
-    run_cli_command(cmd_daemon.restart, options)
+def test_daemon_restart(run_cli_command, started_daemon_client, options, monkeypatch, unacknowledged_config):
+    """Confirm before stopping the daemon and do not ask again when it starts."""
+    monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
+    prompt = 'Continue with this development version? [y/N]'
+    pid = started_daemon_client.get_daemon_pid()
+
+    result = run_cli_command(cmd_daemon.restart, options, user_input='n\n', raises=True)
+    assert prompt in result.stderr
+    assert started_daemon_client.get_daemon_pid() == pid
+    assert started_daemon_client.is_daemon_running
+
+    result = run_cli_command(cmd_daemon.restart, options, user_input='y\n')
+    assert result.stderr.count(prompt) == 1
 
     daemon_response = started_daemon_client.get_daemon_info()
     worker_response = started_daemon_client.get_worker_info()
@@ -71,7 +89,7 @@ def test_daemon_restart(run_cli_command, started_daemon_client, options):
 def test_daemon_start_number(run_cli_command, stopped_daemon_client):
     """Test ``verdi daemon start`` with a specific number of workers."""
     number = 4
-    run_cli_command(cmd_daemon.start, [str(number)])
+    run_cli_command(cmd_daemon.start, [str(number)], user_input='y\n')
 
     daemon_response = stopped_daemon_client.get_daemon_info()
 
@@ -90,7 +108,7 @@ def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isol
     isolated_config.set_option('daemon.default_workers', number, scope=get_profile().name)
     isolated_config.store()
 
-    run_cli_command(cmd_daemon.start, use_subprocess=False)
+    run_cli_command(cmd_daemon.start, user_input='y\n', use_subprocess=False)
 
     daemon_response = stopped_daemon_client.get_daemon_info()
 
@@ -119,7 +137,7 @@ def test_daemon_stop(run_cli_command, started_daemon_client):
 
 def test_foreground_multiple_workers(run_cli_command):
     """Test `verdi daemon start` in foreground with more than one worker will fail."""
-    run_cli_command(cmd_daemon.start, ['--foreground', str(4)], raises=True)
+    run_cli_command(cmd_daemon.start, ['--foreground', str(4)], user_input='y\n', raises=True)
 
 
 @pytest.mark.usefixtures('started_daemon_client', 'isolated_config')

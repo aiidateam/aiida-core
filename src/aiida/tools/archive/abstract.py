@@ -251,6 +251,7 @@ class ArchiveFormatAbstract(ABC):
         :param version: version to migrate to
         :param force: allow overwrite of existing output archive path
         :param compression: default level of compression to use for writing (integer from 0 to 9)
+        :raises ConfirmationRequiredError: if the development-version acknowledgement has not been saved
         """
 
 

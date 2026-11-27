@@ -32,6 +32,41 @@ if t.TYPE_CHECKING:
 __all__ = ('is_verbose',)
 
 
+def confirm_development_version() -> None:
+    """Ask once per configuration on a 3.0.0 development build.
+
+    :raises click.Abort: if the user declines or no confirmation can be read
+    """
+    import click
+
+    from aiida.common.development import DEVELOPMENT_VERSION_WARNING_OPTION, is_development_version
+    from aiida.manage import configuration
+    from aiida.manage.configuration.config import Config
+
+    if not is_development_version():
+        return
+
+    filepath = configuration.get_config_path()
+    if Config.has_development_version_acknowledgement(filepath):
+        return
+
+    lines = (
+        'This is a development version. Do not use it in production.',
+        'The data you produce will not be compatible with the stable release.',
+        'Continuing disables the development-version warning for this setup.',
+    )
+    width = max(map(len, lines))
+    border = f'+{"-" * (width + 2)}+'
+    message = '\n'.join((border, *(f'| {line:<{width}} |' for line in lines), border))
+    click.secho(message, fg='yellow', err=True)
+    click.confirm('I understand. Continue with this development version?', abort=True, err=True)
+    Config.record_development_version_acknowledgement(filepath)
+
+    # Keep normal configuration writes in this command from dropping the saved option.
+    if configuration.CONFIG is not None and Path(configuration.CONFIG.filepath) == Path(filepath):
+        configuration.CONFIG.set_option(DEVELOPMENT_VERSION_WARNING_OPTION, False)
+
+
 def tabulate(table, **kwargs):
     """A dummy wrapper to hide the import cost of tabulate"""
     import tabulate as tb

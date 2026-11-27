@@ -269,6 +269,35 @@ def test_config_set_caching_enabled(run_cli_command, config_with_profile_factory
         assert "Success: 'caching.enabled_for' set to" in result.output
 
 
+def test_development_version_warning_option(run_cli_command, unacknowledged_config, monkeypatch):
+    """The regular config commands can acknowledge the warning and turn it back on."""
+    from aiida.manage import configuration
+
+    monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
+    option = 'warnings.development_version'
+    command = ['config', 'upgrade']
+    prompt = 'Continue with this development version? [y/N]'
+
+    result = run_cli_command(cmd_verdi.verdi, ['config', 'list'])
+    assert option in result.output
+
+    run_cli_command(cmd_verdi.verdi, ['config', 'set', option, 'False'])
+    configuration.reset_config()
+    result = run_cli_command(cmd_verdi.verdi, command)
+    assert prompt not in result.stderr
+
+    run_cli_command(cmd_verdi.verdi, ['config', 'set', option, 'True'])
+    result = run_cli_command(cmd_verdi.verdi, command, user_input='n\n', raises=True)
+    assert prompt in result.stderr
+    assert configuration.get_config().get_option(option) is True
+
+    result = run_cli_command(cmd_verdi.verdi, command, user_input='y\n')
+    assert prompt in result.stderr
+    assert configuration.get_config().get_option(option) is False
+    result = run_cli_command(cmd_verdi.verdi, command)
+    assert prompt not in result.stderr
+
+
 def test_config_help_schema_command_order(run_cli_command):
     """List upgrade immediately before downgrade in the config help."""
     result = run_cli_command(cmd_verdi.verdi, ['config', '--help'])
@@ -277,11 +306,13 @@ def test_config_help_schema_command_order(run_cli_command):
     assert lines[upgrade + 1].lstrip().startswith('downgrade ')
 
 
-def test_config_upgrade(run_cli_command, config_with_profile_factory):
+@pytest.mark.parametrize('version', ['3.0.0', '3.0.0.dev0'])
+def test_config_upgrade(run_cli_command, config_with_profile_factory, monkeypatch, version):
     """Upgrade an outdated file explicitly without loading a profile."""
     from aiida.manage import configuration, get_manager
     from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, downgrade_config
 
+    monkeypatch.setattr('aiida.__version__', version)
     config = config_with_profile_factory()
     path = pathlib.Path(config.filepath)
     original = json.dumps(downgrade_config(config.dictionary, CURRENT_CONFIG_VERSION - 1))
@@ -293,7 +324,17 @@ def test_config_upgrade(run_cli_command, config_with_profile_factory):
     assert 'verdi config upgrade' in result.stderr
     assert path.read_text(encoding='utf8') == original
 
-    result = run_cli_command(cmd_verdi.verdi, ['config', 'upgrade'], initialize_ctx_obj=False)
+    command = ['config', 'upgrade']
+    prompt = 'Continue with this development version? [y/N]'
+    user_input = None
+    if version == '3.0.0.dev0':
+        result = run_cli_command(cmd_verdi.verdi, command, user_input='n\n', raises=True, initialize_ctx_obj=False)
+        assert prompt in result.stderr
+        assert path.read_text(encoding='utf8') == original
+        user_input = 'y\n'
+
+    result = run_cli_command(cmd_verdi.verdi, command, user_input=user_input, initialize_ctx_obj=False)
+    assert (prompt in result.stderr) == (version == '3.0.0.dev0')
     assert f'Configuration is up to date (schema v{CURRENT_CONFIG_VERSION})' in result.output
     assert configuration.get_config().version == CURRENT_CONFIG_VERSION
     assert configuration.get_config().profile_names == config.profile_names

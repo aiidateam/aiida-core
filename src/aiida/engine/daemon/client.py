@@ -28,6 +28,7 @@ import urllib.request
 
 import psutil
 
+from aiida.common.development import require_development_version_acknowledgement
 from aiida.common.exceptions import AiidaException, ConfigurationError
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
@@ -793,9 +794,11 @@ class DaemonClient:
         :param wait: Boolean to indicate whether to wait for the result of the command.
         :param timeout: Optional timeout to set for trying to reach the circus daemon after the subprocess has started.
             Default is set on the client upon instantiation taken from the ``daemon.timeout`` config option.
-        :raises DaemonException: If the command to start the daemon subprocess excepts.
+        :raises ConfirmationRequiredError: If the development-version acknowledgement has not been saved.
+        :raises DaemonException: If launching the daemon subprocess fails.
         :raises DaemonTimeoutException: If the daemon starts but then is unresponsive or in an unexpected state.
         """
+        require_development_version_acknowledgement(filepath=self._config.filepath)
         self._clean_potentially_stale_pid_file()
 
         env = self.get_env()
@@ -828,10 +831,11 @@ class DaemonClient:
         :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
             instantiation taken from the ``daemon.timeout`` config option.
         :returns: The client call response.
+        :raises ConfirmationRequiredError: If the development-version acknowledgement has not been saved.
         :raises DaemonException: If the daemon is not running or cannot be reached.
         :raises DaemonTimeoutException: If the connection to the daemon timed out.
-        :raises DaemonException: If the connection to the daemon failed for any other reason.
         """
+        require_development_version_acknowledgement(filepath=self._config.filepath)
         command = {'command': 'restart', 'properties': {'name': self.daemon_name, 'waiting': wait}}
         response = self.call_client(command, timeout=timeout)
         if response.get('status') == 'ok':

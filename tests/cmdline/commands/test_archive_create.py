@@ -19,6 +19,8 @@ from aiida.orm import Computer, Dict, Group, InstalledCode
 from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
 
+pytestmark = pytest.mark.usefixtures('stable_aiida_version')
+
 pytest.mark.usefixtures('chdir_tmp_path')
 
 
@@ -126,6 +128,32 @@ def test_migrate_force(run_cli_command, tmp_path):
     options = ['--force', filename_input, outpath]
     run_cli_command(cmd_archive.migrate, options)
     assert ArchiveFormatSqlZip().read_version(outpath) == ArchiveFormatSqlZip().latest_version
+
+
+@pytest.mark.parametrize('in_place', [False, True], ids=['new-file', 'in-place'])
+@pytest.mark.usefixtures('unacknowledged_config')
+def test_migrate_development_version_confirmation(run_cli_command, tmp_path, monkeypatch, in_place):
+    """Require confirmation before writing a migrated archive, even with --force."""
+    monkeypatch.setattr('aiida.__version__', '3.0.0.dev0')
+    input_file = tmp_path / 'original.aiida'
+    shutil.copyfile(get_archive_file('export_0.6_simple.aiida', filepath='export/migrate'), input_file)
+    original = input_file.read_bytes()
+    output_file = input_file if in_place else tmp_path / 'migrated.aiida'
+    options = [input_file, '--in-place'] if in_place else [input_file, output_file, '--force']
+    prompt = 'Continue with this development version? [y/N]'
+
+    result = run_cli_command(cmd_archive.migrate, options, user_input='n\n', raises=True)
+    assert prompt in result.stderr
+    assert input_file.read_bytes() == original
+    if not in_place:
+        assert not output_file.exists()
+
+    result = run_cli_command(cmd_archive.migrate, options, user_input='y\n')
+    assert prompt in result.stderr
+    archive_format = ArchiveFormatSqlZip()
+    assert archive_format.read_version(output_file) == archive_format.latest_version
+    if not in_place:
+        assert input_file.read_bytes() == original
 
 
 def test_migrate_in_place(run_cli_command, tmp_path):

@@ -268,7 +268,7 @@ def verdi_config_upgrade() -> None:
 @verdi_config.command('downgrade')
 @click.argument('version', type=click.Choice(sorted({str(m.down_revision) for m in MIGRATIONS})))
 def verdi_config_downgrade(version):
-    """Print a configuration, downgraded to a specific version."""
+    """Downgrade the configuration file to the specified schema version."""
     path = Path(get_config_path())
     echo.echo_report(f'Downgrading configuration to v{version}: {path}')
     config = json.loads(path.read_text(encoding='utf8'))

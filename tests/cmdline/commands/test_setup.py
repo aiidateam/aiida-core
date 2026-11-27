@@ -8,8 +8,6 @@
 ###########################################################################
 """Tests for ``verdi setup``."""
 
-import os
-import tempfile
 import uuid
 
 import pytest
@@ -32,7 +30,7 @@ def pg_test_cluster():
 
 
 class TestVerdiSetup:
-    """Tests for `verdi setup` and `verdi quicksetup`."""
+    """Tests for `verdi setup`."""
 
     @pytest.fixture(autouse=True)
     def init_profile(self, pg_test_cluster, empty_config, run_cli_command):
@@ -62,165 +60,6 @@ class TestVerdiSetup:
         prompt cycle, which by waiting for input, will block the test from continuing.
         """
         self.cli_runner(cmd_setup.setup, ['--help'])
-        self.cli_runner(cmd_setup.quicksetup, ['--help'])
-
-    def test_quicksetup(self, tmp_path):
-        """Test `verdi quicksetup`."""
-        profile_name = 'testing'
-        user_email = 'some@email.com'
-        user_first_name = 'John'
-        user_last_name = 'Smith'
-        user_institution = 'ECMA'
-
-        options = [
-            '--non-interactive',
-            '--profile',
-            profile_name,
-            '--email',
-            user_email,
-            '--first-name',
-            user_first_name,
-            '--last-name',
-            user_last_name,
-            '--institution',
-            user_institution,
-            '--db-port',
-            self.pg_test.dsn['port'],
-            '--db-backend',
-            self.storage_backend_name,
-            '--repository',
-            str(tmp_path),
-        ]
-
-        self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
-
-        config = configuration.get_config()
-        assert profile_name in config.profile_names
-
-        profile = config.get_profile(profile_name)
-        profile.default_user_email = user_email
-
-        # Verify that the backend type of the created profile matches that of the profile for the current test session
-        assert self.storage_backend_name == profile.storage_backend
-
-        user = orm.User.collection.get(email=user_email)
-        assert user.first_name == user_first_name
-        assert user.last_name == user_last_name
-        assert user.institution == user_institution
-
-        # Check that the repository UUID was stored in the database
-        backend = profile.storage_cls(profile)
-        try:
-            assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
-        finally:
-            backend.close()
-
-    def test_quicksetup_default_user(self, tmp_path):
-        """Test `verdi quicksetup` and ensure that user details (apart from the email) are optional."""
-        profile_name = 'testing-default-user-details'
-        user_email = 'some@email.com'
-
-        options = [
-            '--non-interactive',
-            '--profile',
-            profile_name,
-            '--email',
-            user_email,
-            '--db-port',
-            self.pg_test.dsn['port'],
-            '--db-backend',
-            self.storage_backend_name,
-            '--repository',
-            str(tmp_path),
-        ]
-
-        self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
-
-        config = configuration.get_config()
-        assert profile_name in config.profile_names
-
-    def test_quicksetup_from_config_file(self, tmp_path):
-        """Test `verdi quicksetup` from configuration file."""
-        with tempfile.NamedTemporaryFile('w') as handle:
-            handle.write(
-                f"""---
-profile: testing
-first_name: Leopold
-last_name: Talirz
-institution: EPFL
-db_backend: {self.storage_backend_name}
-db_port: {self.pg_test.dsn['port']}
-email: 123@234.de
-repository: {tmp_path}"""
-            )
-            handle.flush()
-            self.cli_runner(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)], use_subprocess=False)
-
-    def test_quicksetup_autofill_on_early_exit(self, tmp_path):
-        """Test `verdi quicksetup` stores user information even if command fails."""
-        config = configuration.get_config()
-        assert config.get_option('autofill.user.email', scope=None) is None
-        assert config.get_option('autofill.user.first_name', scope=None) is None
-        assert config.get_option('autofill.user.last_name', scope=None) is None
-        assert config.get_option('autofill.user.institution', scope=None) is None
-
-        user_email = 'some@email.com'
-        user_first_name = 'John'
-        user_last_name = 'Smith'
-        user_institution = 'ECMA'
-
-        # The incorrect port will cause the command to fail, but the user information should have been stored on the
-        # configuration such that the user won't have to retype it but can use the pre-stored defaults.
-        options = [
-            '--non-interactive',
-            '--profile',
-            'testing',
-            '--email',
-            user_email,
-            '--first-name',
-            user_first_name,
-            '--last-name',
-            user_last_name,
-            '--institution',
-            user_institution,
-            '--db-port',
-            self.pg_test.dsn['port'] + 100,
-            '--repository',
-            str(tmp_path),
-        ]
-
-        self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
-
-        assert config.get_option('autofill.user.email', scope=None) == user_email
-        assert config.get_option('autofill.user.first_name', scope=None) == user_first_name
-        assert config.get_option('autofill.user.last_name', scope=None) == user_last_name
-        assert config.get_option('autofill.user.institution', scope=None) == user_institution
-
-    def test_quicksetup_wrong_port(self):
-        """Test `verdi quicksetup` exits if port is wrong."""
-        profile_name = 'testing'
-        user_email = 'some@email.com'
-        user_first_name = 'John'
-        user_last_name = 'Smith'
-        user_institution = 'ECMA'
-
-        options = [
-            '--non-interactive',
-            '--profile',
-            profile_name,
-            '--email',
-            user_email,
-            '--first-name',
-            user_first_name,
-            '--last-name',
-            user_last_name,
-            '--institution',
-            user_institution,
-            '--db-port',
-            self.pg_test.dsn['port'] + 100,
-        ]
-
-        self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
 
     def test_setup(self):
         """Test `verdi setup` (non-interactive)."""

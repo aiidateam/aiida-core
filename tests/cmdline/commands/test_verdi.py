@@ -108,6 +108,12 @@ def test_invalid_cmd_no_matches(run_cli_command):
     assert 'No similar commands found' in result.output
 
 
+def test_quicksetup_command_removed(run_cli_command):
+    """The old setup shortcut is no longer available from the CLI."""
+    result = run_cli_command(cmd_verdi.verdi, ['quicksetup', '--help'], use_subprocess=False, raises=True)
+    assert '`quicksetup` is not a verdi command' in result.output
+
+
 def test_verbosity_options():
     """Recursively find all leaf commands of ``verdi`` and ensure they have the ``--verbosity`` option."""
 

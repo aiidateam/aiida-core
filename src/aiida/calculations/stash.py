@@ -16,6 +16,7 @@ import typing as t
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import CalcInfo, CodeInfo, StashMode
+from aiida.common.links import LinkType
 from aiida.engine import CalcJob
 
 EXEC_LOGGER = AIIDA_LOGGER.getChild('StashCalculation')
@@ -34,8 +35,8 @@ def validate_source_node(source_node: t.Any, _: t.Any) -> str | None:
     if not isinstance(source_node, orm.RemoteData):
         return None  # Let the valid_type check handle this
 
-    creator = source_node.creator
-    if creator is not None and not creator.is_sealed:
+    creator_link = source_node.base.links.get_incoming(link_type=LinkType.CREATE).first()
+    if creator_link is not None and not t.cast('orm.CalculationNode', creator_link.node).is_sealed:
         return (
             'The source_node is an expected output of an active calculation. '
             'Stashing files from running calculations is not possible, '

@@ -33,7 +33,8 @@ from aiida.engine.processes.ports import (
     _infer_runtime_types,
     _is_storable,
 )
-from aiida.orm import Data, Dict, to_aiida_type
+from aiida.orm import Dict, to_aiida_type
+from aiida.orm.nodes.data.data import Data
 
 __all__ = ('CalcJobProcessSpec', 'GraphProcessSpec', 'ProcessSpec')
 

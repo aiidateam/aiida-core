@@ -25,6 +25,7 @@ class LinkType(Enum):
     INPUT_WORK = 'input_work'
     CALL_CALC = 'call_calc'
     CALL_WORK = 'call_work'
+    CONTAINS = 'contains'  # Stored as a membership edge, not in db_dblink.
 
 
 GraphTraversalRule = namedtuple('GraphTraversalRule', ['link_type', 'direction', 'toggleable', 'default'])
@@ -76,6 +77,8 @@ class GraphTraversalRules(Enum):
     }
 
     EXPORT = {
+        'contains_forward': GraphTraversalRule(LinkType.CONTAINS, 'forward', True, False),
+        'contains_backward': GraphTraversalRule(LinkType.CONTAINS, 'backward', False, True),
         'input_calc_forward': GraphTraversalRule(LinkType.INPUT_CALC, 'forward', True, False),
         'input_calc_backward': GraphTraversalRule(LinkType.INPUT_CALC, 'backward', False, True),
         'create_forward': GraphTraversalRule(LinkType.CREATE, 'forward', False, True),
@@ -89,6 +92,10 @@ class GraphTraversalRules(Enum):
         'call_work_forward': GraphTraversalRule(LinkType.CALL_WORK, 'forward', False, True),
         'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, True),
     }
+
+
+# User-supplied link labels cannot start with an underscore.
+CONTAINER_MEMBER_LINK_PREFIX = '_aiida_container_member_'
 
 
 def validate_link_label(link_label: str) -> None:

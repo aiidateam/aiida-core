@@ -344,6 +344,8 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
         :note: all the nodes *and* the group itself have to be stored.
 
+        Only the supplied nodes are added, without following container membership.
+
         :param nodes: a single `Node` or a list of `Nodes`
         """
         from aiida.orm.nodes import Node
@@ -364,6 +366,8 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         """Remove a node or a set of nodes to the group.
 
         :note: all the nodes *and* the group itself have to be stored.
+
+        Only the supplied nodes are removed, without following container membership.
 
         :param nodes: a single `Node` or a list of `Nodes`
         """

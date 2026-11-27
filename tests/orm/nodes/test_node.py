@@ -702,7 +702,7 @@ class TestNodeLinks:
     def test_node_indegree_unique_pair(self):
         """Test that the validation of links with indegree `unique_pair` works correctly
 
-        The example here is a `DataNode` that has two incoming links with the same label, but with different types.
+        The example here is a `Data` that has two incoming links with the same label, but with different types.
         This is legal and should pass validation.
         """
         caller = WorkflowNode().store()
@@ -721,7 +721,7 @@ class TestNodeLinks:
     def test_node_indegree_unique_triple(self):
         """Test that the validation of links with indegree `unique_triple` works correctly
 
-        The example here is a `DataNode` that has two incoming RETURN links with the same label, but from different
+        The example here is a `Data` that has two incoming RETURN links with the same label, but from different
         source nodes. This is legal and should pass validation.
         """
         return_one = WorkflowNode()

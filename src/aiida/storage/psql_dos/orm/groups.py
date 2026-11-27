@@ -188,12 +188,12 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
         with utils.disable_expire_on_commit(self.backend.get_session()) as session:
-            ins_dict = []
+            if not nodes:
+                return
+            group_id = self.id
             for node in nodes:
                 check_node(node)
-                ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})
-            if len(ins_dict) == 0:
-                return
+            ins_dict = [{'dbnode_id': node.id, 'dbgroup_id': group_id} for node in nodes]
 
             table = self.GROUP_NODE_CLASS.__table__
             ins = insert(table)
@@ -210,7 +210,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
 
         :param nodes: a list of `BackendNode` instance to be added to this group
         """
-        from sqlalchemy import and_
+        from aiida.storage.utils import _create_smarter_in_clause
 
         super().remove_nodes(nodes)
 
@@ -226,8 +226,11 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
             table = self.GROUP_NODE_CLASS.__table__
             for node in nodes:
                 check_node(node)
-                clause = and_(table.c.dbnode_id == node.id, table.c.dbgroup_id == self.id)
-                statement = table.delete().where(clause)
+            if nodes:
+                ids = [node.id for node in nodes]
+                statement = table.delete().where(
+                    table.c.dbgroup_id == self.id, _create_smarter_in_clause(session, table.c.dbnode_id, ids)
+                )
                 session.execute(statement)
 
             if not session.in_nested_transaction():

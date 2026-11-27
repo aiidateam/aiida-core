@@ -14,6 +14,7 @@ import abc
 import typing as t
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
+from dataclasses import dataclass
 from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
@@ -38,11 +39,22 @@ if t.TYPE_CHECKING:
     from aiida.orm.users import User
     from aiida.repository.backend.abstract import AbstractRepositoryBackend
 
-__all__ = ('StorageBackend',)
+__all__ = ('MembershipDeletion', 'RollbackCallback', 'StorageBackend')
 
 LOGGER = AIIDA_LOGGER.getChild('orm.implementation.storage_backend')
 
 TransactionType = t.TypeVar('TransactionType')
+
+#: Zero-argument callable restoring a caller's in-memory state after a backend transaction rolls back.
+RollbackCallback = t.Callable[[], None]
+
+
+@dataclass(frozen=True)
+class MembershipDeletion:
+    """Membership effects on surviving nodes when deleting part of a container tree."""
+
+    detached: frozenset[int] = frozenset()
+    edited_containers: frozenset[int] = frozenset()
 
 
 class StorageBackend(abc.ABC):
@@ -120,6 +132,7 @@ class StorageBackend(abc.ABC):
         self._profile = profile
         self._default_user: User | None = None
         self._autogroup = AutogroupManager(self)
+        self._rollback_callback_scopes: list[list[RollbackCallback]] = []
 
     @abc.abstractmethod
     def __str__(self) -> str:
@@ -242,6 +255,71 @@ class StorageBackend(abc.ABC):
     def in_transaction(self) -> bool:
         """Return whether a transaction is currently active."""
 
+    def add_rollback_callback(self, callback: RollbackCallback) -> None:
+        """Register ``callback`` to run if the current backend transaction rolls back.
+
+        General transaction-outcome hook without ORM or container knowledge: ``callback`` is a plain
+        zero-argument callable invoked at most once. Scopes nest with :meth:`transaction`: a callback
+        registered inside a nested scope moves to the parent scope when the nested scope exits cleanly,
+        and fires immediately when its own scope rolls back. Callbacks of an outermost scope fire when it
+        rolls back and are discarded when it commits. If no transaction scope is active the callback is
+        discarded since there is nothing whose rollback could invalidate the caller's work.
+
+        Callbacks must be self-contained and must not raise: a failing callback is logged and the
+        remaining callbacks still run, without masking the original failure. Callbacks run on the thread
+        that exits the failed transaction scope.
+
+        :param callback: zero-argument callable restoring the caller's in-memory state.
+        """
+        scopes = getattr(self, '_rollback_callback_scopes', None)
+        if not scopes:
+            return
+        scopes[-1].append(callback)
+
+    def _push_rollback_scope(self) -> list[RollbackCallback]:
+        """Open a new rollback-callback scope for one :meth:`transaction` entry."""
+        scopes = getattr(self, '_rollback_callback_scopes', None)
+        if scopes is None:
+            scopes = self._rollback_callback_scopes = []
+        scope: list[RollbackCallback] = []
+        scopes.append(scope)
+        return scope
+
+    def _merge_rollback_scope(self, scope: list[RollbackCallback]) -> None:
+        """Close ``scope`` after a clean exit, handing its callbacks to the parent scope.
+
+        The callbacks of an outermost scope are discarded since its work persisted.
+        """
+        scopes = getattr(self, '_rollback_callback_scopes', None)
+        if not scopes:
+            return
+        for index, candidate in enumerate(scopes):
+            if candidate is scope:
+                del scopes[index]
+                break
+        else:
+            return
+        if scopes:
+            scopes[-1].extend(scope)
+
+    def _fail_rollback_scope(self, scope: list[RollbackCallback]) -> None:
+        """Close ``scope`` after a rollback, invoking its callbacks exactly once.
+
+        Only the failed scope's callbacks fire; enclosing scopes keep theirs for their own outcome.
+        """
+        scopes = getattr(self, '_rollback_callback_scopes', None)
+        if scopes:
+            for index, candidate in enumerate(scopes):
+                if candidate is scope:
+                    del scopes[index]
+                    break
+        for callback in reversed(scope):
+            try:
+                callback()
+            except Exception:
+                # Rollback recovery must not mask the original failure.
+                LOGGER.exception('transaction rollback callback failed')
+
     @abc.abstractmethod
     def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         """Insert a list of entities into the database, directly into a backend transaction.
@@ -272,15 +350,21 @@ class StorageBackend(abc.ABC):
         """Delete the storage and all the data."""
         raise NotImplementedError()
 
+    def get_membership_deletion(self, pks_to_delete: Iterable[int]) -> MembershipDeletion:
+        """Return the effects of deleting these nodes on surviving nodes' membership."""
+        return MembershipDeletion()
+
     @abc.abstractmethod
-    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
+    def delete_nodes_and_connections(
+        self, pks_to_delete: Iterable[int], *, membership: MembershipDeletion | None = None
+    ) -> None:
         """Delete all nodes corresponding to pks in the input and any links to/from them.
 
         This method is intended to be used within a transaction context.
 
         :param pks_to_delete: an iterable of node pks to delete
-
-        :raises: ``AssertionError`` if a transaction is not active
+        :param membership: approved changes to surviving members and containers; by default, reject partial units
+        :raises AssertionError: if a transaction is not active
         """
 
     @abc.abstractmethod

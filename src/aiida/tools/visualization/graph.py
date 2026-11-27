@@ -13,9 +13,9 @@
 from __future__ import annotations
 
 import typing as t
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 
-from graphviz import Digraph
+from graphviz import Digraph, escape, nohtml
 
 from aiida import orm
 from aiida.common import LinkType
@@ -25,6 +25,7 @@ from aiida.tools.graph.graph_traversers import traverse_graph
 
 if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
+    from aiida.tools.graph.graph_traversers import MembershipEdge
 
 __all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'default_node_sublabels', 'pstate_node_styles')
 
@@ -70,14 +71,16 @@ def default_link_styles(link_pair: LinkPair, add_label: bool, add_type: bool) ->
             'style': 'dashed',
             'color': '#000000',  # black
         },
+        LinkType.CONTAINS: {'style': 'dashed', 'color': 'gray40'},
     }[link_pair.link_type]
 
+    label = escape(link_pair.link_label) if link_pair.link_type is LinkType.CONTAINS else link_pair.link_label
     if add_label and not add_type:
-        style['label'] = link_pair.link_label
+        style['label'] = label
     elif add_type and not add_label:
         style['label'] = link_pair.link_type.name
     elif add_label and add_type:
-        style['label'] = f'{link_pair.link_type.name}\n{link_pair.link_label}'
+        style['label'] = nohtml(f'{link_pair.link_type.name}\n{label}')
 
     return style
 
@@ -525,6 +528,21 @@ class Graph:
             link_types_list = link_types
         return tuple(getattr(LinkType, link.upper()) if isinstance(link, str) else link for link in link_types_list)
 
+    def _add_membership_edges(
+        self,
+        nodes: dict[int, orm.Node],
+        memberships: Iterable[MembershipEdge],
+        annotate_links: LinkAnnotateType,
+    ) -> None:
+        """Draw ownership edges in their stored owner-to-child direction."""
+        for edge in memberships:
+            label = edge.key if edge.key is not None else str(edge.position)
+            link_pair = LinkPair(LinkType.CONTAINS, label)
+            style = self._link_styles(
+                link_pair, add_label=annotate_links in ('label', 'both'), add_type=annotate_links in ('type', 'both')
+            )
+            self.add_edge(nodes[edge.owner_id], nodes[edge.child_id], link_pair, style=style)
+
     def add_incoming(
         self,
         node: int | str | orm.Node,
@@ -575,6 +593,8 @@ class Graph:
                 link_pair, add_label=annotate_links in ['label', 'both'], add_type=annotate_links in ['type', 'both']
             )
             self.add_edge(source_node, target_node, link_pair, style=link_style)
+
+        self._add_membership_edges(traversed_nodes, traversed_graph.get('memberships', ()), annotate_links)
 
         if return_pks:
             return list(traversed_nodes.keys())
@@ -631,6 +651,8 @@ class Graph:
                 link_pair, add_label=annotate_links in ['label', 'both'], add_type=annotate_links in ['type', 'both']
             )
             self.add_edge(source_node, target_node, link_pair, style=link_style)
+
+        self._add_membership_edges(traversed_nodes, traversed_graph.get('memberships', ()), annotate_links)
 
         if return_pks:
             return list(traversed_nodes.keys())
@@ -720,6 +742,8 @@ class Graph:
             )
             self.add_edge(source_node, target_node, link_pair, style=link_style)
 
+        self._add_membership_edges(traversed_nodes, traversed_graph.get('memberships', ()), annotate_links)
+
     def recurse_ancestors(
         self,
         origin: int | str | orm.Node,
@@ -802,6 +826,8 @@ class Graph:
                 link_pair, add_label=annotate_links in ['label', 'both'], add_type=annotate_links in ['type', 'both']
             )
             self.add_edge(source_node, target_node, link_pair, style=link_style)
+
+        self._add_membership_edges(traversed_nodes, traversed_graph.get('memberships', ()), annotate_links)
 
     def add_origin_to_targets(
         self,

@@ -20,18 +20,76 @@ from aiida.common import exceptions
 from aiida.common.links import GraphTraversalRules, LinkType
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.tools.graph.age_entities import Basket
-from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
+from aiida.tools.graph.age_rules import Operation, RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
 if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.utils.links import LinkQuadruple
-    from aiida.tools.graph.age_rules import Operation
+
+
+class MembershipEdge(t.NamedTuple):
+    """One ownership membership edge, always oriented owner -> child.
+
+    :param owner_id: pk of the owner container node.
+    :param child_id: pk of the owned child node.
+    :param position: persisted iteration ordinal of the child within the owner.
+    :param key: dictionary key of the child, ``None`` for list members.
+    """
+
+    owner_id: int
+    child_id: int
+    position: int
+    key: str | None
 
 
 class TraverseGraphOutput(TypedDict, total=False, closed=True):
     nodes: set[int]
     links: set[LinkQuadruple] | None
+    memberships: set[MembershipEdge]
     rules: dict[str, bool]
+
+
+class _MembershipRule(Operation):
+    """Batched one-hop ownership traversal in a single direction.
+
+    Forward follows ``with_members`` (owner -> child), backward follows ``with_owner``
+    (child -> owner). Each :meth:`run` performs a single batched frontier query; visited
+    termination is handled by the enclosing :class:`RuleSequence`. Collected edges are always
+    oriented owner -> child and accumulated in :attr:`memberships`, separate from the
+    provenance :class:`Basket` edge schema.
+    """
+
+    def __init__(self, backend: StorageBackend | None, *, forward: bool, track_edges: bool) -> None:
+        super().__init__(max_iterations=1, track_edges=track_edges)
+        self._forward = forward
+        self._backend = backend
+        self.memberships: set[MembershipEdge] = set()
+
+    def run(self, operational_set: Basket) -> Basket:
+        """Add the one-hop ownership neighbours of the walkers to a copy and return it."""
+        result = operational_set.copy()
+        frontier = operational_set.nodes.keyset
+        if not frontier:
+            return result
+
+        query = orm.QueryBuilder(backend=self._backend)
+        query.append(orm.Node, tag='source', filters={'id': {'in': frontier}}, project='id')
+        edge_project = ['position', 'key'] if self._track_edges else []
+        if self._forward:
+            query.append(orm.Node, with_members='source', project='id', edge_project=edge_project)
+        else:
+            query.append(orm.Node, with_owner='source', project='id', edge_project=edge_project)
+
+        new_ids: set[int] = set()
+        for source, target, *edge in query.iterall():
+            new_ids.add(target)
+            if self._track_edges:
+                owner, child = (source, target) if self._forward else (target, source)
+                position, key = edge
+                self.memberships.add(MembershipEdge(owner, child, position, key))
+
+        result.nodes.add_entities(new_ids)
+        return result
 
 
 def get_nodes_delete(
@@ -206,6 +264,13 @@ def traverse_graph(
     :param links_backward: List with all the links that should be traversed in the backward direction.
 
     :param missing_callback: A callback to handle missing starting_pks or if None raise NotExistent
+
+    ``LinkType.CONTAINS`` may be passed in ``links_forward`` (owner -> child via
+    ``with_members``) and/or ``links_backward`` (child -> owner via ``with_owner``).
+    When ``get_links`` is ``True`` and ``CONTAINS`` is requested, the result also contains
+    ``memberships``, the set of traversed :class:`MembershipEdge` (always oriented
+    owner -> child), even if empty. Otherwise the key is omitted and the result keeps
+    its previous shape. Provenance links are reported separately under ``links``.
     """
     from numpy import inf
 
@@ -214,21 +279,22 @@ def traverse_graph(
     elif not (isinstance(max_iterations, int) or max_iterations is inf):  # type: ignore[unreachable]
         raise TypeError('Max_iterations has to be an integer or infinity')
 
-    linktype_list = []
+    links_forward = list(links_forward)
+    links_backward = list(links_backward)
+
     for linktype in links_forward:
         if not isinstance(linktype, LinkType):
             msg = f'links_forward should contain links, but one of them is: {type(linktype)}'  # type: ignore[unreachable]
             raise TypeError(msg)
-        linktype_list.append(linktype.value)
-    filters_forwards = {'type': {'in': linktype_list}}
-
-    linktype_list = []
     for linktype in links_backward:
         if not isinstance(linktype, LinkType):
             msg = f'links_backward should contain links, but one of them is: {type(linktype)}'  # type: ignore[unreachable]
             raise TypeError(msg)
-        linktype_list.append(linktype.value)
-    filters_backwards = {'type': {'in': linktype_list}}
+
+    provenance_forward = [linktype.value for linktype in links_forward if linktype is not LinkType.CONTAINS]
+    provenance_backward = [linktype.value for linktype in links_backward if linktype is not LinkType.CONTAINS]
+    membership_forward = LinkType.CONTAINS in links_forward
+    membership_backward = LinkType.CONTAINS in links_backward
 
     if not isinstance(starting_pks, Iterable):
         msg = f'starting_pks must be an iterable\ninstead, it is {type(starting_pks)}'  # type: ignore[unreachable]
@@ -241,7 +307,10 @@ def traverse_graph(
 
     if not operational_set:
         if get_links:
-            return {'nodes': set(), 'links': set()}
+            output: TraverseGraphOutput = {'nodes': set(), 'links': set()}
+            if membership_forward or membership_backward:
+                output['memberships'] = set()
+            return output
         return {'nodes': set(), 'links': None}
 
     query_nodes = orm.QueryBuilder(backend=backend)
@@ -258,34 +327,40 @@ def traverse_graph(
     rules: list[Operation] = []
     basket = Basket(nodes=existing_pks)
 
-    # When max_iterations is finite, the order of traversal may affect the result
-    # (its not the same to first go backwards and then forwards than vice-versa)
-    # In order to make it order-independent, the result of the first operation needs
-    # to be stashed and the second operation must be performed only on the nodes
-    # that were already in the set at the begining of the iteration: this way, both
-    # rules are applied on the same set of nodes and the order doesn't matter.
-    # The way to do this is saving and seting the walkers at the right moments only
-    # when both forwards and backwards rules are present.
-    if links_forward and links_backward:
-        stash = basket.get_template()
-        rules += [RuleSaveWalkers(stash)]
+    directional_rules: list[Operation] = []
+    membership_rules: list[_MembershipRule] = []
 
-    if links_forward:
+    if provenance_forward:
         query_outgoing = orm.QueryBuilder(backend=backend)
         query_outgoing.append(orm.Node, tag='sources')
-        query_outgoing.append(orm.Node, edge_filters=filters_forwards, with_incoming='sources')
+        query_outgoing.append(orm.Node, edge_filters={'type': {'in': provenance_forward}}, with_incoming='sources')
         rule_outgoing = UpdateRule(query_outgoing, max_iterations=1, track_edges=get_links)
-        rules += [rule_outgoing]
+        directional_rules.append(rule_outgoing)
 
-    if links_forward and links_backward:
-        rules += [RuleSetWalkers(stash)]
-
-    if links_backward:
+    if provenance_backward:
         query_incoming = orm.QueryBuilder(backend=backend)
         query_incoming.append(orm.Node, tag='sources')
-        query_incoming.append(orm.Node, edge_filters=filters_backwards, with_outgoing='sources')
+        query_incoming.append(orm.Node, edge_filters={'type': {'in': provenance_backward}}, with_outgoing='sources')
         rule_incoming = UpdateRule(query_incoming, max_iterations=1, track_edges=get_links)
-        rules += [rule_incoming]
+        directional_rules.append(rule_incoming)
+
+    for forward, enabled in [(True, membership_forward), (False, membership_backward)]:
+        if enabled:
+            rule = _MembershipRule(backend, forward=forward, track_edges=get_links)
+            membership_rules.append(rule)
+            directional_rules.append(rule)
+
+    # Every rule must start from the same frontier: otherwise adding another rule
+    # could advance the walk more than one hop per iteration.
+    if len(directional_rules) > 1:
+        stash = basket.get_template()
+        rules.append(RuleSaveWalkers(stash))
+        for index, directional_rule in enumerate(directional_rules):
+            if index > 0:
+                rules.append(RuleSetWalkers(stash))
+            rules.append(directional_rule)
+    else:
+        rules.extend(directional_rules)
 
     # Without a total the project bar format's percentage sits frozen at 0%, so `bar_format=None`
     # falls back to tqdm's plain counter. `unit` is set because tqdm's default renders the count as
@@ -306,7 +381,13 @@ def traverse_graph(
         rulesequence = RuleSequence(rules, max_iterations=max_iterations, iteration_callback=update_progress)
         results = rulesequence.run(basket)
 
-    return TraverseGraphOutput(
+    traverse_output = TraverseGraphOutput(
         nodes=results.nodes.keyset,
         links=results['nodes_nodes'].keyset if get_links else None,
     )
+    if get_links and membership_rules:
+        collected: set[MembershipEdge] = set()
+        for membership_rule in membership_rules:
+            collected |= membership_rule.memberships
+        traverse_output['memberships'] = collected
+    return traverse_output

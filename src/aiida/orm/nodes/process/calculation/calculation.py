@@ -39,7 +39,7 @@ class CalculationNode(ProcessNode):
 
         The returned Manager allows you to easily explore the nodes connected to this node
         via an outgoing CREATE link.
-        The outgoing nodes are reachable by their link labels which are attributes of the manager.
+        Links recording creation of container members are not output ports and are omitted.
 
         """
         return NodeLinksManager(node=self, link_type=LinkType.CREATE, incoming=False)

@@ -21,6 +21,7 @@ __all__ = (
     'BrokerFactory',
     'CalcJobImporterFactory',
     'CalculationFactory',
+    'ContainerFactory',
     'DataFactory',
     'DbImporterFactory',
     'GroupFactory',

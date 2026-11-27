@@ -172,3 +172,43 @@ def test_outputs_directory(parse_calc_job, create_retrieved_temporary):
 
     for filename, content in files.items():
         assert node.base.repository.get_object_content(pathlib.Path(filename).name) == content
+
+
+def custom_parser_returning_container(dirpath):
+    """Custom parser hook returning a container output."""
+    from aiida.orm import DataList, Int
+
+    return {'my_list': DataList([Int(1), Int(2)])}
+
+
+def custom_parser_returning_invalid(dirpath):
+    """Custom parser hook returning a non-data output."""
+    return {'bad': 'not-a-node'}
+
+
+def test_parser_hook_container_output(parse_calc_job, create_retrieved_temporary):
+    """Test that a custom ``parser`` hook may return container outputs."""
+    from aiida.orm import DataList, PickledData
+
+    retrieved_temporary = create_retrieved_temporary({})
+    _, results, calcfunction = parse_calc_job(
+        filepath_retrieved_temporary=retrieved_temporary,
+        inputs={'parser': PickledData(custom_parser_returning_container)},
+    )
+
+    assert calcfunction.is_finished_ok, calcfunction.exit_status
+    assert isinstance(results['my_list'], DataList)
+    assert [node.value for node in results['my_list']] == [1, 2]
+
+
+def test_parser_hook_invalid_output(parse_calc_job, create_retrieved_temporary):
+    """Test that a custom ``parser`` hook returning non-data fails parsing."""
+    from aiida.orm import PickledData
+
+    retrieved_temporary = create_retrieved_temporary({})
+    _, _, calcfunction = parse_calc_job(
+        filepath_retrieved_temporary=retrieved_temporary,
+        inputs={'parser': PickledData(custom_parser_returning_invalid)},
+    )
+
+    assert not calcfunction.is_finished_ok

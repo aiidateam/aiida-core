@@ -135,7 +135,7 @@ class Process(ProcessBase):
             valid_type=bool,
             help='Do not consider the cache for this process, ignoring all other caching configuration rules.',
         )
-        spec.inputs.valid_type = orm.Data
+        spec.inputs.valid_type = (orm.Data,)
         spec.inputs.dynamic = False  # Settings a ``valid_type`` automatically makes it dynamic, so we reset it again
         spec.exit_code(
             1, 'ERROR_UNSPECIFIED', invalidates_cache=True, message='The process has failed with an unspecified error.'
@@ -491,7 +491,9 @@ class Process(ProcessBase):
     @override
     def _pre_process_inputs(self, inputs: dict[str, t.Any]) -> AttributesFrozendict:
         """Keep provenance sources separate from the values validated and consumed at runtime."""
-        prepared = super()._pre_process_inputs(inputs)
+        from aiida.orm.nodes.data.container import detach_owned_inputs
+
+        prepared = super()._pre_process_inputs(detach_owned_inputs(inputs))
         resolved = self.spec().inputs.prepare(prepared)
         namespace = self.spec().inputs
         assert isinstance(resolved.sources, AttributesFrozendict)
@@ -728,7 +730,9 @@ class Process(ProcessBase):
                         self.out(label, entry.node)
                     # This is needed for CalcJob. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
-                    for entry in self.node.base.links.get_outgoing(link_type=LinkType.CREATE):
+                    for entry in self.node.base.links.get_outgoing(
+                        link_type=LinkType.CREATE, include_container_members=False
+                    ):
                         label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
                         self.out(label, entry.node)
             except exceptions.ModificationNotAllowed:
@@ -774,20 +778,65 @@ class Process(ProcessBase):
             for path, output in self._flatten_outputs(self.output_ports, self.outputs)
         }
         outputs_stored = self.node.base.links.get_outgoing(
-            link_type=(LinkType.CREATE, LinkType.RETURN)
+            link_type=(LinkType.CREATE, LinkType.RETURN), include_container_members=False
         ).all_link_labels()
         outputs_new = set(outputs_flat) - set(outputs_stored)
 
-        for link_label, (_, output) in outputs_flat.items():
+        for link_label, (path, output) in outputs_flat.items():
             if link_label not in outputs_new:
                 continue
 
             if isinstance(self.node, orm.CalculationNode):
-                output.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
+                exposed = self._detach_owned_output(output)
+                if isinstance(exposed, orm.Container) and exposed.is_stored:
+                    msg = 'calculations must return a new container; clone a stored container before returning it'
+                    raise exceptions.ValidationError(msg)
+                exposed.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
+                exposed.store()
+                if exposed is not output:
+                    # Keep the emitted value in sync with provenance without treating the link label as a port path.
+                    namespace = self.outputs
+                    for name in path[:-1]:
+                        namespace = namespace[name]
+                    namespace[path[-1]] = exposed
             elif isinstance(self.node, orm.WorkflowNode):
+                # Workflows may RETURN a whole standalone container but must
+                # never return owned children (including owned nested
+                # containers); outputs are not copied automatically.
+                self._reject_owned_workflow_output(output)
                 output.base.links.add_incoming(self.node, LinkType.RETURN, link_label)
+                output.store()
 
-            output.store()
+    def _detach_owned_output(self, output: t.Any) -> t.Any:
+        """Return the recordable calculation output for ``output`` (spec §7).
+
+        Calculation-output boundary: exposing an owned container child copies
+        it (new identity, no ownership or provenance links, recursive for
+        nested containers). Standalone nodes, including detached input
+        copies, remain subject to ordinary CREATE link validation.
+        """
+        from aiida.orm.nodes.data.container import ensure_standalone
+
+        return ensure_standalone(output) if isinstance(output, orm.Data) else output
+
+    @staticmethod
+    def _reject_owned_workflow_output(output: t.Any) -> None:
+        """Reject a workflow output that is an owned container child (spec §7).
+
+        Workflows may return a whole standalone container under ordinary
+        RETURN validation; separately returning owned children — including
+        owned nested containers — is rejected without automatic copying.
+
+        :raises aiida.common.exceptions.InvalidOperation: if ``output`` is owned.
+        """
+        from aiida.orm.nodes.data.container import is_owned
+
+        if isinstance(output, orm.Data) and is_owned(output):
+            msg = (
+                'workflow processes cannot return an owned container child'
+                f'({output!r}); return the whole standalone container instead'
+            )
+            raise exceptions.InvalidOperation(msg)
 
     def _build_process_label(self) -> str:
         """Construct the process label that should be set on ``ProcessNode`` instances for this process class.
@@ -1099,7 +1148,9 @@ class Process(ProcessBase):
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
         link_types = (LinkType.CREATE, LinkType.RETURN)
-        process_outputs_dict = node.base.links.get_outgoing(link_type=link_types).nested()
+        process_outputs_dict = node.base.links.get_outgoing(
+            link_type=link_types, include_container_members=False
+        ).nested()
 
         for port_name in process_outputs_dict:
             top_namespace = port_name.split(namespace_separator)[0]

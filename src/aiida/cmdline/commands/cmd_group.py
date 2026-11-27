@@ -179,6 +179,7 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
     '--delete-nodes', is_flag=True, default=False, help='Delete all nodes in the group along with the group itself.'
 )
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
+@options.CONTAINS_FORWARD()
 @options.DRY_RUN()
 @with_dbenv()
 def group_delete(
@@ -194,12 +195,14 @@ def group_delete(
     endswith,
     contains,
     node,
+    contains_forward,
     **traversal_rules,
 ):
     """Delete groups and (optionally) the nodes they contain."""
     from tabulate import tabulate
 
     from aiida import orm
+    from aiida.common.exceptions import IntegrityError
     from aiida.tools import delete_group_nodes
 
     filters_provided = any(
@@ -307,7 +310,15 @@ def group_delete(
                 )
                 return not click.confirm('Do you want to continue?', abort=True)
 
-            _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
+            try:
+                _, nodes_deleted = delete_group_nodes(
+                    [group.pk],
+                    dry_run=dry_run or _dry_run_callback,
+                    contains_forward=contains_forward,
+                    **traversal_rules,
+                )
+            except IntegrityError as exc:
+                echo.echo_critical(str(exc))
             if not nodes_deleted:
                 # don't delete the group if the nodes were not deleted
                 return

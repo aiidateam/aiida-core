@@ -17,6 +17,7 @@ from aiida.orm.nodes.data.base import *
 from aiida.orm.nodes.data.bool import *
 from aiida.orm.nodes.data.cif import *
 from aiida.orm.nodes.data.code import *
+from aiida.orm.nodes.data.container import *
 from aiida.orm.nodes.data.data import *
 from aiida.orm.nodes.data.dict import *
 from aiida.orm.nodes.data.entry_point import *
@@ -42,8 +43,11 @@ __all__ = (
     'Bool',
     'CifData',
     'Code',
+    'Container',
     'ContainerizedCode',
     'Data',
+    'DataDict',
+    'DataList',
     'Dict',
     'EntryPointData',
     'EnumData',

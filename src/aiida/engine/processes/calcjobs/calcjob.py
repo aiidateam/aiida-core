@@ -644,7 +644,9 @@ class CalcJob(Process):
             # this case, the parser will not be called. The outputs will already have been added to the process node
             # though, so all that needs to be done here is just also assign them to the process instance. This such that
             # when the process returns its results, it returns the actual outputs and not an empty dictionary.
-            self._outputs = self.node.base.links.get_outgoing(link_type=LinkType.CREATE).nested()
+            self._outputs = self.node.base.links.get_outgoing(
+                link_type=LinkType.CREATE, include_container_members=False
+            ).nested()
             return self.node.exit_status
 
         # Launch the upload operation
@@ -949,7 +951,7 @@ class CalcJob(Process):
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import Code, Computer, load_code
 
-        inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
+        inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC, include_container_members=False)
 
         if not self.inputs.metadata.dry_run and not self.node.is_stored:
             raise InvalidOperation('calculation node is not stored.')

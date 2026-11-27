@@ -104,7 +104,7 @@ def validate_link(
     The same holds for outdegree, but then it concerns outgoing links from the source node to the target node.
 
     For illustration purposes, consider the following example provenance graphs that are considered legal, where
-    `WN`, `DN` and `CN` represent a `WorkflowNode`, a `DataNode` and a `CalculationNode`, respectively::
+    `WN`, `DN` and `CN` represent a `WorkflowNode`, a `Data` and a `CalculationNode`, respectively::
 
                     1                    2                    3
             ______     ______          ______          ______     ______
@@ -125,7 +125,7 @@ def validate_link(
     Similarly, in the second example, the constraint is not violated, because despite both links having the same link
     type `INPUT_CALC`, the have different labels, so the `unique_pair` indegree of the `INPUT_CALC` is not violated.
 
-    Finally, in the third example, we see two `WorkflowNodes` both returning the same `DataNode` and with the same
+    Finally, in the third example, we see two `WorkflowNodes` both returning the same `Data` and with the same
     label. Despite the two incoming links here having both the same type as well as the same label, the uniqueness
     constraint is not violated, because the indegree for `RETURN` links is `unique_triple` which means that the triple
     of source node and link type and label should be unique.
@@ -143,6 +143,10 @@ def validate_link(
     type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
     type_check(source, Node, f'source should be a `Node` but got: {type(source)}')
     type_check(target, Node, f'target should be a `Node` but got: {type(target)}')
+
+    if link_type is LinkType.CONTAINS:
+        msg = f'cannot add a {link_type} link: non-provenance links must not be stored as provenance links'
+        raise ValueError(msg)
 
     if source.backend != target.backend:
         msg = (
@@ -167,22 +171,22 @@ def validate_link(
     # link of this type regardless of the label. If instead it is `unique_label`, an infinite amount of links of that
     # type can be defined, as long as the link label is unique for the sub set of links of that type. Finally, for
     # `unique_triple` the triple of node, link type and link label has to be unique.
-    link_mapping = {
-        LinkType.CALL_CALC: (WorkflowNode, CalculationNode, 'unique_triple', 'unique'),
-        LinkType.CALL_WORK: (WorkflowNode, WorkflowNode, 'unique_triple', 'unique'),
-        LinkType.CREATE: (CalculationNode, Data, 'unique_pair', 'unique'),
-        LinkType.INPUT_CALC: (Data, CalculationNode, 'unique_triple', 'unique_pair'),
-        LinkType.INPUT_WORK: (Data, WorkflowNode, 'unique_triple', 'unique_pair'),
-        LinkType.RETURN: (WorkflowNode, Data, 'unique_pair', 'unique_triple'),
+    link_mapping: dict[LinkType, tuple[tuple[type[Node], ...], tuple[type[Node], ...], str, str]] = {
+        LinkType.CALL_CALC: ((WorkflowNode,), (CalculationNode,), 'unique_triple', 'unique'),
+        LinkType.CALL_WORK: ((WorkflowNode,), (WorkflowNode,), 'unique_triple', 'unique'),
+        LinkType.CREATE: ((CalculationNode,), (Data,), 'unique_pair', 'unique'),
+        LinkType.INPUT_CALC: ((Data,), (CalculationNode,), 'unique_triple', 'unique_pair'),
+        LinkType.INPUT_WORK: ((Data,), (WorkflowNode,), 'unique_triple', 'unique_pair'),
+        LinkType.RETURN: ((WorkflowNode,), (Data,), 'unique_pair', 'unique_triple'),
     }
 
     type_source, type_target, outdegree, indegree = link_mapping[link_type]
 
-    if not isinstance(source, type_source) or not isinstance(target, type_target):  # type: ignore[unreachable]
+    if not isinstance(source, type_source) or not isinstance(target, type_target):
         msg = f'cannot add a {link_type} link from {type(source)} to {type(target)}'
         raise ValueError(msg)
 
-    if outdegree == 'unique_triple' or indegree == 'unique_triple':  # type: ignore[unreachable]
+    if outdegree == 'unique_triple' or indegree == 'unique_triple':
         # For a `unique_triple` degree we just have to check if an identical triple already exist, either in the cache
         # or stored, in which case, the new proposed link is a duplicate and thus illegal
         duplicate_link_triple = link_triple_exists(source, target, link_type, link_label, backend)

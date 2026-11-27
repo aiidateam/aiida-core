@@ -31,6 +31,7 @@ from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
+from aiida.orm.implementation.storage_backend import MembershipDeletion
 from aiida.repository.backend.sandbox import SandboxRepositoryBackend
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head
@@ -217,24 +218,33 @@ class SqliteTempBackend(StorageBackend):
         """Open a transaction to be used as a context manager.
 
         If there is an exception within the context then the changes will be rolled back and the state will be as before
-        entering. Transactions can be nested.
+        entering. Transactions can be nested. Rollback callbacks registered via
+        :meth:`add_rollback_callback <aiida.orm.implementation.storage_backend.StorageBackend.add_rollback_callback>`
+        fire when their scope rolls back and are handed to the parent scope on a clean nested exit.
         """
         session = self.get_session()
-        if session.in_nested_transaction():
-            # Already inside an explicit transaction: join it and let the outermost transaction own the commit, so
-            # nested work rolls back together with the outer transaction on failure.
-            with session.begin_nested():
-                yield session
-        elif session.in_transaction():
-            # An autobegun transaction (for example from preceding reads) is active, but no explicit outer
-            # transaction owns the commit, so commit on successful exit as before.
-            with session.begin_nested():
-                yield session
-            session.commit()
-        else:
-            with session.begin():
+        scope = self._push_rollback_scope()
+        try:
+            if session.in_nested_transaction():
+                # Already inside an explicit transaction: join it and let the outermost transaction own the commit,
+                # so nested work rolls back together with the outer transaction on failure.
                 with session.begin_nested():
                     yield session
+            elif session.in_transaction():
+                # An autobegun transaction (for example from preceding reads) is active, but no explicit outer
+                # transaction owns the commit, so commit on successful exit as before.
+                with session.begin_nested():
+                    yield session
+                session.commit()
+            else:
+                with session.begin():
+                    with session.begin_nested():
+                        yield session
+        except BaseException:
+            self._fail_rollback_scope(scope)
+            raise
+        else:
+            self._merge_rollback_scope(scope)
 
     def _clear(self) -> None:
         raise NotImplementedError
@@ -298,6 +308,56 @@ class SqliteTempBackend(StorageBackend):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
+    def _ownership_models(self) -> tuple[t.Any, t.Any]:
+        """Return the ``(DbNode, DbMembership)`` model classes for this backend."""
+        from aiida.storage.sqlite_zip.models import DbMembership, DbNode
+
+        return DbNode, DbMembership
+
+    def create_container_membership(
+        self,
+        owner_id: int,
+        members: list[dict[str, t.Any]],
+        *,
+        kind: t.Literal['list', 'dict'] | None = None,
+    ) -> None:
+        """Atomically persist ownership edges for one container.
+
+        Minimal hook for the ORM container iteration; shares the backend-contract validation in
+        :mod:`aiida.storage.ownership` with the other SQL backends. See
+        :meth:`aiida.storage.psql_dos.backend.PsqlDosBackend.create_container_membership`.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        ownership_contract.attach_membership(self, owner_id, members, kind=kind)
+
+    def merge_container_membership(
+        self, owner_id: int, members: list[dict[str, t.Any]], *, kind: t.Literal['list', 'dict']
+    ) -> None:
+        """Add missing archived edges without changing existing membership."""
+        from aiida.storage.ownership import attach_membership
+
+        link_model, _ = self._get_mapper_from_entity(EntityTypes.LINK, with_pk=True)
+        attach_membership(self, owner_id, members, kind=kind, merge_with_link_model=link_model.class_)
+
+    def store_container_subtree(
+        self,
+        entities: t.Sequence[t.Any],
+        containers: t.Sequence[t.Any],
+        root_links: t.Sequence[t.Any] | None = None,
+        *,
+        clean: bool = True,
+    ) -> None:
+        """Persist a complete owned-container subtree atomically.
+
+        Shares the backend-contract orchestration in :mod:`aiida.storage.ownership` with the other
+        SQL backends. See
+        :meth:`aiida.storage.psql_dos.backend.PsqlDosBackend.store_container_subtree`.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        ownership_contract.store_container_subtree(self, entities, containers, root_links, clean=clean)
+
     def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
@@ -305,6 +365,18 @@ class SqliteTempBackend(StorageBackend):
         if entity_type in (EntityTypes.COMPUTER, EntityTypes.LOG, EntityTypes.AUTHINFO):
             for row in rows:
                 row['_metadata'] = row.pop('metadata')
+        if entity_type is EntityTypes.NODE:
+            from aiida.storage import ownership as ownership_contract
+
+            # Ownership columns default to standalone for rows predating them; existing standalone
+            # nodes remain standalone through migration.
+            ownership_contract.default_bulk_node_rows(rows)
+            ownership_contract.validate_bulk_node_insert(rows)
+        if entity_type is EntityTypes.LINK:
+            from aiida.storage import ownership as ownership_contract
+
+            node_model, _ = self._ownership_models()
+            ownership_contract.validate_link_rows(self.get_session(), node_model, rows)
         if allow_defaults:
             for row in rows:
                 if not keys.issuperset(row):
@@ -331,6 +403,17 @@ class SqliteTempBackend(StorageBackend):
             if not keys.issuperset(row):
                 msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
                 raise IntegrityError(msg)
+        if entity_type is EntityTypes.NODE:
+            # Stored ownership and membership cannot be changed in place (no triggers; the backend
+            # contract is the enforcement boundary).
+            from aiida.storage import ownership as ownership_contract
+
+            ownership_contract.validate_bulk_node_update(rows)
+        if entity_type is EntityTypes.LINK:
+            from aiida.storage.ownership import validate_provenance_link_type
+
+            for row in rows:
+                validate_provenance_link_type(row.get('type'))
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)
@@ -340,7 +423,9 @@ class SqliteTempBackend(StorageBackend):
         assert self._repo
         self._repo.erase()
 
-    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
+    def delete_nodes_and_connections(
+        self, pks_to_delete: Iterable[int], *, membership: MembershipDeletion | None = None
+    ) -> None:
         raise NotImplementedError
 
 

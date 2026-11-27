@@ -5,9 +5,9 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common import exceptions
-from aiida.common.escaping import sql_string_match
+from aiida.common.escaping import escape_for_sql_like, sql_string_match
 from aiida.common.lang import type_check
-from aiida.common.links import LinkType
+from aiida.common.links import CONTAINER_MEMBER_LINK_PREFIX, LinkType
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.utils.links import LinkManager, LinkTriple
 
@@ -116,17 +116,20 @@ class NodeLinks:
         link_label_filter: str | None = None,
         link_direction: str = 'incoming',
         only_uuid: bool = False,
+        *,
+        include_container_members: bool = True,
     ) -> list[LinkTriple]:
         """Return the list of stored link triples directly incoming to or outgoing of this node.
 
         Note this will only return link triples that are stored in the database. Anything in the cache is ignored.
 
         :param node_class: If specified, should be a class, and it filters only elements of that (subclass of) type
-        :param link_type: Only get inputs of this link type, if empty tuple then returns all inputs of all link types.
+        :param link_type: Filter by link type. Only provenance links are returned, never container membership.
         :param link_label_filter: filters the incoming nodes by its link label. This should be a regex statement as
             one would pass directly to a QueryBuilder filter statement with the 'like' operation.
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
+        :param include_container_members: whether to include member provenance links that do not represent ports.
         """
         from aiida.orm.nodes.node import Node
 
@@ -139,13 +142,17 @@ class NodeLinks:
 
         node_class = node_class or Node
         node_filters: dict[str, t.Any] = {'id': {'==': self._node.pk}}
-        edge_filters: dict[str, t.Any] = {}
+        edge_filters: dict[str, t.Any] = {
+            'type': {'in': [kind.value for kind in (link_type or LinkType) if kind is not LinkType.CONTAINS]}
+        }
 
-        if link_type:
-            edge_filters['type'] = {'in': [t.value for t in link_type]}
-
+        label_filters = {}
         if link_label_filter:
-            edge_filters['label'] = {'like': link_label_filter}
+            label_filters['like'] = link_label_filter
+        if not include_container_members:
+            label_filters['!like'] = escape_for_sql_like(CONTAINER_MEMBER_LINK_PREFIX) + '%'
+        if label_filters:
+            edge_filters['label'] = label_filters
 
         builder = QueryBuilder(backend=self._node.backend)
         builder.append(Node, filters=node_filters, tag='main')
@@ -176,6 +183,8 @@ class NodeLinks:
         link_type: LinkType | t.Sequence[LinkType] = (),
         link_label_filter: str | None = None,
         only_uuid: bool = False,
+        *,
+        include_container_members: bool = True,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) incoming into this node.
 
@@ -186,13 +195,19 @@ class NodeLinks:
         :param link_label_filter: filters the incoming nodes by its link label.
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
+        :param include_container_members: whether to include member provenance links that do not represent ports.
         """
         if not isinstance(link_type, (tuple, list)):
             link_type = t.cast(t.Sequence[LinkType], (link_type,))
 
         if self._node.is_stored:
             link_triples = self.get_stored_link_triples(
-                node_class, link_type, link_label_filter, 'incoming', only_uuid=only_uuid
+                node_class,
+                link_type,
+                link_label_filter,
+                'incoming',
+                only_uuid=only_uuid,
+                include_container_members=include_container_members,
             )
         else:
             link_triples = []
@@ -225,6 +240,8 @@ class NodeLinks:
         link_type: LinkType | t.Sequence[LinkType] = (),
         link_label_filter: str | None = None,
         only_uuid: bool = False,
+        *,
+        include_container_members: bool = True,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) outgoing of this node.
 
@@ -235,6 +252,14 @@ class NodeLinks:
         :param link_label_filter: filters the outgoing nodes by its link label.
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
+        :param include_container_members: whether to include member provenance links that do not represent ports.
         """
-        link_triples = self.get_stored_link_triples(node_class, link_type, link_label_filter, 'outgoing', only_uuid)
+        link_triples = self.get_stored_link_triples(
+            node_class,
+            link_type,
+            link_label_filter,
+            'outgoing',
+            only_uuid,
+            include_container_members=include_container_members,
+        )
         return LinkManager(link_triples)

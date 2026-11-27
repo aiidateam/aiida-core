@@ -27,6 +27,7 @@ from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.repository import Repository
+from aiida.tools.archive._ownership import Ownership, read_ownership
 from aiida.tools.archive.abstract import ArchiveFormatAbstract
 from aiida.tools.archive.common import entity_type_to_orm
 from aiida.tools.archive.exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
@@ -488,8 +489,14 @@ def _import_nodes(
 
     new_nodes = len(input_id_uuid) - len(backend_uuid_id)
 
+    reused_ids = {pk: backend_uuid_id[uuid] for pk, uuid in input_id_uuid.items() if uuid in backend_uuid_id}
+    ownership = _validate_ownership_agreement(backend_from, backend_to, reused_ids)
+
     if backend_uuid_id:
-        _merge_node_extras(backend_from, backend_to, batch_size, backend_uuid_id, merge_extras)
+        container_uuids = {input_id_uuid[pk] for pk in ownership.containers if pk in reused_ids}
+        _merge_node_extras(
+            backend_from, backend_to, batch_size, backend_uuid_id, merge_extras, container_uuids=container_uuids
+        )
 
     if new_nodes:
         # add new nodes and update backend_uuid_id with their uuid -> id mapping
@@ -506,8 +513,66 @@ def _import_nodes(
             transform,
         )
 
-    # generate mapping of input backend id to output backend id
-    return {int(i): backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
+    ids = {int(i): backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
+    _import_ownership(backend_to, ownership, ids)
+    return ids
+
+
+def _validate_ownership_agreement(
+    backend_from: StorageBackend, backend_to: StorageBackend, reused_ids: dict[int, int]
+) -> Ownership:
+    """Validate the archive and reused container types; check explicit edges when merging them."""
+    from aiida.common.exceptions import IntegrityError
+
+    try:
+        archive = read_ownership(backend_from)
+    except IntegrityError as exc:
+        msg = f'Invalid or conflicting ownership: {exc}'
+        raise ImportValidationError(msg) from exc
+    if archive.containers and not hasattr(backend_to, 'merge_container_membership'):
+        msg = 'The destination storage does not support merging owned containers.'
+        raise ImportValidationError(msg)
+    if reused_ids:
+        expected = {reused_ids[pk]: archive.types[pk] for pk in archive.containers if pk in reused_ids}
+        actual = dict(
+            QueryBuilder(backend=backend_to)
+            .append(orm.Container, filters={'id': {'in': list(reused_ids.values())}}, project=['id', 'node_type'])
+            .all()
+        )
+        if expected != actual:
+            msg = 'Archive UUIDs have conflicting ownership: reused container types must agree.'
+            raise ImportValidationError(msg)
+    return archive
+
+
+def _import_ownership(backend: StorageBackend, ownership: Ownership, ids: dict[int, int]) -> None:
+    """Merge explicit ownership edges without deleting any edges missing from the archive."""
+    from aiida.common.exceptions import IntegrityError
+
+    if not ownership.containers:
+        return
+    merge_membership = getattr(backend, 'merge_container_membership')
+    for owner, state in ownership.containers.items():
+        if not state.members:
+            continue
+        try:
+            merge_membership(
+                ids[owner],
+                [
+                    {
+                        'child_id': ids[member.child_id],
+                        'child_node_type': member.reference_type or ownership.types[member.child_id],
+                        'reference': member.reference_type is not None,
+                        'position': member.position,
+                        'key': member.key,
+                    }
+                    for member in state.members
+                ],
+                kind=state.kind,
+            )
+        except IntegrityError as exc:
+            msg = f'Archive UUIDs have conflicting ownership: {exc}'
+            raise ImportValidationError(msg) from exc
 
 
 class NodeTransform:
@@ -528,6 +593,8 @@ class NodeTransform:
         """Perform the transform."""
         data = row['entity']
         pk = data.pop('id')
+        # Archive-local ownership IDs are restored with membership after node insertion.
+        data.pop('owner_id', None)
         try:
             data['user_id'] = self.user_ids_archive_backend[data['user_id']]
         except KeyError as exc:
@@ -614,11 +681,14 @@ def _merge_node_extras(
     batch_size: int,
     backend_uuid_id: dict[str, int],
     mode: MergeExtrasType,
+    *,
+    container_uuids: set[str],
 ) -> None:
     """Merge extras from the input backend with the ones in the output backend.
 
     :param backend_uuid_id: mapping of uuid to output backend id
     :param mode: tuple of merge modes for extras
+    :param container_uuids: reused containers whose archived hashes may not describe their merged contents
     """
     num_existing = len(backend_uuid_id)
 
@@ -635,12 +705,17 @@ def _merge_node_extras(
         .order_by([{'node': 'uuid'}])
     )
 
+    def imported_extras(uuid: str, extras: dict) -> dict:
+        if uuid in container_uuids:
+            return {key: value for key, value in extras.items() if key != '_aiida_hash'}
+        return extras
+
     if mode == ('n', 'c', 'u'):
         # 'mirror' operation: remove old extras, put only the new ones
         IMPORT_LOGGER.report(f'Replacing {num_existing} existing Node extras')
 
         def transform(row):
-            return {'id': backend_uuid_id[row[0]], 'extras': row[1]}
+            return {'id': backend_uuid_id[row[0]], 'extras': imported_extras(row[0], row[1])}
 
         with get_progress_reporter()(desc='Replacing extras', total=input_extras.count()) as progress:
             for nrows, rows in batch_iter(input_extras.iterall(batch_size=batch_size), batch_size, transform):
@@ -671,6 +746,7 @@ def _merge_node_extras(
             msg = f'UUID mismatch when merging node extras: {new_uuid} != {old_uuid}'
             raise ImportValidationError(msg)
         backend_id = backend_uuid_id[new_uuid]
+        new_extras = imported_extras(new_uuid, new_extras)
         old_keys = set(old_extras.keys())
         new_keys = set(new_extras.keys())
         collided_keys = old_keys.intersection(new_keys)
@@ -874,9 +950,10 @@ def _import_links(
         LinkType.RETURN: ('in_id_label',),
     }
 
-    # Batch by type, to reduce memory load
-    # to-do check no extra types in archive?
+    # Batch by provenance type to reduce memory load. Ownership is imported separately.
     for link_type in LinkType:
+        if link_type is LinkType.CONTAINS:
+            continue
         # get validation parameters
         allowed_in_type, allowed_out_type = allowed_link_nodes[link_type]
         link_uniqueness = link_type_uniqueness[link_type]

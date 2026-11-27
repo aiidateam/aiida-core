@@ -22,6 +22,7 @@ from pathlib import Path
 from tabulate import tabulate
 
 from aiida import orm
+from aiida.common.exceptions import IntegrityError
 from aiida.common.lang import type_check
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
@@ -31,6 +32,7 @@ from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
 from aiida.orm.utils.links import LinkQuadruple
+from aiida.tools.archive._ownership import read_ownership
 from aiida.tools.archive.abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
 from aiida.tools.archive.common import entity_type_to_orm
 from aiida.tools.archive.exceptions import ArchiveExportError, ExportValidationError
@@ -258,7 +260,14 @@ def create_archive(
             filter_size,
         )
 
-    # now all the nodes have been retrieved, perform some checks
+    # Membership is projected onto the nodes selected through the ordinary export rules.
+    try:
+        selection = None if entities is None else entity_ids[EntityTypes.NODE]
+        ownership = read_ownership(backend, selection, project_selection=selection is not None)
+    except IntegrityError as exc:
+        msg = f'Cannot export inconsistent ownership: {exc}'
+        raise ExportValidationError(msg) from exc
+
     if entity_ids[EntityTypes.NODE]:
         EXPORT_LOGGER.report('Validating Nodes')
         _check_unsealed_nodes(querybuilder, entity_ids[EntityTypes.NODE], batch_size, filter_size)
@@ -285,6 +294,7 @@ def create_archive(
         return filename
 
     EXPORT_LOGGER.report(f'Creating archive with:\n{tabulate(count_summary)}')
+    changed_containers = ownership.changed_containers
 
     # Create and open the archive for writing.
     # We create in a temp dir then move to final place at end,
@@ -310,11 +320,15 @@ def create_archive(
             # stream entity data to the archive
             with get_progress_reporter()(desc='Archiving database: ', total=sum(entity_counts.values())) as progress:
                 for etype, ids in entity_ids.items():
-                    if etype == EntityTypes.NODE and strip_checkpoints:
+                    if etype == EntityTypes.NODE:
 
                         def transform(row):
                             data = row['entity']
-                            if data.get('node_type', '').startswith('process.'):
+                            if 'owner_id' in data:
+                                data['owner_id'] = ownership.parents.get(data['id'])
+                            if data['id'] in changed_containers:
+                                data['extras'].pop('_aiida_hash', None)
+                            if strip_checkpoints and data.get('node_type', '').startswith('process.'):
                                 data['attributes'].pop(orm.ProcessNode.CHECKPOINT_KEY, None)
                             return data
                     else:
@@ -335,6 +349,9 @@ def create_archive(
                         ):
                             writer.bulk_insert(etype, rows)
                             progress.update(nrows)
+
+                if ownership.containers:
+                    writer.write_ownership(ownership.containers)
 
                 # stream links
                 progress.set_description_str(f'Archiving database: {EntityTypes.LINK.value}s')
@@ -410,7 +427,13 @@ def _collect_all_entities(
         qbuilder = (
             querybuilder()
             .append(orm.Node, tag='incoming', project=['id'])
-            .append(orm.Node, with_incoming='incoming', project=['id'], edge_project=['type', 'label'])
+            .append(
+                orm.Node,
+                with_incoming='incoming',
+                project=['id'],
+                edge_filters={'type': {'!==': None}},
+                edge_project=['type', 'label'],
+            )
             .distinct()
         )
         link_data = {LinkQuadruple(*row) for row in qbuilder.all(batch_size=batch_size)}

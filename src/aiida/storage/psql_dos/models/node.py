@@ -10,7 +10,7 @@
 
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
-from sqlalchemy.schema import Column
+from sqlalchemy.schema import CheckConstraint, Column, UniqueConstraint
 from sqlalchemy.sql.schema import ForeignKey, Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
@@ -32,6 +32,19 @@ class DbNode(Base):
       and are set before storing the node and can't be modified afterwards.
     - ``extras``, on the other hand,
       can be added and removed after the node has been stored and are usually set by the user.
+
+    Ownership (owned data containers, ``orm-container-spec.md`` sections 2-3):
+
+    - ``owner_id`` is an indexed, nullable FK to ``db_dbnode.id``. NULL
+      means a standalone node; non-null means an exclusively owned node.
+      There is no separate ownership-mode flag.
+    - Membership edges live in ``db_dbmembership`` (``owner_id`` FK to
+      ``db_dbnode.id``) and must agree with ``owner_id``; owner references
+      and membership rows are created atomically in one transaction
+      and are immutable once stored. The membership kind (``'list'`` /
+      ``'dict'``) is authoritative via the owner's ``node_type``
+      (``aiida.storage.ownership.container_kind_for``); there are no
+      container marker tables.
 
     """
 
@@ -58,6 +71,16 @@ class DbNode(Base):
         Integer,
         ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),
         nullable=False,
+        index=True,
+    )
+    # NOTE: the default NO ACTION (not RESTRICT) is deliberate. RESTRICT cannot be deferred: SQLite processes
+    # RESTRICT immediately even for deferred constraints and PostgreSQL forbids deferring it, which would make
+    # whole-subtree single-statement deletes impossible. NO ACTION keeps the same safeguard (deleting a referenced
+    # row while referencers remain fails) with end-of-transaction timing under the deferred constraint.
+    owner_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
+        nullable=True,
         index=True,
     )
 
@@ -198,3 +221,70 @@ class DbLink(Base):
             self.output.get_simple_name(invalid_result='Unknown node'),
             self.output.pk,
         )
+
+
+class DbMembership(Base):
+    """Database model for owned-data-container membership edges.
+
+    Each row is a containment edge from an immediate owner container
+    (``owner_id`` FK to ``db_dbnode.id``) to one owned or referenced
+    child node (``child_id`` FK to ``db_dbnode.id``). ``position`` is the persisted iteration
+    ordinal for both kinds — semantic order for lists, explicit insertion order for
+    dicts (database row order is meaningless). ``key`` is the label for keyed
+    kinds only — NULL for lists, NOT NULL string for dicts. Non-string keys
+    are rejected at the ORM boundary (``TypeError``) and at the backend
+    boundary (``IntegrityError``).
+
+    Quantities and constraints:
+
+    - ``owner_id``: FK to ``db_dbnode.id``, NOT NULL, indexed,
+      default NO ACTION (deferred; RESTRICT is unusable here, see the note on
+      ``DbNode.owner_id``). Deletion planning must expand to the full
+      ownership unit explicitly; database cascades alone are not sufficient.
+    - ``child_id``: FK to ``db_dbnode.id``, NOT NULL, indexed, unique
+      (exactly one membership row per owned child), default NO ACTION (deferred).
+    - ``position``: integer ``>= 0`` (CHECK), unique per owner.
+    - ``key``: nullable string; uniqueness per owner applies to non-null
+      keys (NULL entries never collide under the unique constraint).
+      List-vs-dict key discipline (``key IS NULL`` for lists, ``key IS NOT
+      NULL`` for dicts) is enforced in Python (``aiida.storage.ownership``)
+      from the owner's ``node_type`` since DDL cannot express it.
+    - ``owner_id != child_id`` (CHECK); longer cycles are rejected by
+      transactional validation in ``aiida.storage.ownership`` since
+      recursive constraints cannot be expressed declaratively.
+    - For owned children, ``db_dbnode.owner_id`` agrees with the edge and is written
+      atomically with it. For referenced children, it remains NULL.
+    - Stored rows are immutable: updates are rejected at the backend
+      contract level (no triggers).
+    """
+
+    __tablename__ = 'db_dbmembership'
+
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
+        nullable=False,
+        index=True,
+    )
+    child_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
+        nullable=False,
+        index=True,
+    )
+    position = Column(Integer, nullable=False)
+    key = Column(String(255), nullable=True, index=True)
+
+    __table_args__ = (
+        # Point lookups can use the hash index; the unique B-tree still enforces exclusive ownership.
+        Index('ix_membership_child_hash', 'child_id', postgresql_using='hash'),
+        UniqueConstraint('child_id', name='uq_db_dbmembership_child_id'),
+        UniqueConstraint('owner_id', 'position', name='uq_db_dbmembership_owner_id_position'),
+        UniqueConstraint('owner_id', 'key', name='uq_db_dbmembership_owner_id_key'),
+        CheckConstraint('position >= 0', name='ck_db_dbmembership_position_nonnegative'),
+        CheckConstraint('owner_id != child_id', name='ck_db_dbmembership_no_self_ownership'),
+    )
+
+    def __str__(self):
+        return f'membership owner={self.owner_id} -> child={self.child_id} position={self.position} key={self.key}'

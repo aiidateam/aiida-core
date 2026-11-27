@@ -28,6 +28,8 @@ def delete_nodes(
     pks: Iterable[int],
     dry_run: bool | Callable[[set[int]], bool] = True,
     backend: StorageBackend | None = None,
+    *,
+    contains_forward: bool = True,
     **traversal_rules: bool,
 ) -> tuple[set[int], bool]:
     """Delete nodes given a list of "starting" PKs.
@@ -58,7 +60,8 @@ def delete_nodes(
         If True, return the pks to delete without deleting anything.
         If False, delete the pks without confirmation
         If callable, a function that return True/False, based on the pks, e.g. ``dry_run=lambda pks: True``
-
+    :param contains_forward: Follow ownership from containers to their descendants, never to their parents.
+        If false, detach surviving owned members instead of deleting them.
     :param traversal_rules: graph traversal rules.
         See :const:`aiida.common.links.GraphTraversalRules` for what rule names
         are toggleable and what the defaults are.
@@ -72,11 +75,35 @@ def delete_nodes(
         for _pk in _pks:
             DELETE_LOGGER.warning(f'warning: node with pk<{_pk}> does not exist, skipping')
 
-    pks_set_to_delete = get_nodes_delete(
-        pks, get_links=False, missing_callback=_missing_callback, backend=backend, **traversal_rules
-    )['nodes']
+    from aiida.storage.ownership import expand_owned_members
 
+    # Provenance can select additional containers; follow their owned members too.
+    pks_set_to_delete = set(pks)
+    while True:
+        traversed = get_nodes_delete(
+            pks_set_to_delete,
+            get_links=False,
+            missing_callback=_missing_callback,
+            backend=backend,
+            **traversal_rules,
+        )['nodes']
+        pks_set_to_delete = expand_owned_members(backend, traversed) if contains_forward else traversed
+        if pks_set_to_delete == traversed:
+            break
+
+    membership = backend.get_membership_deletion(pks_set_to_delete)
     DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))
+    if membership.detached or membership.edited_containers:
+        if dry_run is True:
+            DELETE_LOGGER.report('Nodes to delete: %s', sorted(pks_set_to_delete))
+        if membership.detached:
+            DELETE_LOGGER.report(
+                'Owned members to detach and keep as standalone nodes: %s', sorted(membership.detached)
+            )
+        if membership.edited_containers:
+            DELETE_LOGGER.report(
+                'Surviving containers that will lose members: %s', sorted(membership.edited_containers)
+            )
 
     if pks_set_to_delete and DELETE_LOGGER.level == logging.DEBUG:
         builder = QueryBuilder(backend=backend).append(
@@ -104,7 +131,10 @@ def delete_nodes(
 
     DELETE_LOGGER.report('Starting node deletion...')
     with backend.transaction():
-        backend.delete_nodes_and_connections(pks_set_to_delete)
+        if membership.detached or membership.edited_containers:
+            backend.delete_nodes_and_connections(pks_set_to_delete, membership=membership)
+        else:
+            backend.delete_nodes_and_connections(pks_set_to_delete)
     DELETE_LOGGER.report('Deletion of nodes completed.')
 
     return (pks_set_to_delete, True)
@@ -114,6 +144,8 @@ def delete_group_nodes(
     pks: Iterable[int],
     dry_run: bool | Callable[[set[int]], bool] = True,
     backend: StorageBackend | None = None,
+    *,
+    contains_forward: bool = True,
     **traversal_rules: bool,
 ) -> tuple[set[int], bool]:
     """Delete nodes contained in a list of groups (not the groups themselves!).
@@ -143,7 +175,7 @@ def delete_group_nodes(
         If True, return the pks to delete without deleting anything.
         If False, delete the pks without confirmation
         If callable, a function that return True/False, based on the pks, e.g. ``dry_run=lambda pks: True``
-
+    :param contains_forward: If false, detach surviving owned members instead of deleting them.
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
         are toggleable and what the defaults are.
 
@@ -161,4 +193,10 @@ def delete_group_nodes(
     )
     group_node_query.distinct()
     node_pks = group_node_query.all(flat=True)
-    return delete_nodes(node_pks, dry_run=dry_run, backend=backend, **traversal_rules)
+    return delete_nodes(
+        node_pks,
+        dry_run=dry_run,
+        backend=backend,
+        contains_forward=contains_forward,
+        **traversal_rules,
+    )

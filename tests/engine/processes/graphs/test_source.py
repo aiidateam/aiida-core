@@ -470,7 +470,6 @@ def test_failing_default_factory_rejected() -> None:
 
 
 def test_cyclic_and_invalid_ordering_dependencies() -> None:
-
     spec = calls.chain.build()
     with pytest.raises(GraphTypeCheckError, match='contain a cycle between'):
         replace(spec, dependencies=(*spec.dependencies, Dependency('add_2', 'add')))

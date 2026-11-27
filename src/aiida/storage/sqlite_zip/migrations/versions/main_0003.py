@@ -13,6 +13,7 @@ Migration steps:
 1. Rename the ``core.ssh_async`` transport plugin to ``core.ssh``.
 2. Migrate the deprecated ``Code`` data plugin to modern code plugins.
 3. Rename the visibility extra on built-in Code nodes.
+4. Create storage for owned containers.
 
 Bring archives in line with the profile database ``main_0003``, so that a computer exported from a
 profile that used ``core.ssh_async`` can be imported into a v3 profile. Archives carry no client
@@ -40,6 +41,7 @@ from aiida.storage.migrations.legacy_code import (
     SQLITE_UPGRADE_STATEMENTS,
     check_sqlite_executables,
 )
+from aiida.storage.migrations.owned_containers import create_ownership_schema
 
 revision = 'main_0003'
 down_revision = 'main_0002'
@@ -56,6 +58,7 @@ def upgrade():
     for statement in SQLITE_UPGRADE_STATEMENTS:
         conn.execute(text(statement))
     conn.execute(text(SQLITE_HIDDEN_UPGRADE_STATEMENT))
+    create_ownership_schema()
 
 
 def downgrade():

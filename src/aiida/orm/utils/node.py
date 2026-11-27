@@ -37,6 +37,7 @@ def load_node_class(type_string):
     """
     from aiida.orm import Data, Node, ProcessNode
     from aiida.plugins.entry_point import load_entry_point
+    from aiida.storage.ownership import CONTAINER_NODE_TYPES
 
     if type_string == '':
         return Node
@@ -62,6 +63,19 @@ def load_node_class(type_string):
     # Since now the type strings no longer have that prefix, we simply strip it and continue with the normal logic.
     if base_path.startswith('node.'):
         base_path = base_path.removeprefix('node.')
+
+    # Owned containers share the ``data.`` type-string prefix (common node identity) but resolve through the
+    # dedicated ``aiida.container`` group. The supported set is closed
+    # (``CONTAINER_NODE_TYPES`` is the single source of truth); stored type strings are unchanged, so no
+    # migration rewrites them and only the resolution group changes.
+    if type_string in CONTAINER_NODE_TYPES:
+        entry_point_name = base_path.removeprefix('data.')
+        try:
+            return load_entry_point('aiida.container', entry_point_name)
+        except exceptions.MissingEntryPointError:
+            from aiida.orm.nodes.data.container import Container
+
+            return Container
 
     # If the Data plugin is not available we fall back on the base Data class
     if base_path.startswith('data.'):

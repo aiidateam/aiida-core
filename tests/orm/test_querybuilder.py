@@ -1126,6 +1126,35 @@ class TestQueryBuilderJoins:
                 == number_students
             )
 
+    def test_joins_provenance_and_membership_edges(self):
+        """Mixed joins preserve link multiplicity without assigning link fields to members."""
+        producer = orm.CalculationNode().store()
+        referenced = orm.Int(1)
+        referenced.base.links.add_incoming(producer, link_type=LinkType.CREATE, link_label='result')
+        referenced.store()
+
+        root = orm.DataList([referenced, orm.Int(2)]).store()
+        consumer = orm.CalculationNode()
+        for label in ('first', 'second'):
+            consumer.base.links.add_incoming(root, link_type=LinkType.INPUT_CALC, link_label=label)
+        consumer.store()
+
+        forward = (
+            orm.QueryBuilder()
+            .append(orm.DataList, filters={'id': root.pk}, tag='root')
+            .append(orm.Node, with_incoming='root', project='id', edge_project='label')
+        )
+        assert sorted(forward.all()) == sorted(
+            [[referenced.pk, None], [root[1].pk, None], [consumer.pk, 'first'], [consumer.pk, 'second']]
+        )
+
+        backward = (
+            orm.QueryBuilder()
+            .append(orm.Int, filters={'id': referenced.pk}, tag='member')
+            .append(orm.Node, with_outgoing='member', project='id', edge_project='label')
+        )
+        assert sorted(backward.all()) == sorted([[root.pk, None], [producer.pk, 'result']])
+
     def test_joins_user_group(self):
         # Create another user
         new_email = 'newuser@new.n'

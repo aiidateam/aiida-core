@@ -49,6 +49,7 @@ __all__ = (
     'COMPUTER',
     'COMPUTERS',
     'CONFIG_FILE',
+    'CONTAINS_FORWARD',
     'DATA',
     'DATUM',
     'DB_BACKEND',
@@ -150,6 +151,7 @@ TRAVERSAL_RULE_HELP_STRING = {
     'input_work_forward': 'INPUT links to workflows forwards',
     'return_backward': 'RETURN links backwards',
     'return_forward': 'RETURN links forwards',
+    'contains_forward': 'CONTAINS edges forwards (from containers to members)',
     'create_backward': 'CREATE links backwards',
     'create_forward': 'CREATE links forwards',
 }
@@ -347,6 +349,13 @@ NODES = OverridableOption(
     type=types.NodeParamType(),
     cls=MultipleValueOption,
     help='One or multiple nodes identified by their ID or UUID.',
+)
+
+CONTAINS_FORWARD = OverridableOption(
+    '--contains-forward/--no-contains-forward',
+    default=True,
+    show_default=True,
+    help='Follow container ownership when deleting nodes. Disable to detach and keep surviving owned members.',
 )
 
 FORCE = OverridableOption('-f', '--force', is_flag=True, default=False, help='Do not ask for confirmation.')

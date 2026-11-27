@@ -12,7 +12,7 @@ import pytest
 
 from aiida.common.links import LinkType
 from aiida.common.progress_reporter import ProgressReporterAbstract, set_progress_reporter
-from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
+from aiida.tools.graph.graph_traversers import MembershipEdge, get_nodes_delete, traverse_graph
 
 
 def create_minimal_graph():
@@ -475,3 +475,39 @@ class TestTraversalProgress:
         """No progress reporter should be created when there is nothing to traverse."""
         traverse_graph([], links_forward=[LinkType.CREATE])
         assert reporter_events == []
+
+
+def test_contains_backward_finds_creator_without_siblings():
+    """An opt-in ownership step reaches the creator without taking a forward step into siblings."""
+    from aiida.engine import calcfunction, run_get_node
+    from aiida.orm import DataDict, Int
+
+    @calcfunction
+    def make_summary():
+        return DataDict({'total': Int(5), 'count': Int(2)})
+
+    summary, calculation = run_get_node(make_summary)
+    member = summary['total']
+    result = traverse_graph([member.pk], links_backward=[LinkType.CONTAINS, LinkType.CREATE], get_links=True)
+
+    assert result['nodes'] == {member.pk, summary.pk, calculation.pk}
+    assert result['memberships'] == {MembershipEdge(summary.pk, member.pk, 0, 'total')}
+    assert {link.link_type for link in result['links']} == {LinkType.CREATE.value}
+
+
+def test_contains_forward_reaches_nested_members():
+    """Forward ownership traversal counts one hop per edge and descends into nested containers."""
+    from aiida.orm import DataList, Int
+
+    outer = DataList([DataList([Int(1)])]).store()
+    inner = outer[0]
+    leaf = inner[0]
+    one_hop = traverse_graph([outer.pk], max_iterations=1, links_forward=[LinkType.CONTAINS])
+    assert one_hop == {'nodes': {outer.pk, inner.pk}, 'links': None}
+
+    result = traverse_graph([outer.pk], links_forward=[LinkType.CONTAINS], get_links=True)
+    assert result['nodes'] == {outer.pk, inner.pk, leaf.pk}
+    assert result['memberships'] == {
+        MembershipEdge(outer.pk, inner.pk, 0, None),
+        MembershipEdge(inner.pk, leaf.pk, 0, None),
+    }

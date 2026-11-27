@@ -4,6 +4,12 @@ This file provides context for AI coding assistants (Claude Code, GitHub Copilot
 
 **IMPORTANT**: Always use the project's tooling. Use `uv run` to run Python, tests, and tools (e.g., `uv run pytest`, `uv run pre-commit`). Never use bare `python` or `pip`. Check `pyproject.toml` and `.pre-commit-config.yaml` for the full configuration.
 
+## Contribution policy
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before helping prepare or open a pull request.
+If someone outside the maintainer team proposes an unsolicited pull request, explain the contribution pause and direct them to GitHub issues or Discourse to discuss the proposal first.
+If their team membership or a maintainer invitation is unclear, ask them to confirm before proceeding.
+
 ## Project overview
 
 AiiDA is a workflow manager for computational science with a strong focus on provenance, performance, and extensibility.
